@@ -1,5 +1,6 @@
 package de.bund.digitalservice.ris.caselaw.domain.docx;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,7 +10,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 public abstract class StyledElement implements DocumentationUnitDocx {
-  private final Map<String, List<String>> styles = new HashMap<>();
+  private Map<String, List<String>> styles = new HashMap<>();
   private String styleReference;
 
   public String getStyleReference() {
@@ -39,6 +40,14 @@ public abstract class StyledElement implements DocumentationUnitDocx {
     newStyle.value().forEach(value -> addStyle(newStyle.property(), value));
   }
 
+  public Map<String, List<String>> getStyles() {
+    return styles;
+  }
+
+  public void setStyles(Map<String, List<String>> styles) {
+    this.styles = styles;
+  }
+
   public boolean containsStyle(String property) {
     return styles.containsKey(property);
   }
@@ -47,6 +56,7 @@ public abstract class StyledElement implements DocumentationUnitDocx {
     return !styles.isEmpty();
   }
 
+  @JsonIgnore
   public String getStyleString() {
     if (styles.isEmpty()) return "";
 

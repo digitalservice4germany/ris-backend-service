@@ -1,7 +1,9 @@
 package de.bund.digitalservice.ris.caselaw.adapter;
 
+import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocumentConverterException;
 import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentationUnitTransformerException;
 import de.bund.digitalservice.ris.caselaw.domain.AttachmentService;
+import de.bund.digitalservice.ris.caselaw.domain.ConvertedDocumentElement;
 import de.bund.digitalservice.ris.caselaw.domain.ConverterService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
@@ -334,6 +336,155 @@ public class DocumentationUnitController {
           .body(docx2Html);
     } catch (Exception ex) {
       log.error("Error by getting docx for documentation unit {}", uuid, ex);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  /**
+   * Get a list of
+   *
+   * @param id
+   * @param s3Path
+   * @return
+   */
+  @GetMapping(value = "/{id}/docx/{s3Path}/converted", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("@userHasReadAccessByDocumentationUnitId.apply(#id)")
+  public ResponseEntity<List<ConvertedDocumentElement>> getConvertedDocx(
+      @PathVariable UUID id, @PathVariable String s3Path) {
+
+    if (service.getByUuid(id) == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      return ResponseEntity.ok(converterService.getConvertedObjectList(id, s3Path));
+    } catch (DocumentConverterException ex) {
+      log.error(
+          "Error by getting list of converted documentation elements for original document "
+              + "'{}' for document unit '{}'",
+          s3Path,
+          id,
+          ex);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @GetMapping(value = "/{id}/docx/{s3Path}/reconvert", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("@userHasReadAccessByDocumentationUnitId.apply(#id)")
+  public ResponseEntity<List<ConvertedDocumentElement>> getReconvertDocx(
+      @PathVariable UUID id, @PathVariable String s3Path) {
+
+    if (service.getByUuid(id) == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      return ResponseEntity.ok(converterService.getReconvertObjectList(id, s3Path));
+    } catch (DocumentConverterException ex) {
+      log.error(
+          "Error by getting list of converted documentation elements for original document "
+              + "'{}' for document unit '{}'",
+          s3Path,
+          id,
+          ex);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @GetMapping(
+      value = "/{id}/docx/{s3Path}/removebordernumbers",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("@userHasReadAccessByDocumentationUnitId.apply(#id)")
+  public ResponseEntity<List<ConvertedDocumentElement>> removeBorderNumbers(
+      @PathVariable UUID id, @PathVariable String s3Path) {
+
+    if (service.getByUuid(id) == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      return ResponseEntity.ok(converterService.removeBorderNumbers(id, s3Path));
+    } catch (DocumentConverterException ex) {
+      log.error(
+          "Error by getting list of converted documentation elements for original document "
+              + "'{}' for document unit '{}'",
+          s3Path,
+          id,
+          ex);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @GetMapping(
+      value = "/{id}/docx/{s3Path}/addbordernumbers",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("@userHasReadAccessByDocumentationUnitId.apply(#id)")
+  public ResponseEntity<List<ConvertedDocumentElement>> addBorderNumbers(
+      @PathVariable UUID id,
+      @PathVariable String s3Path,
+      @RequestParam(value = "startAt", required = false) UUID startId) {
+
+    if (service.getByUuid(id) == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      return ResponseEntity.ok(converterService.addBorderNumbers(id, s3Path, startId));
+    } catch (DocumentConverterException ex) {
+      log.error(
+          "Error by getting list of converted documentation elements for original document "
+              + "'{}' for document unit '{}'",
+          s3Path,
+          id,
+          ex);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @GetMapping(
+      value = "/{id}/docx/{s3Path}/removebordernumber/{elementId}",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("@userHasReadAccessByDocumentationUnitId.apply(#id)")
+  public ResponseEntity<List<ConvertedDocumentElement>> removeBorderNumber(
+      @PathVariable UUID id, @PathVariable String s3Path, @PathVariable UUID elementId) {
+
+    if (service.getByUuid(id) == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      return ResponseEntity.ok(converterService.removeBorderNumber(id, s3Path, elementId));
+    } catch (DocumentConverterException ex) {
+      log.error(
+          "Error by getting list of converted documentation elements for original document "
+              + "'{}' for document unit '{}'",
+          s3Path,
+          id,
+          ex);
+      return ResponseEntity.internalServerError().build();
+    }
+  }
+
+  @GetMapping(
+      value = "/{id}/docx/{s3Path}/joinbordernumbers/{elementId}",
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("@userHasReadAccessByDocumentationUnitId.apply(#id)")
+  public ResponseEntity<List<ConvertedDocumentElement>> joinBorderNumbers(
+      @PathVariable UUID id, @PathVariable String s3Path, @PathVariable UUID elementId) {
+
+    if (service.getByUuid(id) == null) {
+      return ResponseEntity.notFound().build();
+    }
+
+    try {
+      return ResponseEntity.ok(converterService.joinBorderNumbers(id, s3Path, elementId));
+    } catch (DocumentConverterException ex) {
+      log.error(
+          "Error by getting list of converted documentation elements for original document "
+              + "'{}' for document unit '{}'",
+          s3Path,
+          id,
+          ex);
       return ResponseEntity.internalServerError().build();
     }
   }

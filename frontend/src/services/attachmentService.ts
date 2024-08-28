@@ -1,5 +1,5 @@
 import httpClient, { ServiceResponse } from "./httpClient"
-import { Docx2HTML } from "@/domain/docx2html"
+import { Docx2HTML, ConvertedDocumentElement } from "@/domain/docx2html"
 import errorMessages from "@/i18n/errors.json"
 
 interface AttachmentService {
@@ -17,6 +17,39 @@ interface AttachmentService {
     uuid: string,
     s3path: string,
   ): Promise<ServiceResponse<Docx2HTML>>
+
+  reconvertDocument(
+    uuid: string,
+    s3path: string,
+  ): Promise<ServiceResponse<ConvertedDocumentElement[]>>
+
+  getConvertedElementList(
+    uuid: string,
+    s3path: string,
+  ): Promise<ServiceResponse<ConvertedDocumentElement[]>>
+
+  removeBorderNumbers(
+    uuid: string,
+    s3path: string,
+  ): Promise<ServiceResponse<ConvertedDocumentElement[]>>
+
+  addBorderNumbers(
+    uuid: string,
+    s3path: string,
+    elementId?: string,
+  ): Promise<ServiceResponse<ConvertedDocumentElement[]>>
+
+  removeSingleBorderNumber(
+    uuid: string,
+    s3path: string,
+    elementId: string,
+  ): Promise<ServiceResponse<ConvertedDocumentElement[]>>
+
+  joinBorderNumbers(
+    uuid: string,
+    s3path: string,
+    elementId: string,
+  ): Promise<ServiceResponse<ConvertedDocumentElement[]>>
 }
 
 const service: AttachmentService = {
@@ -85,6 +118,83 @@ const service: AttachmentService = {
   async getAttachmentAsHtml(uuid: string, s3path: string) {
     const response = await httpClient.get<Docx2HTML>(
       `caselaw/documentunits/${uuid}/docx/${s3path}`,
+    )
+    response.error =
+      response.status >= 300
+        ? { title: errorMessages.DOCX_COULD_NOT_BE_LOADED.title }
+        : undefined
+
+    return response
+  },
+
+  async getConvertedElementList(uuid: string, s3path: string) {
+    const response = await httpClient.get<ConvertedDocumentElement[]>(
+      `caselaw/documentunits/${uuid}/docx/${s3path}/converted`,
+    )
+    response.error =
+      response.status >= 300
+        ? { title: errorMessages.DOCX_COULD_NOT_BE_LOADED.title }
+        : undefined
+
+    return response
+  },
+
+  async reconvertDocument(uuid: string, s3path: string) {
+    const response = await httpClient.get<ConvertedDocumentElement[]>(
+      `caselaw/documentunits/${uuid}/docx/${s3path}/reconvert`,
+    )
+    response.error =
+      response.status >= 300
+        ? { title: errorMessages.DOCX_COULD_NOT_BE_LOADED.title }
+        : undefined
+
+    return response
+  },
+
+  async removeBorderNumbers(uuid: string, s3path: string) {
+    const response = await httpClient.get<ConvertedDocumentElement[]>(
+      `caselaw/documentunits/${uuid}/docx/${s3path}/removebordernumbers`,
+    )
+    response.error =
+      response.status >= 300
+        ? { title: errorMessages.DOCX_COULD_NOT_BE_LOADED.title }
+        : undefined
+
+    return response
+  },
+
+  async addBorderNumbers(uuid: string, s3path: string, elementId?: string) {
+    const response = await httpClient.get<ConvertedDocumentElement[]>(
+      `caselaw/documentunits/${uuid}/docx/${s3path}/addbordernumbers` +
+        (elementId ? "?startAt=" + elementId : ""),
+    )
+    response.error =
+      response.status >= 300
+        ? { title: errorMessages.DOCX_COULD_NOT_BE_LOADED.title }
+        : undefined
+
+    return response
+  },
+
+  async removeSingleBorderNumber(
+    uuid: string,
+    s3path: string,
+    elementId: string,
+  ) {
+    const response = await httpClient.get<ConvertedDocumentElement[]>(
+      `caselaw/documentunits/${uuid}/docx/${s3path}/removebordernumber/${elementId}`,
+    )
+    response.error =
+      response.status >= 300
+        ? { title: errorMessages.DOCX_COULD_NOT_BE_LOADED.title }
+        : undefined
+
+    return response
+  },
+
+  async joinBorderNumbers(uuid: string, s3path: string, elementId: string) {
+    const response = await httpClient.get<ConvertedDocumentElement[]>(
+      `caselaw/documentunits/${uuid}/docx/${s3path}/joinbordernumbers/${elementId}`,
     )
     response.error =
       response.status >= 300

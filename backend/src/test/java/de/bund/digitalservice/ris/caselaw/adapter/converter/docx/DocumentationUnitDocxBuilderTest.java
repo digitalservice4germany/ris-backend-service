@@ -1018,7 +1018,7 @@ class DocumentationUnitDocxBuilderTest {
     paragraph.getContent().add(run);
 
     builder = builder.setParagraph(paragraph);
-    Exception exception = assertThrows(DocxConverterException.class, builder::build);
+    Exception exception = assertThrows(DocumentConverterException.class, builder::build);
 
     assertEquals("more than one graphic data in a drawing", exception.getMessage());
   }
@@ -1035,7 +1035,7 @@ class DocumentationUnitDocxBuilderTest {
     paragraph.getContent().add(run);
 
     builder = builder.setParagraph(paragraph);
-    Exception exception = assertThrows(DocxConverterException.class, builder::build);
+    Exception exception = assertThrows(DocumentConverterException.class, builder::build);
 
     assertEquals("no graphic data", exception.getMessage());
   }

@@ -1,9 +1,12 @@
 package de.bund.digitalservice.ris.caselaw.domain.docx;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-public class ParagraphElement extends TextElement {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ParagraphElement extends TextElement implements HasElementId {
   private boolean clearfix;
   private List<RunElement> runElements = new ArrayList<>();
 
@@ -29,8 +32,15 @@ public class ParagraphElement extends TextElement {
 
   @Override
   public String toHtmlString() {
+    return toHtmlString(null);
+  }
+
+  public String toHtmlString(UUID elementId) {
     StringBuilder sb = new StringBuilder("<p");
 
+    if (elementId != null) {
+      sb.append(" element-Id=\"").append(elementId).append("\"");
+    }
     if (clearfix) {
       sb.append(" class=\"clearfix\"");
     }

@@ -124,6 +124,19 @@ export const BorderNumber = Node.create({
       },
     }
   },
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      class: { default: null },
+      elementId: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("element-id"),
+        renderHTML: () => {
+          return {}
+        },
+      },
+    }
+  },
 })
 
 export const BorderNumberNumber = Node.create({

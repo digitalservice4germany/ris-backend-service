@@ -111,7 +111,7 @@ public class RunElementConverter {
   private static RunElement parseDrawing(
       ParagraphElement parent, Drawing drawing, DocxConverter converter) {
     if (drawing.getAnchorOrInline().size() != 1) {
-      throw new DocxConverterException("more than one graphic data in a drawing");
+      throw new DocumentConverterException("more than one graphic data in a drawing");
     }
 
     var drawingObject = drawing.getAnchorOrInline().get(0);
@@ -178,7 +178,7 @@ public class RunElementConverter {
     if (anchor == null
         || anchor.getGraphic() == null
         || anchor.getGraphic().getGraphicData() == null) {
-      throw new DocxConverterException("no graphic data");
+      throw new DocumentConverterException("no graphic data");
     }
 
     Dimension size = parseImageSize(anchor.getExtent());
@@ -209,7 +209,7 @@ public class RunElementConverter {
     if (inline == null
         || inline.getGraphic() == null
         || inline.getGraphic().getGraphicData() == null) {
-      throw new DocxConverterException("no graphic data");
+      throw new DocumentConverterException("no graphic data");
     }
 
     Dimension size = parseImageSize(inline.getExtent());

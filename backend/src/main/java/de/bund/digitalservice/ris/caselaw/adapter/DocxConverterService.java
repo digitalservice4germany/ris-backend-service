@@ -1,10 +1,17 @@
 package de.bund.digitalservice.ris.caselaw.adapter;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocumentConverterException;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocumentationUnitDocxListUtils;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverter;
-import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverterException;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.FooterConverter;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.ConvertedDocumentElementDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseConvertedDocumentElementRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.transformer.ConvertedDocumentElementTransformer;
+import de.bund.digitalservice.ris.caselaw.domain.ConvertedDocumentElement;
 import de.bund.digitalservice.ris.caselaw.domain.ConverterService;
+import de.bund.digitalservice.ris.caselaw.domain.docx.BorderNumber;
 import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
 import de.bund.digitalservice.ris.caselaw.domain.docx.Docx2Html;
 import de.bund.digitalservice.ris.caselaw.domain.docx.DocxImagePart;
@@ -24,6 +31,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,6 +59,7 @@ import org.docx4j.openpackaging.parts.WordprocessingML.MetafileEmfPart;
 import org.docx4j.wml.Style;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -64,15 +76,23 @@ public class DocxConverterService implements ConverterService {
   private final S3Client client;
   private final DocumentBuilderFactory documentBuilderFactory;
   private final DocxConverter converter;
+  private final DatabaseConvertedDocumentElementRepository convertedDocumentElementRepository;
+  private final ObjectMapper objectMapper;
 
   @Value("${otc.obs.bucket-name}")
   private String bucketName;
 
   public DocxConverterService(
-      S3Client client, DocumentBuilderFactory documentBuilderFactory, DocxConverter converter) {
+      S3Client client,
+      DocumentBuilderFactory documentBuilderFactory,
+      DocxConverter converter,
+      DatabaseConvertedDocumentElementRepository convertedDocumentElementRepository,
+      ObjectMapper objectMapper) {
     this.client = client;
     this.documentBuilderFactory = documentBuilderFactory;
     this.converter = converter;
+    this.convertedDocumentElementRepository = convertedDocumentElementRepository;
+    this.objectMapper = objectMapper;
   }
 
   public String getOriginalText(WordprocessingMLPackage mlPackage) {
@@ -100,7 +120,7 @@ public class DocxConverterService implements ConverterService {
         | SAXException
         | XPathExpressionException
         | ParserConfigurationException e) {
-      throw new DocxConverterException("Couldn't read all text elements of docx xml!", e);
+      throw new DocumentConverterException("Couldn't read all text elements of docx xml!", e);
     }
 
     return originalText;
@@ -119,21 +139,7 @@ public class DocxConverterService implements ConverterService {
       return null;
     }
 
-    GetObjectRequest request = GetObjectRequest.builder().bucket(bucketName).key(fileName).build();
-
-    ResponseBytes<GetObjectResponse> response =
-        client.getObject(request, ResponseTransformer.toBytes());
-
-    List<DocumentationUnitDocx> documentationUnitDocxList;
-    documentationUnitDocxList = parseAsDocumentationUnitDocxList(response.asInputStream());
-    List<DocumentationUnitDocx> packedList =
-        DocumentationUnitDocxListUtils.packList(documentationUnitDocxList);
-    List<String> ecliList =
-        packedList.stream()
-            .filter(ECLIElement.class::isInstance)
-            .map(ECLIElement.class::cast)
-            .map(ECLIElement::getText)
-            .toList();
+    List<DocumentationUnitDocx> packedList = convertDocx(fileName);
 
     String content = null;
     if (!packedList.isEmpty()) {
@@ -143,6 +149,13 @@ public class DocxConverterService implements ConverterService {
               .collect(Collectors.joining());
     }
 
+    List<String> ecliList =
+        packedList.stream()
+            .filter(ECLIElement.class::isInstance)
+            .map(ECLIElement.class::cast)
+            .map(ECLIElement::getText)
+            .toList();
+
     Map<DocxMetadataProperty, String> properties =
         packedList.stream()
             .filter(MetadataProperty.class::isInstance)
@@ -150,6 +163,241 @@ public class DocxConverterService implements ConverterService {
             .collect(Collectors.toMap(MetadataProperty::getKey, MetadataProperty::getValue));
 
     return new Docx2Html(content, ecliList, properties);
+  }
+
+  @Override
+  public List<ConvertedDocumentElement> getConvertedObjectList(
+      UUID documentationUnitId, String fileName) throws DocumentConverterException {
+
+    if (fileName == null) {
+      return Collections.emptyList();
+    }
+
+    List<ConvertedDocumentElementDTO> convertedDocumentElements =
+        convertedDocumentElementRepository.findAllByDocumentationUnitIdOrderByRank(
+            documentationUnitId);
+
+    if (convertedDocumentElements.isEmpty()) {
+      List<DocumentationUnitDocx> elements = convertDocx(fileName);
+      convertedDocumentElements = convertDocument(documentationUnitId, elements);
+    }
+
+    return convertedDocumentElements.stream()
+        .map(dto -> ConvertedDocumentElementTransformer.transformDTO(objectMapper, dto))
+        .toList();
+  }
+
+  @Override
+  @Transactional
+  public List<ConvertedDocumentElement> getReconvertObjectList(
+      UUID documentationUnitId, String fileName) throws DocumentConverterException {
+
+    if (fileName == null) {
+      return Collections.emptyList();
+    }
+
+    convertedDocumentElementRepository.deleteAllByDocumentationUnitId(documentationUnitId);
+
+    List<DocumentationUnitDocx> elements = convertDocx(fileName);
+
+    return convertDocument(documentationUnitId, elements).stream()
+        .map(dto -> ConvertedDocumentElementTransformer.transformDTO(objectMapper, dto))
+        .toList();
+  }
+
+  @Override
+  @Transactional
+  public List<ConvertedDocumentElement> removeBorderNumbers(
+      UUID documentationUnitId, String fileName) {
+    List<ConvertedDocumentElementDTO> convertedDocumentElements =
+        convertedDocumentElementRepository.findAllByDocumentationUnitIdOrderByRank(
+            documentationUnitId);
+
+    List<DocumentationUnitDocx> elementsWithoutBorderNumbers = new ArrayList<>();
+    convertedDocumentElements.forEach(
+        convertedDocumentElementDTO -> {
+          DocumentationUnitDocx contentObject =
+              ConvertedDocumentElementTransformer.getContentObject(
+                  objectMapper, convertedDocumentElementDTO);
+          if (contentObject instanceof BorderNumber borderNumber) {
+            elementsWithoutBorderNumbers.addAll(borderNumber.getChildren());
+          } else {
+            elementsWithoutBorderNumbers.add(contentObject);
+          }
+        });
+
+    convertedDocumentElementRepository.deleteAllByDocumentationUnitId(documentationUnitId);
+    return convertDocument(documentationUnitId, elementsWithoutBorderNumbers).stream()
+        .map(dto -> ConvertedDocumentElementTransformer.transformDTO(objectMapper, dto))
+        .toList();
+  }
+
+  @Override
+  @Transactional
+  public List<ConvertedDocumentElement> addBorderNumbers(
+      UUID documentationUnitId, String fileName, UUID startId) {
+    List<ConvertedDocumentElementDTO> convertedDocumentElements =
+        convertedDocumentElementRepository.findAllByDocumentationUnitIdOrderByRank(
+            documentationUnitId);
+
+    AtomicLong borderNumberValue = new AtomicLong(1);
+    AtomicBoolean startBorderNumbers = new AtomicBoolean(true);
+    if (startId != null) {
+      startBorderNumbers.set(false);
+    }
+    AtomicReference<BorderNumber> lastBorderNumber = new AtomicReference<>(null);
+
+    List<DocumentationUnitDocx> newConvertedElementList = new ArrayList<>();
+    convertedDocumentElements.forEach(
+        convertedDocumentElementDTO -> {
+          DocumentationUnitDocx contentObject =
+              ConvertedDocumentElementTransformer.getContentObject(
+                  objectMapper, convertedDocumentElementDTO);
+          if (convertedDocumentElementDTO.getId().equals(startId)) {
+            startBorderNumbers.set(true);
+          }
+          if (startBorderNumbers.get()
+              && contentObject instanceof ParagraphElement paragraphElement) {
+            if (paragraphElement.getText().isBlank() && lastBorderNumber.get() != null) {
+              lastBorderNumber.get().addChild(paragraphElement);
+            } else {
+              BorderNumber borderNumber = new BorderNumber();
+              borderNumber.addNumberText(String.valueOf(borderNumberValue.getAndIncrement()));
+              borderNumber.addChild(paragraphElement);
+              lastBorderNumber.set(borderNumber);
+              newConvertedElementList.add(borderNumber);
+            }
+          } else {
+            newConvertedElementList.add(contentObject);
+          }
+        });
+
+    convertedDocumentElementRepository.deleteAllByDocumentationUnitId(documentationUnitId);
+    return convertDocument(documentationUnitId, newConvertedElementList).stream()
+        .map(dto -> ConvertedDocumentElementTransformer.transformDTO(objectMapper, dto))
+        .toList();
+  }
+
+  @Override
+  @Transactional
+  public List<ConvertedDocumentElement> removeBorderNumber(
+      UUID documentationUnitId, String fileName, UUID elementId) {
+    List<ConvertedDocumentElementDTO> convertedDocumentElements =
+        convertedDocumentElementRepository.findAllByDocumentationUnitIdOrderByRank(
+            documentationUnitId);
+
+    AtomicLong borderNumberValue = new AtomicLong(1);
+
+    List<DocumentationUnitDocx> newConvertedElementList = new ArrayList<>();
+    convertedDocumentElements.forEach(
+        convertedDocumentElementDTO -> {
+          DocumentationUnitDocx contentObject =
+              ConvertedDocumentElementTransformer.getContentObject(
+                  objectMapper, convertedDocumentElementDTO);
+          if (contentObject instanceof BorderNumber borderNumber) {
+            if (convertedDocumentElementDTO.getId().equals(elementId)) {
+              newConvertedElementList.addAll(borderNumber.getChildren());
+            } else {
+              borderNumber.setNumberText(String.valueOf(borderNumberValue.getAndIncrement()));
+              newConvertedElementList.add(borderNumber);
+            }
+          } else {
+            newConvertedElementList.add(contentObject);
+          }
+        });
+
+    convertedDocumentElementRepository.deleteAllByDocumentationUnitId(documentationUnitId);
+    return convertDocument(documentationUnitId, newConvertedElementList).stream()
+        .map(dto -> ConvertedDocumentElementTransformer.transformDTO(objectMapper, dto))
+        .toList();
+  }
+
+  @Override
+  @Transactional
+  public List<ConvertedDocumentElement> joinBorderNumbers(
+      UUID documentationUnitId, String fileName, UUID elementId) {
+    List<ConvertedDocumentElementDTO> convertedDocumentElements =
+        convertedDocumentElementRepository.findAllByDocumentationUnitIdOrderByRank(
+            documentationUnitId);
+
+    AtomicLong borderNumberValue = new AtomicLong(1);
+    AtomicReference<BorderNumber> lastBorderNumber = new AtomicReference<>(null);
+
+    List<DocumentationUnitDocx> newConvertedElementList = new ArrayList<>();
+    convertedDocumentElements.forEach(
+        convertedDocumentElementDTO -> {
+          DocumentationUnitDocx contentObject =
+              ConvertedDocumentElementTransformer.getContentObject(
+                  objectMapper, convertedDocumentElementDTO);
+          if (contentObject instanceof BorderNumber borderNumber) {
+            if (convertedDocumentElementDTO.getId().equals(elementId)) {
+              if (lastBorderNumber.get() != null) {
+                lastBorderNumber.get().getChildren().addAll(borderNumber.getChildren());
+              } else {
+                newConvertedElementList.addAll(borderNumber.getChildren());
+              }
+            } else {
+              borderNumber.setNumberText(String.valueOf(borderNumberValue.getAndIncrement()));
+              newConvertedElementList.add(borderNumber);
+              lastBorderNumber.set(borderNumber);
+            }
+          } else {
+            newConvertedElementList.add(contentObject);
+          }
+        });
+
+    convertedDocumentElementRepository.deleteAllByDocumentationUnitId(documentationUnitId);
+    return convertDocument(documentationUnitId, newConvertedElementList).stream()
+        .map(dto -> ConvertedDocumentElementTransformer.transformDTO(objectMapper, dto))
+        .toList();
+  }
+
+  private List<ConvertedDocumentElementDTO> convertDocument(
+      UUID documentationUnitId, List<DocumentationUnitDocx> elements)
+      throws DocumentConverterException {
+
+    AtomicLong rank = new AtomicLong(1L);
+    List<ConvertedDocumentElementDTO> dtoList = new ArrayList<>();
+
+    elements.forEach(
+        documentationUnitDocx -> {
+          ConvertedDocumentElementDTO convertedDocumentElementDTO;
+          try {
+            convertedDocumentElementDTO =
+                ConvertedDocumentElementDTO.builder()
+                    .documentationUnitId(documentationUnitId)
+                    .content(objectMapper.writeValueAsString(documentationUnitDocx))
+                    .rank(rank.getAndIncrement())
+                    .build();
+          } catch (JsonProcessingException e) {
+            throw new DocumentConverterException(
+                "Couldn't persist "
+                    + rank.get()
+                    + ". element "
+                    + "for documentation unit '"
+                    + documentationUnitId
+                    + "'",
+                e);
+          }
+          dtoList.add(convertedDocumentElementDTO);
+        });
+
+    return convertedDocumentElementRepository.saveAll(dtoList);
+  }
+
+  private List<DocumentationUnitDocx> convertDocx(String fileName) {
+    if (fileName == null) {
+      return Collections.emptyList();
+    }
+
+    GetObjectRequest request = GetObjectRequest.builder().bucket(bucketName).key(fileName).build();
+
+    ResponseBytes<GetObjectResponse> response =
+        client.getObject(request, ResponseTransformer.toBytes());
+
+    List<DocumentationUnitDocx> documentationUnitDocxList;
+    documentationUnitDocxList = parseAsDocumentationUnitDocxList(response.asInputStream());
+    return DocumentationUnitDocxListUtils.packList(documentationUnitDocxList);
   }
 
   /**
@@ -168,7 +416,7 @@ public class DocxConverterService implements ConverterService {
     try {
       mlPackage = WordprocessingMLPackage.load(inputStream);
     } catch (Docx4JException e) {
-      throw new DocxConverterException("Couldn't load docx file!", e);
+      throw new DocumentConverterException("Couldn't load docx file!", e);
     }
 
     converter.setStyles(readStyles(mlPackage));
@@ -389,7 +637,7 @@ public class DocxConverterService implements ConverterService {
                                 relationship.getId(),
                                 new DocxImagePart(pngPart.getContentType(), pngPart.getBytes())));
               } else if (part instanceof BinaryPartAbstractImage imagePart) {
-                throw new DocxConverterException(
+                throw new DocumentConverterException(
                     "unknown image file format: " + imagePart.getClass().getName());
               }
             });

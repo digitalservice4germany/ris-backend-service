@@ -3,6 +3,8 @@ package de.bund.digitalservice.ris.caselaw.domain.docx;
 public class RunTextElement extends TextElement implements RunElement {
   private String text;
 
+  public RunTextElement() {}
+
   public String getText() {
     return text;
   }

@@ -47,6 +47,13 @@ export const CustomParagraph = Paragraph.extend({
           return {}
         },
       },
+      elementId: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("element-id"),
+        renderHTML: () => {
+          return {}
+        },
+      },
     }
   },
 })

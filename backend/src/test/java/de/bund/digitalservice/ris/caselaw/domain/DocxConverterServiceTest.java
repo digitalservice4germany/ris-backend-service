@@ -11,8 +11,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import de.bund.digitalservice.ris.caselaw.adapter.DocxConverterService;
+import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocumentConverterException;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverter;
-import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverterException;
 import de.bund.digitalservice.ris.caselaw.config.ConverterConfig;
 import de.bund.digitalservice.ris.caselaw.domain.docx.BorderNumber;
 import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
@@ -138,7 +138,7 @@ class DocxConverterServiceTest {
             () -> {
               service.getOriginalText(mlPackage);
             })
-        .isInstanceOf(DocxConverterException.class)
+        .isInstanceOf(DocumentConverterException.class)
         .hasMessageContaining("Couldn't read all text elements of docx xml!");
   }
 
@@ -1240,7 +1240,7 @@ class DocxConverterServiceTest {
 
       // TODO throwable.getMessage().equals("Couldn't load docx file!"))
       Assertions.assertThrows(
-          DocxConverterException.class, () -> service.getConvertedObject("test.docx"));
+          DocumentConverterException.class, () -> service.getConvertedObject("test.docx"));
     }
   }
 
