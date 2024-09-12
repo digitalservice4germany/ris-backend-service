@@ -4,6 +4,13 @@
         <include resource="org/springframework/boot/logging/logback/base.xml"/>
         <logger name="de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService" level="DEBUG" />
         <logger name="de.bund.digitalservice.ris.caselaw.adapter.DatabasePatchMapperService" level="DEBUG" />
+
+        <appender name="OpenSearch" class="de.bund.digitalservice.ris.caselaw.adapter.OpenSearchAppender" />
+
+        <root level="INFO">
+            <appender-ref ref="OpenSearch" />
+        </root>
+
     </springProfile>
     <springProfile name="staging,production,uat">
         <include resource="org/springframework/boot/logging/logback/base.xml"/>
