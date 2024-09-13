@@ -293,23 +293,25 @@ getConvertedElementList()
 
 <template>
   <div id="converted-document">
-    <div class="top-60 z-4 sticky">
-      <TextButton label="reconvert document" @click="handleReconvertDocument" />
+    <div
+      class="z-4 sticky top-64 z-10 flex flex-row flex-wrap justify-center gap-10 bg-blue-100 p-8"
+    >
       <TextButton
-        label="remove border numbers"
-        @click="handleRemoveBorderNumbers"
+        label="Ausgangszustand wiederherstellen"
+        @click="handleReconvertDocument"
       />
-      <TextButton label="add border numbers" @click="handleAddBorderNumbers" />
+      <TextButton label="Alle entfernen" @click="handleRemoveBorderNumbers" />
+      <TextButton label="Alle hinzufügen" @click="handleAddBorderNumbers" />
       <TextButton
-        label="add border numbers starts at cursor"
+        label="Ab Cursor hinzufügen"
         @click="handleAddBorderNumbersWithStart"
       />
       <TextButton
-        label="remove single border number"
+        label="Einzelne entfernen"
         @click="handleRemoveSingleBorderNumber"
       />
       <TextButton
-        label="join border number with above"
+        label="Mit Randnummer darüber vereinigen"
         @click="handleJoinBorderNumberWithAbove"
       />
     </div>
