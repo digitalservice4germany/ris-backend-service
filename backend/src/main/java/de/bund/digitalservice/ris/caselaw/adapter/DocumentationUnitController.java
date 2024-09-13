@@ -378,11 +378,8 @@ public class DocumentationUnitController {
   public ResponseEntity<List<ConvertedDocumentElement>> getConvertedDocx(
       @PathVariable UUID id, @PathVariable String s3Path) {
 
-    if (service.getByUuid(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     try {
+      service.getByUuid(id);
       return ResponseEntity.ok(converterService.getConvertedObjectList(id, s3Path));
     } catch (DocumentConverterException ex) {
       log.error(
@@ -392,6 +389,9 @@ public class DocumentationUnitController {
           id,
           ex);
       return ResponseEntity.internalServerError().build();
+    } catch (DocumentationUnitNotExistsException ex) {
+      log.error("document unit '{}' does not exist", id);
+      return ResponseEntity.internalServerError().build();
     }
   }
 
@@ -400,11 +400,8 @@ public class DocumentationUnitController {
   public ResponseEntity<List<ConvertedDocumentElement>> getReconvertDocx(
       @PathVariable UUID id, @PathVariable String s3Path) {
 
-    if (service.getByUuid(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     try {
+      service.getByUuid(id);
       return ResponseEntity.ok(converterService.getReconvertObjectList(id, s3Path));
     } catch (DocumentConverterException ex) {
       log.error(
@@ -413,6 +410,9 @@ public class DocumentationUnitController {
           s3Path,
           id,
           ex);
+      return ResponseEntity.internalServerError().build();
+    } catch (DocumentationUnitNotExistsException ex) {
+      log.error("document unit '{}' does not exist", id);
       return ResponseEntity.internalServerError().build();
     }
   }
@@ -424,11 +424,8 @@ public class DocumentationUnitController {
   public ResponseEntity<List<ConvertedDocumentElement>> removeBorderNumbers(
       @PathVariable UUID id, @PathVariable String s3Path) {
 
-    if (service.getByUuid(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     try {
+      service.getByUuid(id);
       return ResponseEntity.ok(converterService.removeBorderNumbers(id, s3Path));
     } catch (DocumentConverterException ex) {
       log.error(
@@ -437,6 +434,9 @@ public class DocumentationUnitController {
           s3Path,
           id,
           ex);
+      return ResponseEntity.internalServerError().build();
+    } catch (DocumentationUnitNotExistsException ex) {
+      log.error("document unit '{}' does not exist", id);
       return ResponseEntity.internalServerError().build();
     }
   }
@@ -450,11 +450,8 @@ public class DocumentationUnitController {
       @PathVariable String s3Path,
       @RequestParam(value = "startAt", required = false) UUID startId) {
 
-    if (service.getByUuid(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     try {
+      service.getByUuid(id);
       return ResponseEntity.ok(converterService.addBorderNumbers(id, s3Path, startId));
     } catch (DocumentConverterException ex) {
       log.error(
@@ -463,6 +460,9 @@ public class DocumentationUnitController {
           s3Path,
           id,
           ex);
+      return ResponseEntity.internalServerError().build();
+    } catch (DocumentationUnitNotExistsException ex) {
+      log.error("document unit '{}' does not exist", id);
       return ResponseEntity.internalServerError().build();
     }
   }
@@ -474,11 +474,8 @@ public class DocumentationUnitController {
   public ResponseEntity<List<ConvertedDocumentElement>> removeBorderNumber(
       @PathVariable UUID id, @PathVariable String s3Path, @PathVariable UUID elementId) {
 
-    if (service.getByUuid(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     try {
+      service.getByUuid(id);
       return ResponseEntity.ok(converterService.removeBorderNumber(id, s3Path, elementId));
     } catch (DocumentConverterException ex) {
       log.error(
@@ -487,6 +484,9 @@ public class DocumentationUnitController {
           s3Path,
           id,
           ex);
+      return ResponseEntity.internalServerError().build();
+    } catch (DocumentationUnitNotExistsException ex) {
+      log.error("document unit '{}' does not exist", id);
       return ResponseEntity.internalServerError().build();
     }
   }
@@ -498,11 +498,8 @@ public class DocumentationUnitController {
   public ResponseEntity<List<ConvertedDocumentElement>> joinBorderNumbers(
       @PathVariable UUID id, @PathVariable String s3Path, @PathVariable UUID elementId) {
 
-    if (service.getByUuid(id) == null) {
-      return ResponseEntity.notFound().build();
-    }
-
     try {
+      service.getByUuid(id);
       return ResponseEntity.ok(converterService.joinBorderNumbers(id, s3Path, elementId));
     } catch (DocumentConverterException ex) {
       log.error(
@@ -511,6 +508,9 @@ public class DocumentationUnitController {
           s3Path,
           id,
           ex);
+      return ResponseEntity.internalServerError().build();
+    } catch (DocumentationUnitNotExistsException ex) {
+      log.error("document unit '{}' does not exist", id);
       return ResponseEntity.internalServerError().build();
     }
   }
