@@ -23,6 +23,7 @@ describe("text editor toolbar", async () => {
     await flushPromises()
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   global.ResizeObserver = require("resize-observer-polyfill")
   const router = createRouter({
     history: createWebHistory(),

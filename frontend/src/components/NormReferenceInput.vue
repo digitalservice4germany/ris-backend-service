@@ -149,7 +149,7 @@ function cancelEdit() {
  */
 function updateFormatValidation(
   validationError: ValidationError | undefined,
-  field: string,
+  field?: string,
 ) {
   if (validationError) {
     validationStore.add(
@@ -219,7 +219,7 @@ watch(
         norm-abbreviation="normAbbreviation.abbreviation"
         @remove-entry="removeSingleNormEntry(index)"
         @update:validation-error="
-          (validationError: ValidationError | undefined, field: string) =>
+          (validationError: ValidationError | undefined, field?: string) =>
             updateFormatValidation(validationError, field)
         "
       />

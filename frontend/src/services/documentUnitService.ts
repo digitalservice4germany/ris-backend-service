@@ -3,7 +3,7 @@ import httpClient, {
   FailedValidationServerResponse,
 } from "./httpClient"
 import { DocumentUnitSearchParameter } from "@/components/DocumentUnitSearchEntryForm.vue"
-import { PageableService, Page } from "@/components/Pagination.vue"
+import { Page } from "@/components/Pagination.vue"
 import DocumentUnit from "@/domain/documentUnit"
 import DocumentUnitListEntry from "@/domain/documentUnitListEntry"
 import RelatedDocumentation from "@/domain/relatedDocumentation"
@@ -25,10 +25,10 @@ interface DocumentUnitService {
 
   delete(documentUnitUuid: string): Promise<ServiceResponse<unknown>>
 
-  searchByRelatedDocumentation: PageableService<
-    RelatedDocumentation,
-    RelatedDocumentation
-  >
+  searchByRelatedDocumentation(
+    query: RelatedDocumentation,
+    requestParams?: { [key: string]: string } | undefined,
+  ): Promise<ServiceResponse<Page<RelatedDocumentation>>>
 
   searchByDocumentUnitSearchInput(
     requestParams?: { [key: string]: string } | undefined,
@@ -124,20 +124,16 @@ const service: DocumentUnitService = {
   },
 
   async searchByRelatedDocumentation(
-    page: number,
-    size: number,
-    query = new RelatedDocumentation(),
+    query: RelatedDocumentation = new RelatedDocumentation(),
+    requestParams: { [K in DocumentUnitSearchParameter]?: string } = {},
   ) {
-    const urlParams = window.location.pathname.split("/")
-    const documentNumberToExclude =
-      urlParams[urlParams.indexOf("documentunit") + 1]
-
     const response = await httpClient.put<
       RelatedDocumentation,
       Page<RelatedDocumentation>
     >(
-      `caselaw/documentunits/${documentNumberToExclude}/search-linkable-documentation-units?pg=${page}&sz=${size}`,
+      `caselaw/documentunits/search-linkable-documentation-units`,
       {
+        params: requestParams,
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",

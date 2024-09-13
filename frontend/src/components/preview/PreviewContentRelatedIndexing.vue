@@ -42,6 +42,13 @@ const hasActiveCitations = computed(() => {
     contentRelatedIndexing.value.activeCitations?.length > 0
   )
 })
+
+const hasJobProfiles = computed(() => {
+  return (
+    contentRelatedIndexing.value.jobProfiles &&
+    contentRelatedIndexing.value.jobProfiles?.length > 0
+  )
+})
 </script>
 
 <template>
@@ -107,6 +114,17 @@ const hasActiveCitations = computed(() => {
           :key="index"
         >
           {{ activeCitation.renderDecision }}
+        </div>
+      </PreviewContent>
+    </PreviewRow>
+    <PreviewRow v-if="hasJobProfiles">
+      <PreviewCategory>Berufsbild</PreviewCategory>
+      <PreviewContent>
+        <div
+          v-for="(jobProfile, index) in contentRelatedIndexing.jobProfiles"
+          :key="index"
+        >
+          {{ jobProfile }}
         </div>
       </PreviewContent>
     </PreviewRow>

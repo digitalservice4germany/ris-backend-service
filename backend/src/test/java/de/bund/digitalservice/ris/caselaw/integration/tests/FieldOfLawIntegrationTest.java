@@ -16,6 +16,7 @@ import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.fieldoflaw.FieldOfLaw;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
@@ -71,8 +72,8 @@ class FieldOfLawIntegrationTest {
   @MockBean private UserService userService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private DocumentationUnitService service;
-
   @MockBean private HandoverService handoverService;
+  @MockBean private ProcedureService procedureService;
 
   @MockBean
   private DocumentationUnitDocxMetadataInitializationService

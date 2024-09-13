@@ -1,11 +1,12 @@
 package de.bund.digitalservice.ris.caselaw.domain;
 
+import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.repository.NoRepositoryBean;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
 /** Domain repository for documentation units */
 @NoRepositoryBean
@@ -17,7 +18,8 @@ public interface DocumentationUnitRepository {
    * @param documentNumber the document number
    * @return the documentation unit found
    */
-  Optional<DocumentationUnit> findByDocumentNumber(String documentNumber);
+  DocumentationUnit findByDocumentNumber(String documentNumber)
+      throws DocumentationUnitNotExistsException;
 
   /**
    * Find a documentation unit by its UUID
@@ -25,7 +27,7 @@ public interface DocumentationUnitRepository {
    * @param uuid the UUID to search for
    * @return the documentation unit found
    */
-  Optional<DocumentationUnit> findByUuid(UUID uuid);
+  DocumentationUnit findByUuid(UUID uuid) throws DocumentationUnitNotExistsException;
 
   /**
    * Create a new documentation unit with the given document number and documentation office
@@ -92,14 +94,12 @@ public interface DocumentationUnitRepository {
    * Search for documentation units with given search parameters
    *
    * @param pageable the pageable to use for the search
-   * @param documentationOffice the documentation office of the current user
+   * @param oidcUser current user via openid connect system
    * @param searchInput the search parameters
    * @return the search result containing the documentation units found
    */
   Slice<DocumentationUnitListItem> searchByDocumentationUnitSearchInput(
-      Pageable pageable,
-      DocumentationOffice documentationOffice,
-      DocumentationUnitSearchInput searchInput);
+      Pageable pageable, OidcUser oidcUser, DocumentationUnitSearchInput searchInput);
 
   /**
    * Find existing links to a documentation unit with a given id. This can be used to check if a

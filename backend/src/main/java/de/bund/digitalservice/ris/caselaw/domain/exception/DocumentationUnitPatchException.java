@@ -7,6 +7,6 @@ package de.bund.digitalservice.ris.caselaw.domain.exception;
 public class DocumentationUnitPatchException extends RuntimeException {
 
   public DocumentationUnitPatchException(String message, Exception cause) {
-    super(message, cause);
+    super(message + ": " + cause.getMessage(), cause);
   }
 }

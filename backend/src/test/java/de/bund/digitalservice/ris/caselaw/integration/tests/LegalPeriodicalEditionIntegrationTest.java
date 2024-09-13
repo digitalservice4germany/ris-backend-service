@@ -1,7 +1,7 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDefaultDocOffice;
-import static org.junit.Assert.assertFalse;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDSDocOffice;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD;
@@ -10,7 +10,6 @@ import de.bund.digitalservice.ris.caselaw.TestConfig;
 import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.LegalPeriodicalEditionController;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationOfficeRepository;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationOfficeDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresFieldOfLawRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresLegalPeriodicalEditionRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresLegalPeriodicalRepositoryImpl;
@@ -19,10 +18,12 @@ import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalEdition;
 import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalEditionRepository;
 import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalEditionService;
 import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalRepository;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
 import java.util.Arrays;
@@ -80,17 +81,15 @@ class LegalPeriodicalEditionIntegrationTest {
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private DocumentationUnitService service;
   @MockBean private DatabaseDocumentationOfficeRepository documentationOfficeRepository;
+  @MockBean private ProcedureService procedureService;
 
-  private static final UUID TEST_UUID = UUID.randomUUID();
-  private final String EDITION_ENDPOINT = "/api/v1/caselaw/legalperiodicaledition";
-  private final DocumentationOffice docOffice = buildDefaultDocOffice();
-  private DocumentationOfficeDTO documentationOfficeDTO;
+  @MockBean private HandoverService handoverService;
+
+  private static final String EDITION_ENDPOINT = "/api/v1/caselaw/legalperiodicaledition";
+  private final DocumentationOffice docOffice = buildDSDocOffice();
 
   @BeforeEach
   void setUp() {
-    documentationOfficeDTO =
-        documentationOfficeRepository.findByAbbreviation(docOffice.abbreviation());
-
     when(userService.getDocumentationOffice(any())).thenReturn(docOffice);
   }
 
@@ -119,10 +118,7 @@ class LegalPeriodicalEditionIntegrationTest {
                 risWebTestClient
                     .withDefaultLogin()
                     .get()
-                    .uri(
-                        EDITION_ENDPOINT
-                            + "?legal_periodical_id="
-                            + legalPeriodical.legalPeriodicalId())
+                    .uri(EDITION_ENDPOINT + "?legal_periodical_id=" + legalPeriodical.uuid())
                     .exchange()
                     .expectStatus()
                     .isOk()
@@ -131,8 +127,8 @@ class LegalPeriodicalEditionIntegrationTest {
                     .getResponseBody())
             .toList();
 
-    assertFalse("List should not be empty", editionList.isEmpty());
-    Assertions.assertEquals(editionList.get(0).name(), "2024 Sonderheft 1");
+    Assertions.assertFalse(editionList.isEmpty(), "List should not be empty");
+    Assertions.assertEquals("2024 Sonderheft 1", editionList.get(0).name());
   }
 
   @Test
@@ -155,6 +151,8 @@ class LegalPeriodicalEditionIntegrationTest {
                 .suffix("- Sonderheft 1")
                 .build());
 
+    Assertions.assertNotNull(saved.createdAt());
+
     var result =
         risWebTestClient
             .withDefaultLogin()
@@ -166,5 +164,28 @@ class LegalPeriodicalEditionIntegrationTest {
             .getResponseBody();
 
     Assertions.assertEquals(saved, result);
+  }
+
+  @Test
+  void testDeleteEditionWithoutReferences() {
+    var legalPeriodical =
+        legalPeriodicalRepository.findAllBySearchStr(Optional.of("ABC")).stream()
+            .findAny()
+            .orElseThrow(
+                () ->
+                    new NoSuchElementException(
+                        "Legal periodical not found, check legal_periodical_init.sql"));
+
+    var legalPeriodicalEdition =
+        LegalPeriodicalEdition.builder()
+            .id(UUID.randomUUID())
+            .legalPeriodical(legalPeriodical)
+            .prefix("2024, ")
+            .build();
+    legalPeriodicalEdition = repository.save(legalPeriodicalEdition);
+    assertThat(repository.findAllByLegalPeriodicalId(legalPeriodical.uuid())).hasSize(1);
+    repository.delete(legalPeriodicalEdition);
+
+    assertThat(repository.findAllByLegalPeriodicalId(legalPeriodical.uuid())).isEmpty();
   }
 }

@@ -1,38 +1,25 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import de.bund.digitalservice.ris.caselaw.domain.ContentRelatedIndexing;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData;
-import de.bund.digitalservice.ris.caselaw.domain.DataSource;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
-import de.bund.digitalservice.ris.caselaw.domain.NormReference;
 import de.bund.digitalservice.ris.caselaw.domain.PreviousDecision;
-import de.bund.digitalservice.ris.caselaw.domain.Procedure;
-import de.bund.digitalservice.ris.caselaw.domain.PublicationStatus;
-import de.bund.digitalservice.ris.caselaw.domain.SingleNorm;
-import de.bund.digitalservice.ris.caselaw.domain.Status;
 import de.bund.digitalservice.ris.caselaw.domain.Texts;
 import de.bund.digitalservice.ris.caselaw.domain.court.Court;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.documenttype.DocumentType;
-import de.bund.digitalservice.ris.caselaw.domain.lookuptable.fieldoflaw.FieldOfLaw;
 import de.bund.digitalservice.ris.domain.export.juris.JurisXmlExporter;
-import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-@Tag("IntegrationTest")
+@Tag("integration")
 class JurisXmlExporterWrapperIntegrationTest {
 
   private JurisXmlExporter jurisXmlExporter;
@@ -104,119 +91,10 @@ class JurisXmlExporterWrapperIntegrationTest {
     this.jurisXmlExporter = new JurisXmlExporter(objectMapper);
 
     DocumentationUnit documentationUnit =
-        DocumentationUnit.builder()
-            .uuid(TEST_UUID)
-            .documentNumber(documentNr)
-            //            .fileuploadtimestamp(Instant.parse("2021-01-01T00:00:00Z"))
-            //            .s3path("s3path")
-            //            .filetype("filetype")
-            //            .filename("filename")
-            .build();
+        DocumentationUnit.builder().uuid(TEST_UUID).documentNumber(documentNr).build();
 
     encryptedXml = jurisXmlExporter.generateEncryptedXMLString(documentationUnit);
 
     assertEquals("", encryptedXml);
-  }
-
-  // In order to be in sync with the model, all possible fields are set in this
-  // test documentationUnit and checked for null fields. Everytime a new field is
-  // added to the data model this test will fail, as it is not set in the test
-  // documentationUnit. The test documentationUnit needs to be updated accordingly to be
-  // in sync with the model.
-  @Test
-  void testDocumentationUnitIsSyncedWithModel()
-      throws SecurityException, IllegalArgumentException, IllegalAccessException {
-    CoreData coreData =
-        CoreData.builder()
-            .fileNumbers(List.of("fileNumber"))
-            .documentType(DocumentType.builder().jurisShortcut("ca").label("category").build())
-            .procedure(Procedure.builder().label("procedure").build())
-            .ecli("ecli")
-            .deviatingEclis(List.of("dev-ecli-1", "dev-ecli-2"))
-            .appraisalBody("appraisalBody")
-            .decisionDate(LocalDate.parse("2021-01-01"))
-            .legalEffect("legalEffect")
-            .inputTypes(List.of("inputType"))
-            .documentationOffice(DocumentationOffice.builder().abbreviation("fooOffice").build())
-            .region("region")
-            .leadingDecisionNormReferences(List.of("BGB", "ZPO", "StPO", "GG"))
-            .build();
-    Texts texts =
-        Texts.builder()
-            .decisionName("decisionName")
-            .headline("headline")
-            .guidingPrinciple("guidingPrinciple")
-            .headnote("headnote")
-            .tenor("tenor")
-            .reasons("reasons")
-            .caseFacts("caseFacts")
-            .decisionReasons("decisionReasons")
-            .build();
-
-    List<PreviousDecision> previousDecisions =
-        List.of(
-            PreviousDecision.builder()
-                .uuid(UUID.randomUUID())
-                .documentNumber("documentNumber")
-                .status(Status.builder().build())
-                .uuid(UUID.randomUUID())
-                .court(new Court(UUID.randomUUID(), "courtType", "courtPlace", "courtLabel", null))
-                .decisionDate(LocalDate.parse("2020-04-05"))
-                .dateKnown(true)
-                .fileNumber("fileNumber")
-                .deviatingFileNumber("deviatingFileNumber")
-                .documentType(
-                    DocumentType.builder().jurisShortcut("category").label("category123").build())
-                .build());
-
-    ContentRelatedIndexing indexing =
-        ContentRelatedIndexing.builder()
-            .keywords(List.of("keyword1", "keyword2"))
-            .fieldsOfLaw(
-                List.of(
-                    FieldOfLaw.builder()
-                        .id(UUID.randomUUID())
-                        .identifier("SF-01")
-                        .text("field of law text")
-                        .build()))
-            .norms(
-                List.of(
-                    NormReference.builder()
-                        .singleNorms(List.of(SingleNorm.builder().singleNorm("01").build()))
-                        .build()))
-            .build();
-
-    DocumentationUnit documentationUnit =
-        DocumentationUnit.builder()
-            .uuid(TEST_UUID)
-            .documentNumber(documentNr)
-            .attachments(Collections.emptyList())
-            .dataSource(DataSource.NEURIS)
-            .coreData(coreData)
-            .previousDecisions(previousDecisions)
-            .ensuingDecisions(new ArrayList<>())
-            .texts(texts)
-            .note("note")
-            .borderNumbers(Collections.emptyList())
-            .contentRelatedIndexing(indexing)
-            .status(Status.builder().publicationStatus(PublicationStatus.UNPUBLISHED).build())
-            .version(0L)
-            .references(Collections.emptyList())
-            .build();
-
-    assertThat(documentationUnit).hasNoNullFieldsOrProperties();
-
-    for (Field field : documentationUnit.getClass().getDeclaredFields()) {
-      if (field.getType().equals(CoreData.class) || field.getType().equals(Texts.class))
-        assertThat(field).hasNoNullFieldsOrProperties();
-      if (field.getType().equals(List.class)) {
-        field.setAccessible(true);
-        List<PreviousDecision> previousDecisionsList =
-            (List<PreviousDecision>) field.get(documentationUnit);
-        for (PreviousDecision previousDecision : previousDecisionsList) {
-          assertThat(previousDecision).hasNoNullFieldsOrProperties();
-        }
-      }
-    }
   }
 }

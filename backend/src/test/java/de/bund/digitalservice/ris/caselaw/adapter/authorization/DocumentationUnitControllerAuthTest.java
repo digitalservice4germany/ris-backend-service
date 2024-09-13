@@ -1,6 +1,7 @@
 package de.bund.digitalservice.ris.caselaw.adapter.authorization;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildBGHDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildCCRisDocOffice;
 import static de.bund.digitalservice.ris.caselaw.AuthUtils.setUpDocumentationOfficeMocks;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.PUBLISHED;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.UNPUBLISHED;
@@ -22,7 +23,9 @@ import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.HandoverEntityType;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
 import de.bund.digitalservice.ris.caselaw.domain.docx.Docx2Html;
 import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException;
@@ -64,12 +67,13 @@ class DocumentationUnitControllerAuthTest {
   @MockBean DatabaseApiKeyRepository apiKeyRepository;
   @MockBean DatabaseDocumentationOfficeRepository officeRepository;
   @MockBean PatchMapperService patchMapperService;
+  @MockBean private ProcedureService procedureService;
 
   private static final UUID TEST_UUID = UUID.fromString("88888888-4444-4444-4444-121212121212");
   private final String docOffice1Group = "/CC-RIS";
-  private final String docOffice2Group = "/caselaw/BGH";
-  private final DocumentationOffice docOffice1 = buildDocOffice("CC-RIS");
-  private final DocumentationOffice docOffice2 = buildDocOffice("BGH");
+  private final String docOffice2Group = "/BGH";
+  private final DocumentationOffice docOffice1 = buildCCRisDocOffice();
+  private final DocumentationOffice docOffice2 = buildBGHDocOffice();
 
   @BeforeEach
   void setUp() {
@@ -78,7 +82,9 @@ class DocumentationUnitControllerAuthTest {
   }
 
   @Test
-  void testGetByDocumentNumber_nonExistentDocumentNumber_shouldYield403Too() {
+  void testGetByDocumentNumber_nonExistentDocumentNumber_shouldYield403Too()
+      throws DocumentationUnitNotExistsException {
+
     // testGetByDocumentNumber() is also in DocumentationUnitControllerAuthIntegrationTest
     when(service.getByDocumentNumber(any(String.class))).thenReturn(null);
 
@@ -100,7 +106,7 @@ class DocumentationUnitControllerAuthTest {
   }
 
   @Test
-  void testAttachFileToDocumentationUnit() {
+  void testAttachFileToDocumentationUnit() throws DocumentationUnitNotExistsException {
     when(attachmentService.attachFileToDocumentationUnit(
             eq(TEST_UUID), any(ByteBuffer.class), any(HttpHeaders.class)))
         .thenReturn(Attachment.builder().s3path("fooPath").build());
@@ -135,7 +141,7 @@ class DocumentationUnitControllerAuthTest {
   }
 
   @Test
-  void testRemoveFileFromDocumentationUnit() {
+  void testRemoveFileFromDocumentationUnit() throws DocumentationUnitNotExistsException {
     mockDocumentationUnit(docOffice2, null, null);
     String uri = "/api/v1/caselaw/documentunits/" + TEST_UUID + "/file/fooPath";
 
@@ -228,7 +234,7 @@ class DocumentationUnitControllerAuthTest {
   }
 
   @Test
-  void testGetHtml() {
+  void testGetHtml() throws DocumentationUnitNotExistsException {
     mockDocumentationUnit(docOffice1, "123", Status.builder().publicationStatus(PUBLISHED).build());
     when(docxConverterService.getConvertedObject("123")).thenReturn(null);
 
@@ -254,7 +260,7 @@ class DocumentationUnitControllerAuthTest {
   void testHandoverDocumentationUnitAsEmail() throws DocumentationUnitNotExistsException {
     mockDocumentationUnit(docOffice2, null, null);
     when(userService.getEmail(any(OidcUser.class))).thenReturn("abc");
-    when(handoverService.handoverAsMail(TEST_UUID, "abc")).thenReturn(null);
+    when(handoverService.handoverDocumentationUnitAsMail(TEST_UUID, "abc")).thenReturn(null);
 
     String uri = "/api/v1/caselaw/documentunits/" + TEST_UUID + "/handover";
 
@@ -270,9 +276,10 @@ class DocumentationUnitControllerAuthTest {
   }
 
   @Test
-  void testGetEvents() {
+  void testGetEvents() throws DocumentationUnitNotExistsException {
     mockDocumentationUnit(docOffice1, null, Status.builder().publicationStatus(PUBLISHED).build());
-    when(handoverService.getEventLog(TEST_UUID)).thenReturn(List.of());
+    when(handoverService.getEventLog(TEST_UUID, HandoverEntityType.DOCUMENTATION_UNIT))
+        .thenReturn(List.of());
 
     String uri = "/api/v1/caselaw/documentunits/" + TEST_UUID + "/handover";
 
@@ -299,7 +306,9 @@ class DocumentationUnitControllerAuthTest {
   }
 
   private DocumentationUnit mockDocumentationUnit(
-      DocumentationOffice docOffice, String s3path, Status status) {
+      DocumentationOffice docOffice, String s3path, Status status)
+      throws DocumentationUnitNotExistsException {
+
     DocumentationUnit docUnit =
         DocumentationUnit.builder()
             .uuid(TEST_UUID)

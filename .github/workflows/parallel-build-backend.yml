@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@v4.2.2
+        uses: actions/setup-java@v4.3.0
         with:
           java-version: "17.0"
           distribution: "temurin"
@@ -36,7 +36,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@v4.2.2
+        uses: actions/setup-java@v4.3.0
         with:
           java-version: "17.0"
           distribution: "temurin"
@@ -55,7 +55,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"
@@ -74,7 +74,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"
@@ -95,7 +95,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"

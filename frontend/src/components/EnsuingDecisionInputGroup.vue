@@ -62,11 +62,25 @@ async function search() {
     pageNumber.value = 0
   }
 
+  const urlParams = window.location.pathname.split("/")
+  const documentNumberToExclude =
+    urlParams[urlParams.indexOf("documentunit") + 1]
+
   const response = await documentUnitService.searchByRelatedDocumentation(
-    pageNumber.value,
-    itemsPerPage.value,
     ensuingDecisionRef,
+    {
+      ...(pageNumber.value != undefined
+        ? { pg: pageNumber.value.toString() }
+        : {}),
+      ...(itemsPerPage.value != undefined
+        ? { sz: itemsPerPage.value.toString() }
+        : {}),
+      ...(documentNumberToExclude != undefined
+        ? { documentNumber: documentNumberToExclude.toString() }
+        : {}),
+    },
   )
+
   if (response.data) {
     searchResultsCurrentPage.value = {
       ...response.data,

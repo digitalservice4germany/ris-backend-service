@@ -15,6 +15,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnit
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO.DocumentationUnitDTOBuilder;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.EnsuingDecisionDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.InputTypeDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.JobProfileDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LeadingDecisionNormReferenceDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LegalEffectDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.NormAbbreviationDTO;
@@ -649,6 +650,25 @@ class DocumentationUnitTransformerTest {
   }
 
   @Test
+  void testTransformToDTO_withSameJobProfiles_shouldMakeJobProfilesDistinct() {
+    DocumentationUnit documentationUnit =
+        generateSimpleDocumentationUnitBuilder()
+            .contentRelatedIndexing(
+                ContentRelatedIndexing.builder()
+                    .jobProfiles(List.of("job profile", "job profile"))
+                    .build())
+            .build();
+
+    DocumentationUnitDTO documentationUnitDTO =
+        DocumentationUnitTransformer.transformToDTO(
+            DocumentationUnitDTO.builder().build(), documentationUnit);
+
+    assertThat(documentationUnitDTO.getJobProfiles())
+        .extracting("value")
+        .containsExactly("job profile");
+  }
+
+  @Test
   void testTransformToDomain_withDocumentationUnitDTOIsNull_shouldReturnEmptyDocumentationUnit() {
 
     assertThatThrownBy(() -> DocumentationUnitTransformer.transformToDomain(null))
@@ -1033,6 +1053,20 @@ class DocumentationUnitTransformerTest {
         List.of(1, 2, 3));
   }
 
+  @Test
+  void testTransformToDomain_withJobProfiles_shouldAddJobProfiles() {
+    DocumentationUnitDTO documentationUnitDTO =
+        generateSimpleDTOBuilder()
+            .jobProfiles(List.of(JobProfileDTO.builder().value("job profile").build()))
+            .build();
+
+    DocumentationUnit documentationUnit =
+        DocumentationUnitTransformer.transformToDomain(documentationUnitDTO);
+
+    assertThat(documentationUnit.contentRelatedIndexing().jobProfiles())
+        .containsExactly("job profile");
+  }
+
   private DocumentationUnit.DocumentationUnitBuilder generateSimpleDocumentationUnitBuilder() {
     return DocumentationUnit.builder()
         .previousDecisions(Collections.emptyList())
@@ -1046,6 +1080,7 @@ class DocumentationUnitTransformerTest {
                 .fieldsOfLaw(Collections.emptyList())
                 .norms(Collections.emptyList())
                 .activeCitations(Collections.emptyList())
+                .jobProfiles(Collections.emptyList())
                 .build())
         .references(Collections.emptyList());
   }

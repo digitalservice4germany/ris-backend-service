@@ -6,7 +6,7 @@
       <env name="SPRING_PROFILES_ACTIVE" value="local" />
     </envs>
     <option name="MAIN_CLASS_NAME" value="de.bund.digitalservice.ris.Application" />
-    <module name="de.bund.digitalservice.ris-backend-service.main" />
+    <module name="backend.ris-backend-service.main" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="true" />
       <option name="IS_SUBST" value="false" />

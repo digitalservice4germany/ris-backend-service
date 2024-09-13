@@ -14,10 +14,10 @@ public class LegalPeriodicalTransformer {
     }
 
     return LegalPeriodical.builder()
-        .legalPeriodicalId(legalPeriodicalDTO.getId())
-        .legalPeriodicalAbbreviation(legalPeriodicalDTO.getAbbreviation())
-        .legalPeriodicalTitle(legalPeriodicalDTO.getTitle())
-        .legalPeriodicalSubtitle(legalPeriodicalDTO.getSubtitle())
+        .uuid(legalPeriodicalDTO.getId())
+        .abbreviation(legalPeriodicalDTO.getAbbreviation())
+        .title(legalPeriodicalDTO.getTitle())
+        .subtitle(legalPeriodicalDTO.getSubtitle())
         .primaryReference(legalPeriodicalDTO.getPrimaryReference())
         .citationStyle(legalPeriodicalDTO.getCitationStyle())
         .build();
@@ -29,10 +29,10 @@ public class LegalPeriodicalTransformer {
     }
 
     return LegalPeriodicalDTO.builder()
-        .id(legalPeriodical.legalPeriodicalId())
-        .title(legalPeriodical.legalPeriodicalTitle())
-        .abbreviation(legalPeriodical.legalPeriodicalAbbreviation())
-        .subtitle(legalPeriodical.legalPeriodicalSubtitle())
+        .id(legalPeriodical.uuid())
+        .title(legalPeriodical.title())
+        .abbreviation(legalPeriodical.abbreviation())
+        .subtitle(legalPeriodical.subtitle())
         .citationStyle(legalPeriodical.citationStyle())
         .primaryReference(legalPeriodical.primaryReference())
         .build();

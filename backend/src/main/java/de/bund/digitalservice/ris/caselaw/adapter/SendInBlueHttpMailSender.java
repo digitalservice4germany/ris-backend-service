@@ -1,6 +1,6 @@
 package de.bund.digitalservice.ris.caselaw.adapter;
 
-import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitHandoverException;
+import de.bund.digitalservice.ris.caselaw.domain.HandoverException;
 import de.bund.digitalservice.ris.caselaw.domain.HttpMailSender;
 import de.bund.digitalservice.ris.caselaw.domain.MailAttachment;
 import java.nio.charset.StandardCharsets;
@@ -80,7 +80,7 @@ public class SendInBlueHttpMailSender implements HttpMailSender {
     try {
       api.sendTransacEmail(sendSmtpEmail);
     } catch (ApiException e) {
-      throw new DocumentationUnitHandoverException("Couldn't send email.", e);
+      throw new HandoverException("Couldn't send email.", e);
     }
   }
 }

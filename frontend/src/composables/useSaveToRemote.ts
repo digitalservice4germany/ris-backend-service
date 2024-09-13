@@ -33,6 +33,7 @@ export function useSaveToRemote(autoSaveInterval = 0) {
       if (lastSaveError.value == undefined) {
         lastSavedOn.value = new Date()
       }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       lastSaveError.value = { title: "Verbindung fehlgeschlagen" }
     } finally {

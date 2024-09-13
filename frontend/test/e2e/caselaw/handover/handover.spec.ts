@@ -236,8 +236,6 @@ test.describe("ensuring the handover of documentunits works as expected", () => 
     await expect(
       page.getByText("Es sind noch nicht alle Pflichtfelder befüllt."),
     ).toBeVisible()
-
-    await expect(page.getByText("unveröffentlicht")).toBeVisible()
   })
 
   test("handover possible when all required fields filled", async ({
@@ -272,4 +270,33 @@ test.describe("ensuring the handover of documentunits works as expected", () => 
 
     await expect(page.getByText("Xml Email Abgabe -")).toBeVisible()
   })
+
+  test(
+    "handover does not change publication status",
+    {
+      annotation: [
+        {
+          type: "story",
+          description:
+            "https://digitalservicebund.atlassian.net/browse/RISDEV-4293",
+        },
+      ],
+    },
+    async ({ page, prefilledDocumentUnit }) => {
+      await navigateToHandover(page, prefilledDocumentUnit.documentNumber!)
+      await expect(page.getByText("unveröffentlicht")).toBeVisible()
+
+      await expect(
+        page.getByText("Alle Pflichtfelder sind korrekt ausgefüllt"),
+      ).toBeVisible()
+
+      await page
+        .locator("[aria-label='Dokumentationseinheit an jDV übergeben']")
+        .click()
+
+      await expect(page.getByText("Email wurde versendet")).toBeVisible()
+      await expect(page.getByText("Xml Email Abgabe -")).toBeVisible()
+      await expect(page.getByText("unveröffentlicht")).toBeVisible()
+    },
+  )
 })

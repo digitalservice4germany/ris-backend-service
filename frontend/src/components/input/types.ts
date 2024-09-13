@@ -4,8 +4,8 @@ import DocumentationOffice from "@/domain/documentationOffice"
 import { Court, DocumentType, Procedure } from "@/domain/documentUnit"
 import { FieldOfLaw } from "@/domain/fieldOfLaw"
 import { LegalForceRegion, LegalForceType } from "@/domain/legalForce"
+import LegalPeriodical from "@/domain/legalPeriodical"
 import { NormAbbreviation } from "@/domain/normAbbreviation"
-import { LegalPeriodical } from "@/domain/reference"
 import { ResponseError } from "@/services/httpClient"
 
 export enum InputType {
@@ -140,6 +140,7 @@ export type ComboboxItem = {
   value?: ComboboxInputModelType
   labelCssClasses?: string
   additionalInformation?: string
+  sideInformation?: string
 }
 
 export interface ComboboxAttributes extends BaseInputAttributes {

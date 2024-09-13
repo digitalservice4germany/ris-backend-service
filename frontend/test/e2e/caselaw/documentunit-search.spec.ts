@@ -336,8 +336,8 @@ test.describe("search", () => {
 
         await page.getByRole("button", { name: "Seitenpanel öffnen" }).click()
 
-        await fillInput(page, "Notiz Eingabefeld", noteContent),
-          await save(page)
+        await fillInput(page, "Notiz Eingabefeld", noteContent)
+        await save(page)
       })
 
       await test.step("search indicates by icon that doc unit has notiz", async () => {
@@ -353,7 +353,8 @@ test.describe("search", () => {
       await test.step("delete notiz", async () => {
         await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
 
-        await fillInput(page, "Notiz Eingabefeld", ""), await save(page)
+        await fillInput(page, "Notiz Eingabefeld", "")
+        await save(page)
       })
 
       await test.step("search indicates by icon that doc unit has no notiz", async () => {

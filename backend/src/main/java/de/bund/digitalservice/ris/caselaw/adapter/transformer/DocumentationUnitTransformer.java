@@ -11,6 +11,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnit
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.EnsuingDecisionDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.FileNumberDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.InputTypeDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.JobProfileDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LeadingDecisionNormReferenceDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LegalEffectDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.NormReferenceDTO;
@@ -20,7 +21,6 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.YearOfDisputeDTO;
 import de.bund.digitalservice.ris.caselaw.domain.ContentRelatedIndexing;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData.CoreDataBuilder;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.EnsuingDecision;
 import de.bund.digitalservice.ris.caselaw.domain.LegalEffect;
@@ -115,6 +115,7 @@ public class DocumentationUnitTransformer {
 
       addActiveCitations(builder, contentRelatedIndexing);
       addNormReferences(builder, contentRelatedIndexing);
+      addJobProfiles(builder, contentRelatedIndexing);
     }
 
     if (updatedDomainObject.texts() != null) {
@@ -125,10 +126,14 @@ public class DocumentationUnitTransformer {
           .headline(null)
           .guidingPrinciple(null)
           .headnote(null)
+          .otherHeadnote(null)
           .tenor(null)
           .grounds(null)
           .caseFacts(null)
-          .decisionGrounds(null);
+          .decisionGrounds(null)
+          .dissentingOpinion(null)
+          .otherLongText(null)
+          .outline(null);
     }
 
     addReferences(updatedDomainObject, builder);
@@ -166,7 +171,10 @@ public class DocumentationUnitTransformer {
         .tenor(texts.tenor())
         .grounds(texts.reasons())
         .caseFacts(texts.caseFacts())
-        .decisionGrounds(texts.decisionReasons());
+        .decisionGrounds(texts.decisionReasons())
+        .dissentingOpinion(texts.dissentingOpinion())
+        .otherLongText(texts.otherLongText())
+        .outline(texts.outline());
 
     if (texts.decisionName() != null) {
       // Todo multiple decision names?
@@ -234,6 +242,22 @@ public class DocumentationUnitTransformer {
                   return activeCitationDTO;
                 })
             .toList());
+  }
+
+  private static void addJobProfiles(
+      DocumentationUnitDTOBuilder builder, ContentRelatedIndexing contentRelatedIndexing) {
+    if (contentRelatedIndexing.jobProfiles() == null) {
+      return;
+    }
+
+    List<JobProfileDTO> jobProfileDTOs = new ArrayList<>();
+    List<String> jobProfiles = contentRelatedIndexing.jobProfiles().stream().distinct().toList();
+
+    for (int i = 0; i < jobProfiles.size(); i++) {
+      jobProfileDTOs.add(JobProfileDTO.builder().value(jobProfiles.get(i)).rank(i + 1L).build());
+    }
+
+    builder.jobProfiles(jobProfileDTOs);
   }
 
   private static void addEnsuingAndPendingDecisions(
@@ -488,9 +512,8 @@ public class DocumentationUnitTransformer {
                 ProcedureTransformer.transformPreviousProceduresToLabel(
                     documentationUnitDTO.getProcedures()))
             .documentationOffice(
-                DocumentationOffice.builder()
-                    .abbreviation(documentationUnitDTO.getDocumentationOffice().getAbbreviation())
-                    .build())
+                DocumentationOfficeTransformer.transformToDomain(
+                    documentationUnitDTO.getDocumentationOffice()))
             // TODO multiple regions
             .region(
                 documentationUnitDTO.getRegions() == null
@@ -555,6 +578,12 @@ public class DocumentationUnitTransformer {
       contentRelatedIndexingBuilder.fieldsOfLaw(fieldOfLaws);
     }
 
+    if (documentationUnitDTO.getJobProfiles() != null) {
+      List<String> jobProfiles =
+          documentationUnitDTO.getJobProfiles().stream().map(JobProfileDTO::getValue).toList();
+      contentRelatedIndexingBuilder.jobProfiles(jobProfiles);
+    }
+
     ContentRelatedIndexing contentRelatedIndexing = contentRelatedIndexingBuilder.build();
 
     Texts texts =
@@ -573,6 +602,9 @@ public class DocumentationUnitTransformer {
             .reasons(documentationUnitDTO.getGrounds())
             .caseFacts(documentationUnitDTO.getCaseFacts())
             .decisionReasons(documentationUnitDTO.getDecisionGrounds())
+            .dissentingOpinion(documentationUnitDTO.getDissentingOpinion())
+            .otherLongText(documentationUnitDTO.getOtherLongText())
+            .outline(documentationUnitDTO.getOutline())
             .build();
 
     List<String> borderNumbers =

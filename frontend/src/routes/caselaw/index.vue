@@ -2,8 +2,10 @@
 import { useRouter } from "vue-router"
 import DocumentUnitSearch from "@/components/DocumentUnitSearch.vue"
 import TextButton from "@/components/input/TextButton.vue"
+import { useInternalUser } from "@/composables/useInternalUser"
 
 const router = useRouter()
+const isInternalUser = useInternalUser()
 </script>
 
 <template>
@@ -12,6 +14,7 @@ const router = useRouter()
       <h1 class="ds-heading-02-reg">Übersicht Rechtsprechung</h1>
 
       <TextButton
+        v-if="isInternalUser"
         label="Neue Dokumentationseinheit"
         @click="router.push({ name: 'caselaw-documentUnit-new' })"
       />

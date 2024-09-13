@@ -70,6 +70,7 @@ export class NodeHelper implements NodeHelperInterface {
         } else {
           return []
         }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         return []
       }

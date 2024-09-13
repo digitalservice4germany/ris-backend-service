@@ -3,6 +3,7 @@ import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import DocumentUnit from "../../../src/domain/documentUnit"
 import { navigateToCategories } from "./e2e-utils"
+import LegalPeriodicalEdition from "@/domain/legalPeriodicalEdition"
 import { generateString } from "~/test-helper/dataGenerators"
 
 dayjs.extend(utc)
@@ -17,6 +18,7 @@ type MyFixtures = {
   pageWithBghUser: Page
   pageWithExternalUser: Page
   prefilledDocumentUnitBgh: DocumentUnit
+  edition: LegalPeriodicalEdition
 }
 
 export const caselawTest = test.extend<MyFixtures>({
@@ -240,6 +242,48 @@ export const caselawTest = test.extend<MyFixtures>({
     )
     if (!deleteResponse.ok()) {
       throw Error(`DocumentUnit with number ${prefilledDocumentUnit.documentNumber} couldn't be deleted:
+      ${deleteResponse.status()} ${deleteResponse.statusText()}`)
+    }
+  },
+
+  edition: async ({ request, context }, use) => {
+    const cookies = await context.cookies()
+    const csrfToken = cookies.find((cookie) => cookie.name === "XSRF-TOKEN")
+
+    const legalPeriodicalSearchResponse = await request.get(
+      `api/v1/caselaw/legalperiodicals?q=MMG`,
+    )
+
+    const legalPeriodical = (
+      (await legalPeriodicalSearchResponse.json()) as LegalPeriodicalEdition[]
+    ).at(0)
+
+    const editionResponse = await request.put(
+      `api/v1/caselaw/legalperiodicaledition`,
+      {
+        data: {
+          legalPeriodical: legalPeriodical,
+          id: crypto.randomUUID(),
+          prefix: "2024, ",
+          suffix: ", Heft 1",
+          name: "2024, " + generateString(),
+        },
+        headers: { "X-XSRF-TOKEN": csrfToken?.value ?? "" },
+      },
+    )
+
+    const edition = await editionResponse.json()
+    await use(edition)
+
+    const deleteResponse = await request.delete(
+      `/api/v1/caselaw/legalperiodicaledition/${edition.id}`,
+      {
+        headers: { "X-XSRF-TOKEN": csrfToken?.value ?? "" },
+      },
+    )
+
+    if (!deleteResponse.ok()) {
+      throw Error(`Edition with number ${edition.id} couldn't be deleted:
       ${deleteResponse.status()} ${deleteResponse.statusText()}`)
     }
   },

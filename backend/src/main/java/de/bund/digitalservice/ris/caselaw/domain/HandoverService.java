@@ -27,6 +27,8 @@ import org.xml.sax.SAXException;
 public class HandoverService {
 
   private final DocumentationUnitRepository repository;
+
+  private final LegalPeriodicalEditionRepository editionRepository;
   private final HandoverReportRepository handoverReportRepository;
   private final MailService mailService;
   private final DeltaMigrationRepository deltaMigrationRepository;
@@ -38,12 +40,14 @@ public class HandoverService {
       DocumentationUnitRepository repository,
       MailService mailService,
       DeltaMigrationRepository migrationService,
-      HandoverReportRepository handoverReportRepository) {
+      HandoverReportRepository handoverReportRepository,
+      LegalPeriodicalEditionRepository editionRepository) {
 
     this.repository = repository;
     this.mailService = mailService;
     this.deltaMigrationRepository = migrationService;
     this.handoverReportRepository = handoverReportRepository;
+    this.editionRepository = editionRepository;
   }
 
   /**
@@ -54,12 +58,10 @@ public class HandoverService {
    * @return the handover result
    * @throws DocumentationUnitNotExistsException if the documentation unit does not exist
    */
-  public HandoverMail handoverAsMail(UUID documentationUnitId, String issuerAddress)
-      throws DocumentationUnitNotExistsException {
-    DocumentationUnit documentationUnit =
-        repository
-            .findByUuid(documentationUnitId)
-            .orElseThrow(() -> new DocumentationUnitNotExistsException(documentationUnitId));
+  public HandoverMail handoverDocumentationUnitAsMail(
+      UUID documentationUnitId, String issuerAddress) throws DocumentationUnitNotExistsException {
+
+    DocumentationUnit documentationUnit = repository.findByUuid(documentationUnitId);
 
     HandoverMail handoverMail =
         mailService.handOver(documentationUnit, recipientAddress, issuerAddress);
@@ -71,6 +73,28 @@ public class HandoverService {
   }
 
   /**
+   * Handover a edition to the email service.
+   *
+   * @param editionId the UUID of the edition
+   * @param issuerAddress the email address of the issuer
+   * @return the handover result or null if the edition has no references
+   * @throws IOException if the edition does not exist
+   */
+  public HandoverMail handoverEditionAsMail(UUID editionId, String issuerAddress)
+      throws IOException {
+    LegalPeriodicalEdition edition =
+        editionRepository
+            .findById(editionId)
+            .orElseThrow(() -> new IOException("Edition not found: " + editionId));
+
+    HandoverMail handoverMail = mailService.handOver(edition, recipientAddress, issuerAddress);
+    if (!handoverMail.success()) {
+      log.warn("Failed to send mail for edition {}", editionId);
+    }
+    return handoverMail;
+  }
+
+  /**
    * Create a preview juris xml for a documentation unit.
    *
    * @param documentUuid the UUID of the documentation unit
@@ -78,26 +102,38 @@ public class HandoverService {
    */
   public XmlTransformationResult createPreviewXml(UUID documentUuid)
       throws DocumentationUnitNotExistsException {
-    DocumentationUnit documentationUnit =
-        repository
-            .findByUuid(documentUuid)
-            .orElseThrow(() -> new DocumentationUnitNotExistsException(documentUuid));
+
+    DocumentationUnit documentationUnit = repository.findByUuid(documentUuid);
     return mailService.getXmlPreview(documentationUnit);
   }
 
   /**
-   * Get the event log for a documentation unit, containing jDV email handover operations, handover
-   * reports (response emails from the jDV) and migrations/import events.
+   * Create a preview juris xml for a edition
    *
-   * @param documentUuid the UUID of the documentation unit
+   * @param editionId the id of the edition
+   * @return the export result, containing the juris xml and export metadata
+   */
+  public List<XmlTransformationResult> createEditionPreviewXml(UUID editionId) throws IOException {
+    LegalPeriodicalEdition edition =
+        editionRepository
+            .findById(editionId)
+            .orElseThrow(() -> new IOException("Edition not found: " + editionId));
+    return mailService.getXmlPreview(edition);
+  }
+
+  /**
+   * Get the event log for a entity (documentation unit or edition), containing jDV email handover
+   * operations, handover reports (response emails from the jDV) and migrations/import events.
+   *
+   * @param entityId the UUID of the entity
    * @return the event log
    */
-  public List<EventRecord> getEventLog(UUID documentUuid) {
+  public List<EventRecord> getEventLog(UUID entityId, HandoverEntityType entityType) {
     List<EventRecord> list =
         ListUtils.union(
-            mailService.getHandoverResult(documentUuid),
-            handoverReportRepository.getAllByDocumentationUnitUuid(documentUuid));
-    var migration = deltaMigrationRepository.getLatestMigration(documentUuid);
+            mailService.getHandoverResult(entityId, entityType),
+            handoverReportRepository.getAllByEntityId(entityId));
+    var migration = deltaMigrationRepository.getLatestMigration(entityId);
     if (migration != null) {
       list.add(
           migration.xml() != null

@@ -245,7 +245,7 @@ describe("ExtraContentSidePanel", () => {
       screen.getByLabelText("Dokumente anzeigen").click()
       expect(
         await screen.findByText(
-          "Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.",
+          "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
         ),
       ).toBeVisible()
 

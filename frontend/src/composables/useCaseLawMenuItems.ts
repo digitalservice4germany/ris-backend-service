@@ -1,4 +1,5 @@
 import { LocationQuery } from "vue-router"
+import { useInternalUser } from "@/composables/useInternalUser"
 import MenuItem from "@/domain/menuItem"
 
 export function useCaseLawMenuItems(
@@ -10,6 +11,8 @@ export function useCaseLawMenuItems(
     query: routeQuery,
   }
 
+  const isInternalUser = useInternalUser()
+
   return [
     {
       label: "Rubriken",
@@ -18,15 +21,18 @@ export function useCaseLawMenuItems(
         ...baseRoute,
       },
       children: [
-        {
-          label: "Stammdaten",
-
-          route: {
-            ...baseRoute,
-            name: "caselaw-documentUnit-documentNumber-categories",
-            hash: "#coreData",
-          },
-        },
+        ...(isInternalUser
+          ? [
+              {
+                label: "Stammdaten",
+                route: {
+                  ...baseRoute,
+                  name: "caselaw-documentUnit-documentNumber-categories",
+                  hash: "#coreData",
+                },
+              },
+            ]
+          : []),
         {
           label: "Rechtszug",
           route: {
@@ -53,20 +59,28 @@ export function useCaseLawMenuItems(
         },
       ],
     },
-    {
-      label: "Dokumente",
-      route: {
-        ...baseRoute,
-        name: "caselaw-documentUnit-documentNumber-attachments",
-      },
-    },
-    {
-      label: "Fundstellen",
-      route: {
-        ...baseRoute,
-        name: "caselaw-documentUnit-documentNumber-references",
-      },
-    },
+    ...(isInternalUser
+      ? [
+          {
+            label: "Dokumente",
+            route: {
+              ...baseRoute,
+              name: "caselaw-documentUnit-documentNumber-attachments",
+            },
+          },
+        ]
+      : []),
+    ...(isInternalUser
+      ? [
+          {
+            label: "Fundstellen",
+            route: {
+              ...baseRoute,
+              name: "caselaw-documentUnit-documentNumber-references",
+            },
+          },
+        ]
+      : []),
     {
       label: "Übergabe an jDV",
       route: {

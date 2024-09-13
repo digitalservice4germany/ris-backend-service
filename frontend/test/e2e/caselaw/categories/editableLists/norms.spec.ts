@@ -427,4 +427,71 @@ test.describe("norm", () => {
       await expect(page.locator("text=Vereinbar (Berlin (Ost))")).toBeVisible()
     })
   })
+
+  test("add three norms and remove the first", async ({
+    page,
+    documentNumber,
+  }) => {
+    await navigateToCategories(page, documentNumber)
+    const normContainer = page.getByLabel("Norm")
+
+    await page.locator("[aria-label='Gericht']").fill("VerfG")
+    await page.locator("text=VerfG Dessau").last().click()
+
+    await fillNormInputs(page, {
+      normAbbreviation: "PBefG",
+      singleNorms: [{ singleNorm: "§ 123" } as SingleNorm],
+    })
+
+    let saveNormButton = normContainer.getByLabel("Norm speichern")
+    await saveNormButton.click()
+
+    await fillNormInputs(page, {
+      normAbbreviation: "BGB",
+      singleNorms: [{ singleNorm: "§ 1" } as SingleNorm],
+    })
+
+    saveNormButton = normContainer.getByLabel("Norm speichern")
+    await saveNormButton.click()
+
+    await save(page)
+
+    await fillNormInputs(page, {
+      normAbbreviation: "KBErrG",
+      singleNorms: [{ singleNorm: "§ 8" } as SingleNorm],
+    })
+
+    saveNormButton = normContainer.getByLabel("Norm speichern")
+    await saveNormButton.click()
+
+    await expect(page.locator("text=PBefG, § 123")).toBeVisible()
+    await expect(page.locator("text=BGB, § 1")).toBeVisible()
+    await expect(page.locator("text=KBErrG, § 8")).toBeVisible()
+
+    await normContainer.getByTestId("list-entry-0").click()
+
+    await expect(page.locator("text=Mit Gesetzeskraft")).toBeVisible()
+
+    await normContainer.getByLabel("Eintrag löschen").click()
+
+    await expect(page.locator("text=PBefG, § 123")).toBeHidden()
+    await expect(page.locator("text=BGB, § 1")).toBeVisible()
+    await expect(page.locator("text=KBErrG, § 8")).toBeVisible()
+
+    await save(page)
+
+    await normContainer.getByTestId("list-entry-0").click()
+
+    await expect(normContainer.locator("text=Mit Gesetzeskraft")).toBeVisible()
+    await expect(
+      normContainer.locator("[aria-label='Einzelnorm der Norm']"),
+    ).toHaveValue("§ 1")
+
+    await expect(
+      normContainer.locator("[aria-label='RIS-Abkürzung']"),
+    ).toHaveValue("BGB")
+
+    await expect(page.locator("text=PBefG, § 123")).toBeHidden()
+    await expect(page.locator("text=KBErrG, § 8")).toBeVisible()
+  })
 })

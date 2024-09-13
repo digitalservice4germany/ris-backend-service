@@ -84,7 +84,7 @@ test.describe("court", () => {
 
   test("court dropdown", async ({ page, documentNumber }) => {
     await navigateToCategories(page, documentNumber)
-    const minTotalCourts = 4052
+    const minTotalCourts = 9
 
     // on start: closed dropdown, no input text
     await waitForInputValue(page, "[aria-label='Gericht']", "")

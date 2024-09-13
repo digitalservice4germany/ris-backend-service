@@ -156,6 +156,42 @@ describe("HandoverView:", () => {
       expect(screen.queryByText("XML Vorschau")).not.toBeInTheDocument()
     })
 
+    it("should show error message with invalid outline", async () => {
+      renderComponent({
+        documentUnit: new DocumentUnit("123", {
+          documentNumber: "foo",
+          coreData: {
+            fileNumbers: ["foo"],
+            court: {
+              type: "type",
+              location: "location",
+              label: "label",
+            },
+            decisionDate: "2022-02-01",
+            legalEffect: "legalEffect",
+            documentType: {
+              jurisShortcut: "ca",
+              label: "category",
+            },
+          },
+          texts: {
+            outline: "Outline",
+            otherHeadnote: "Other Headnote",
+          },
+        }),
+      })
+      expect(
+        await screen.findByText(
+          'Die Rubriken "Gliederung" und "Sonstiger Orientierungssatz" sind befüllt. Es darf nur eine der beiden Rubriken befüllt sein.',
+        ),
+      ).toBeInTheDocument()
+
+      expect(
+        await screen.findByLabelText("Rubriken bearbeiten"),
+      ).toBeInTheDocument()
+      expect(screen.queryByText("XML Vorschau")).not.toBeInTheDocument()
+    })
+
     it("'Rubriken bearbeiten' button links back to categories", async () => {
       render(HandoverView, {
         global: {
@@ -254,7 +290,13 @@ describe("HandoverView:", () => {
           eventLog: [
             {
               type: EventRecordType.HANDOVER,
-              xml: '<?xml version="1.0"?>\n<!DOCTYPE juris-r SYSTEM "juris-r.dtd">\n<xml>content</xml>',
+              attachments: [
+                {
+                  fileContent:
+                    '<?xml version="1.0"?>\n<!DOCTYPE juris-r SYSTEM "juris-r.dtd">\n<xml>content</xml>',
+                  fileName: "file.xml",
+                },
+              ],
               statusMessages: ["success"],
               success: true,
               receiverAddress: "receiver address",
@@ -314,7 +356,7 @@ describe("HandoverView:", () => {
         eventLog: [
           {
             type: EventRecordType.HANDOVER,
-            xml: "xml content",
+            attachments: [{ fileContent: "xml content", fileName: "file.xml" }],
             statusMessages: ["success"],
             success: true,
             receiverAddress: "receiver address",

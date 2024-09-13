@@ -192,6 +192,8 @@ public class RunElementConverter {
       String floating = parseFloating(anchor);
       if (floating != null) {
         if (floating.equals("error")) {
+          if (anchor.getPositionH() == null || anchor.getPositionH().getAlign() == null)
+            return new ErrorRunElement("anchor image with unknown alignment: null");
           return new ErrorRunElement(
               "anchor image with unknown alignment: " + anchor.getPositionH().getAlign().value());
         }

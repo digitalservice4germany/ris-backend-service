@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { computed } from "vue"
+import DocumentUnitReferenceInput from "@/components/DocumentUnitReferenceInput.vue"
 import EditableList from "@/components/EditableList.vue"
-import ReferenceInput from "@/components/ReferenceInput.vue"
 import ReferenceSummary from "@/components/ReferenceSummary.vue"
 import Reference from "@/domain/reference"
 import { useDocumentUnitStore } from "@/stores/documentUnitStore"
@@ -25,7 +25,7 @@ const defaultValue = new Reference() as Reference
       <EditableList
         v-model="references"
         :default-value="defaultValue"
-        :edit-component="ReferenceInput"
+        :edit-component="DocumentUnitReferenceInput"
         :summary-component="ReferenceSummary"
       />
     </div>

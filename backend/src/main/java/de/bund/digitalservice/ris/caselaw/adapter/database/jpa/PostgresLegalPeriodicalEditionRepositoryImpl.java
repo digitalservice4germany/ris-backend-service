@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 public class PostgresLegalPeriodicalEditionRepositoryImpl
@@ -18,20 +19,25 @@ public class PostgresLegalPeriodicalEditionRepositoryImpl
     this.repository = repository;
   }
 
+  @Transactional(transactionManager = "jpaTransactionManager")
   public Optional<LegalPeriodicalEdition> findById(UUID id) {
     return repository.findById(id).map(LegalPeriodicalEditionTransformer::transformToDomain);
   }
 
-  @Override
+  @Transactional(transactionManager = "jpaTransactionManager")
   public List<LegalPeriodicalEdition> findAllByLegalPeriodicalId(UUID legalPeriodicalId) {
-    return repository.findAllByLegalPeriodicalId(legalPeriodicalId).stream()
+    return repository.findAllByLegalPeriodicalIdOrderByCreatedAtDesc(legalPeriodicalId).stream()
         .map(LegalPeriodicalEditionTransformer::transformToDomain)
         .toList();
   }
 
-  @Override
   public LegalPeriodicalEdition save(LegalPeriodicalEdition legalPeriodicalEdition) {
     return LegalPeriodicalEditionTransformer.transformToDomain(
         repository.save(LegalPeriodicalEditionTransformer.transformToDTO(legalPeriodicalEdition)));
+  }
+
+  @Override
+  public void delete(LegalPeriodicalEdition legalPeriodicalEdition) {
+    repository.deleteById(legalPeriodicalEdition.id());
   }
 }

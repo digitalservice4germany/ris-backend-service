@@ -1,46 +1,46 @@
 import EditableListItem from "./editableListItem"
-
-export type LegalPeriodical = {
-  legalPeriodicalId?: string
-  legalPeriodicalTitle?: string
-  legalPeriodicalSubtitle?: string
-  legalPeriodicalAbbreviation: string
-  primaryReference?: boolean
-  citationStyle?: string
-}
+import RelatedDocumentation from "./relatedDocumentation"
+import LegalPeriodical from "@/domain/legalPeriodical"
 
 export default class Reference implements EditableListItem {
-  public uuid?: string
+  id?: string
   citation?: string
   referenceSupplement?: string
   footnote?: string
   legalPeriodical?: LegalPeriodical
   legalPeriodicalRawValue?: string
+  documentationUnit?: RelatedDocumentation
 
   static readonly requiredFields = ["legalPeriodical", "citation"] as const
+
   static readonly fields = [
     "legalPeriodical",
     "citation",
     "referenceSupplement",
+    "documentationUnit",
   ] as const
 
   constructor(data: Partial<Reference> = {}) {
     Object.assign(this, data)
-    if (this.uuid == undefined) {
-      this.uuid = crypto.randomUUID()
+
+    if (this.documentationUnit) {
+      this.documentationUnit = new RelatedDocumentation({
+        ...data.documentationUnit,
+      })
+    }
+    if (this.id == undefined) {
+      this.id = crypto.randomUUID()
     }
   }
 
   get renderDecision(): string {
-    const parts = [
-      ...(this.legalPeriodical
-        ? [this.legalPeriodical.legalPeriodicalAbbreviation]
-        : [this.legalPeriodicalRawValue]),
-      ...(this.citation && this.referenceSupplement
-        ? [`${this.citation} (${this.referenceSupplement})`]
-        : [this.citation]),
+    return [
+      this.legalPeriodical?.abbreviation ?? this.legalPeriodicalRawValue,
+      this.citation,
+      this.referenceSupplement ? ` (${this.referenceSupplement})` : "",
     ]
-    return parts.join(" ")
+      .filter(Boolean)
+      .join(" ")
   }
 
   get hasMissingRequiredFields(): boolean {
@@ -51,10 +51,6 @@ export default class Reference implements EditableListItem {
     return Reference.requiredFields.filter((field) =>
       this.fieldIsEmpty(this[field]),
     )
-  }
-
-  get id() {
-    return this.uuid
   }
 
   equals(entry: Reference): boolean {
@@ -72,7 +68,11 @@ export default class Reference implements EditableListItem {
     return isEmpty
   }
 
-  private fieldIsEmpty(value: Reference[(typeof Reference.fields)[number]]) {
+  fieldIsEmpty(value: Reference[(typeof Reference.fields)[number]]) {
     return value === undefined || !value || Object.keys(value).length === 0
+  }
+
+  get hasForeignSource(): boolean {
+    return true
   }
 }

@@ -56,6 +56,7 @@ function errorBadgeSummarizer(errorLabel: string) {
 }
 
 /**
+ * @deprecated Please look at the implementation of ActiveCitations.vue with summary-component template rendering
  * Summarizer for a normEntry. With no or only one single norm, it is rendered in one line, if more single norms present,
  * they are rendered as sub list.
  * @param normEntry Norm Entry to be summarized.

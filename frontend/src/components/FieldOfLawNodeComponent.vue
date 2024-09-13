@@ -38,7 +38,11 @@ const isSelected = computed({
       ({ identifier }) => identifier === props.node.identifier,
     ),
   set: (value) => {
-    value ? emit("node:select", props.node) : emit("node:unselect", props.node)
+    if (value) {
+      emit("node:select", props.node)
+    } else {
+      emit("node:unselect", props.node)
+    }
   },
 })
 

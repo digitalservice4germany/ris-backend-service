@@ -150,7 +150,8 @@ public class DocumentationUnitDocxBuilder extends DocxBuilder {
     }
 
     if (ppr.getPStyle() != null
-        && List.of("RandNummer", "ListParagraph").contains(ppr.getPStyle().getVal())) {
+        && List.of("RandNummer", "ListParagraph", "Randziffern")
+            .contains(ppr.getPStyle().getVal())) {
       return true;
     }
 

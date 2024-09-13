@@ -7,6 +7,7 @@
     "config:recommended",
     ":disableDependencyDashboard"
   ],
+  "platformAutomerge": false,
   "rangeStrategy": "bump",
   "labels": [
     "renovate"
@@ -15,15 +16,14 @@
     "enabled": false
   },
   "timezone": "Europe/Berlin",
-  "automergeSchedule": [
+  "schedule": [
     "before 5:30am every weekday",
     "after 7:30am every weekday"
   ],
-  "prConcurrentLimit": 5,
+  "automergeType": "pr",
   "packageRules": [
     {
-      "groupName": "all frontend non-major dependencies",
-      "groupSlug": "all-frontend-minor-patch",
+      "groupName": "all-frontend-non-major-dependencies",
       "matchPaths": [
         "frontend/**"
       ],
@@ -38,11 +38,9 @@
         "frontend-updates"
       ],
       "automerge": true,
-      "automergeType": "pr"
     },
     {
-      "groupName": "all backend non-major dependencies",
-      "groupSlug": "all-backend-minor-patch",
+      "groupName": "all-backend-non-major-dependencies",
       "matchPaths": [
         "backend/**"
       ],
@@ -57,7 +55,6 @@
       "labels": [
         "backend-updates"
       ],
-      "automergeType": "pr"
     },
     {
       "packageNames": [
@@ -83,8 +80,6 @@
         "digest"
       ],
       "automerge": true,
-      "platformAutomerge": false,
-      "automergeType": "pr"
     }
   ]
 }

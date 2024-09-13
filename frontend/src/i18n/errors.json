@@ -195,5 +195,26 @@
   },
   "LEGAL_PERIODICAL_EDITIONS_COULD_NOT_BE_LOADED": {
     "title": "Ausgabe konnte nicht geladen werden."
+  },
+  "LEGAL_PERIODICAL_EDITION_COULD_NOT_BE_DELETED": {
+    "title": "Ausgabe konnte nicht gelöscht werden."
+  },
+  "PROCEDURE_COULD_NOT_BE_ASSIGNED": {
+    "title": "Vorgang konnte nicht zugewiesen werden. Bitte laden Sie die Seite neu."
+  },
+  "PROCEDURE_COULD_NOT_BE_UNASSIGNED": {
+    "title": "Zuweisung des Vorgangs konnte nicht entfernt werden. Bitte laden Sie die Seite neu."
+  },
+  "EDITION_HANDOVER_FAILED": {
+    "title": "Leider ist ein Fehler aufgetreten.",
+    "description": "Die Ausgabe kann nicht übergeben werden."
+  },
+  "EDITION_LOADING_HANDOVER_FAILED": {
+    "title": "Fehler beim Laden der Ereignisse",
+    "description": "Die Ereignisse konnten nicht geladen werden."
+  },
+  "EDITION_LOADING_XML_PREVIEW": {
+    "title": "Fehler beim Laden der XML-Vorschau",
+    "description": "Die XML-Vorschau konnte nicht geladen werden."
   }
 }

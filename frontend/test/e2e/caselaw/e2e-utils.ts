@@ -34,6 +34,17 @@ export const navigateToSearch = async (
   })
 }
 
+export const navigateToProcedures = async (
+  page: Page,
+  searchParam?: string,
+) => {
+  await test.step("Navigate to 'Vorgänge'", async () => {
+    const urlPostFix = searchParam ? `?q=${searchParam}` : ""
+    await page.goto(`/caselaw/procedures` + urlPostFix)
+    await expect(page.getByLabel("Nach Vorgängen suchen")).toBeVisible()
+  })
+}
+
 export const navigateToCategories = async (
   page: Page,
   documentNumber: string,
@@ -52,7 +63,7 @@ export const navigateToCategories = async (
 
     if (options?.skipAssert) return
 
-    await expect(page.getByText("Spruchkörper")).toBeVisible({
+    await expect(page.getByText("Entscheidungsname")).toBeVisible({
       timeout: 15000, // for backend warm up
     })
     await expect(page.getByText(documentNumber)).toBeVisible()
@@ -71,12 +82,37 @@ export const navigateToReferences = async (
   })
 }
 
-export const navigateToLegalPeriodicalEvaluation = async (page: Page) => {
+export const navigateToPeriodicalEvaluation = async (page: Page) => {
   await test.step("Navigate to 'Periodika'", async () => {
-    const baseUrl = `/caselaw/legal-periodical-editions`
+    const baseUrl = "/caselaw/periodical-evaluation"
 
     await page.goto(baseUrl)
-    await expect(page.getByRole("heading", { name: "Periodika" })).toBeVisible()
+
+    await expect(page.getByTestId("periodical-evaluation-title")).toBeVisible()
+  })
+}
+
+export const navigateToPeriodicalEdition = async (
+  page: Page,
+  editionId: string,
+) => {
+  await test.step("Navigate to 'Periodika'", async () => {
+    const baseUrl = `/caselaw/periodical-evaluation/${editionId}/edition`
+
+    await page.goto(baseUrl)
+    await expect(page.getByTestId("edition-title")).toBeVisible()
+  })
+}
+
+export const navigateToPeriodicalReferences = async (
+  page: Page,
+  editionId: string,
+) => {
+  await test.step("Navigate to 'Periodika'", async () => {
+    const baseUrl = `/caselaw/periodical-evaluation/${editionId}/references`
+
+    await page.goto(baseUrl)
+    await expect(page.getByTestId("references-title")).toBeVisible()
   })
 }
 
@@ -172,7 +208,11 @@ export const uploadTestfile = async (
 }
 
 export async function save(page: Page) {
+  const saveRequest = page.waitForRequest("**/api/v1/caselaw/documentunits/*", {
+    timeout: 5_000,
+  })
   await page.locator("[aria-label='Speichern Button']").click()
+  await saveRequest
   await expect(page.getByText(`Zuletzt`).first()).toBeVisible()
 }
 
@@ -544,7 +584,7 @@ export async function fillActiveCitationInputs(
   }
 }
 
-export async function copyPasteAllTextFromAttachmentIntoEditor(
+export async function copyPasteTextFromAttachmentIntoEditor(
   page: Page,
   attachmentLocator: Locator,
   editor: Locator,

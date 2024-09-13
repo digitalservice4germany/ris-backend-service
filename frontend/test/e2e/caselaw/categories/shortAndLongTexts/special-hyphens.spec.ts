@@ -1,6 +1,6 @@
 import { expect } from "@playwright/test"
 import {
-  copyPasteAllTextFromAttachmentIntoEditor,
+  copyPasteTextFromAttachmentIntoEditor,
   navigateToAttachments,
   navigateToCategories,
   save,
@@ -58,7 +58,7 @@ test.describe(
           const attachmentLocator = page
             .getByText(textWithSpecialHyphen)
             .locator("..")
-          await copyPasteAllTextFromAttachmentIntoEditor(
+          await copyPasteTextFromAttachmentIntoEditor(
             page,
             attachmentLocator,
             editor,

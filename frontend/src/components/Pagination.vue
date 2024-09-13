@@ -17,12 +17,16 @@ const props = withDefaults(
 
 const emits = defineEmits<(e: "updatePage", page: number) => void>()
 
-async function nextPage() {
-  props.page && !props.page.last && emits("updatePage", props.page.number + 1)
+async function nextPage(): Promise<void> {
+  if (props.page && !props.page.last) {
+    emits("updatePage", props.page.number + 1)
+  }
 }
 
-async function previousPage() {
-  props.page && !props.page?.first && emits("updatePage", props.page.number - 1)
+async function previousPage(): Promise<void> {
+  if (props.page && !props.page?.first) {
+    emits("updatePage", props.page.number - 1)
+  }
 }
 </script>
 

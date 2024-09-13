@@ -1,10 +1,9 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDefaultDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDSDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.mockUserGroups;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
@@ -16,6 +15,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.DatabaseProcedureService;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentNumberPatternConfig;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentationUnitController;
 import de.bund.digitalservice.ris.caselaw.adapter.DocxConverterService;
+import de.bund.digitalservice.ris.caselaw.adapter.KeycloakUserService;
 import de.bund.digitalservice.ris.caselaw.adapter.S3AttachmentService;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverter;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.AttachmentDTO;
@@ -45,7 +45,8 @@ import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataIn
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
-import de.bund.digitalservice.ris.caselaw.domain.UserService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.domain.court.CourtRepository;
 import de.bund.digitalservice.ris.caselaw.domain.docx.Docx2Html;
 import de.bund.digitalservice.ris.caselaw.domain.docx.DocxMetadataProperty;
@@ -55,9 +56,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.AfterEach;
@@ -69,9 +68,9 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -106,9 +105,11 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
       DocxConverterService.class,
       DocxConverter.class,
       PostgresCourtRepositoryImpl.class,
-      PostgresDocumentTypeRepositoryImpl.class
+      PostgresDocumentTypeRepositoryImpl.class,
+      KeycloakUserService.class,
     },
     controllers = {DocumentationUnitController.class})
+@Sql(scripts = {"classpath:doc_office_init.sql"})
 class DocumentationUnitControllerDocxFilesIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgreSQLContainer =
@@ -142,15 +143,15 @@ class DocumentationUnitControllerDocxFilesIntegrationTest {
 
   @MockBean private MailService mailService;
 
-  @MockBean private UserService userService;
-
   @MockBean private HandoverService handoverService;
 
   @MockBean private ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private DocumentBuilderFactory documentBuilderFactory;
   @MockBean private PatchMapperService patchMapperService;
+  @MockBean private ProcedureService procedureService;
+  @MockBean private UserGroupService userGroupService;
 
-  private final DocumentationOffice docOffice = buildDefaultDocOffice();
+  private final DocumentationOffice docOffice = buildDSDocOffice();
 
   @BeforeEach
   void setUp() {
@@ -158,14 +159,7 @@ class DocumentationUnitControllerDocxFilesIntegrationTest {
 
     databaseDocumentCategoryRepository.save(DocumentCategoryDTO.builder().label("R").build());
 
-    doReturn(docOffice)
-        .when(userService)
-        .getDocumentationOffice(
-            argThat(
-                (OidcUser user) -> {
-                  List<String> groups = user.getAttribute("groups");
-                  return Objects.requireNonNull(groups).get(0).equals("/DS");
-                }));
+    mockUserGroups(userGroupService);
   }
 
   @AfterEach
@@ -435,14 +429,72 @@ class DocumentationUnitControllerDocxFilesIntegrationTest {
   }
 
   @Test
-  void testRemoveFileFromDocumentationUnit_withInvalidUuid() {
+  void testAttachFileToDocumentationUnit_withExternalUser_shouldBeForbidden() throws IOException {
+    var attachment = Files.readAllBytes(Paths.get("src/test/resources/fixtures/attachment.docx"));
+    mockS3ClientToReturnFile(attachment);
+
+    DocumentationUnitDTO dto =
+        repository.save(
+            DocumentationUnitDTO.builder()
+                .documentNumber("1234567890123")
+                .documentationOffice(documentationOfficeRepository.findByAbbreviation("DS"))
+                .build());
+
+    risWebTestClient
+        .withExternalLogin()
+        .put()
+        .uri("/api/v1/caselaw/documentunits/" + dto.getId() + "/file")
+        .contentType(
+            MediaType.parseMediaType(
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+        .bodyAsByteArray(attachment)
+        .exchange()
+        .expectStatus()
+        .isForbidden();
+
+    assertThat(attachmentRepository.findAllByDocumentationUnitId(dto.getId())).isEmpty();
+  }
+
+  @Test
+  void testRemoveFileFromDocumentationUnit_withInvalidUuid_shouldFail() {
     risWebTestClient
         .withDefaultLogin()
         .delete()
-        .uri("/api/v1/caselaw/documentunits/abc/file")
+        .uri("/api/v1/caselaw/documentunits/abc/file/fooPath")
         .exchange()
         .expectStatus()
         .is4xxClientError();
+  }
+
+  @Test
+  void testRemoveFileFromDocumentationUnit_withExternalUser_shouldBeForbidden() {
+    when(s3Client.deleteObject(any(DeleteObjectRequest.class)))
+        .thenReturn(DeleteObjectResponse.builder().build());
+
+    DocumentationUnitDTO dto =
+        repository.save(
+            DocumentationUnitDTO.builder()
+                .documentNumber("1234567890123")
+                .documentationOffice(documentationOfficeRepository.findByAbbreviation("DS"))
+                .build());
+
+    attachmentRepository.save(
+        AttachmentDTO.builder()
+            .s3ObjectPath("fooPath")
+            .documentationUnit(dto)
+            .uploadTimestamp(Instant.now())
+            .filename("fooFile")
+            .format("docx")
+            .build());
+
+    assertThat(attachmentRepository.findAll()).hasSize(1);
+    risWebTestClient
+        .withExternalLogin()
+        .delete()
+        .uri("/api/v1/caselaw/documentunits/" + dto.getId() + "/file/fooPath")
+        .exchange()
+        .expectStatus()
+        .isForbidden();
   }
 
   private void mockS3ClientToReturnFile(byte[] file) {

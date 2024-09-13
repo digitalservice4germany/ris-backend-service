@@ -65,10 +65,23 @@ async function search() {
     pageNumber.value = 0
   }
 
+  const urlParams = window.location.pathname.split("/")
+  const documentNumberToExclude =
+    urlParams[urlParams.indexOf("documentunit") + 1]
+
   const response = await documentUnitService.searchByRelatedDocumentation(
-    pageNumber.value,
-    itemsPerPage.value,
     previousDecisionRef,
+    {
+      ...(pageNumber.value != undefined
+        ? { pg: pageNumber.value.toString() }
+        : {}),
+      ...(itemsPerPage.value != undefined
+        ? { sz: itemsPerPage.value.toString() }
+        : {}),
+      ...(documentNumberToExclude != undefined
+        ? { documentNumber: documentNumberToExclude.toString() }
+        : {}),
+    },
   )
   if (response.data) {
     searchResultsCurrentPage.value = {
@@ -321,7 +334,7 @@ onMounted(() => {
         button-type="destructive"
         label="Eintrag löschen"
         size="small"
-        @click.stop="emit('removeEntry', modelValue)"
+        @click.stop="modelValue && emit('removeEntry', modelValue)"
       />
     </div>
 

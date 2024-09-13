@@ -9,6 +9,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumenta
 import de.bund.digitalservice.ris.caselaw.domain.Attachment;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
+import de.bund.digitalservice.ris.caselaw.domain.HandoverEntityType;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverMail;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverRepository;
 import de.bund.digitalservice.ris.caselaw.domain.HttpMailSender;
@@ -58,26 +59,29 @@ class XmlMailServiceProdTest {
   private static final UUID TEST_UUID = UUID.fromString("88888888-4444-4444-4444-121212121212");
   private static final HandoverMail EXPECTED_BEFORE_SAVE_PROD =
       HandoverMail.builder()
-          .documentationUnitId(TEST_UUID)
+          .entityId(TEST_UUID)
+          .entityType(HandoverEntityType.DOCUMENTATION_UNIT)
           .receiverAddress(RECEIVER_ADDRESS)
           .mailSubject(PROD_MAIL_SUBJECT)
-          .xml("xml")
+          .attachments(
+              Collections.singletonList(
+                  MailAttachment.builder().fileContent("xml").fileName("test.xml").build()))
           .success(true)
           .statusMessages(List.of("succeed"))
-          .fileName("test.xml")
           .handoverDate(CREATED_DATE)
           .issuerAddress(ISSUER_ADDRESS)
           .build();
 
   private static final HandoverMail SAVED_XML_MAIL_PROD =
       HandoverMail.builder()
-          .documentationUnitId(TEST_UUID)
+          .entityId(TEST_UUID)
           .receiverAddress(RECEIVER_ADDRESS)
           .mailSubject(PROD_MAIL_SUBJECT)
-          .xml("xml")
+          .attachments(
+              Collections.singletonList(
+                  MailAttachment.builder().fileContent("xml").fileName("test.xml").build()))
           .success(true)
           .statusMessages(List.of("succeed"))
-          .fileName("test.xml")
           .handoverDate(CREATED_DATE)
           .issuerAddress(ISSUER_ADDRESS)
           .build();
@@ -117,7 +121,7 @@ class XmlMailServiceProdTest {
   void testSendWithProdSubjectAndOriginalCourtAndFileNumber()
       throws ParserConfigurationException, TransformerException {
 
-    var response = service.handOver(documentationUnit, RECEIVER_ADDRESS, ISSUER_ADDRESS);
+    HandoverMail response = service.handOver(documentationUnit, RECEIVER_ADDRESS, ISSUER_ADDRESS);
 
     assertThat(response.mailSubject()).isEqualTo(PROD_MAIL_SUBJECT);
 
@@ -131,9 +135,9 @@ class XmlMailServiceProdTest {
             "neuris",
             Collections.singletonList(
                 MailAttachment.builder()
-                    .fileName(SAVED_XML_MAIL_PROD.fileName())
-                    .fileContent(SAVED_XML_MAIL_PROD.xml())
+                    .fileName(SAVED_XML_MAIL_PROD.attachments().get(0).fileName())
+                    .fileContent(SAVED_XML_MAIL_PROD.attachments().get(0).fileContent())
                     .build()),
-            SAVED_XML_MAIL_PROD.documentationUnitId().toString());
+            SAVED_XML_MAIL_PROD.entityId().toString());
   }
 }

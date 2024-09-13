@@ -10,6 +10,7 @@ import { DocumentUnitCatagoriesEnum } from "@/components/enumDocumentUnitCatagor
 import FlexItem from "@/components/FlexItem.vue"
 import PreviousDecisions from "@/components/PreviousDecisions.vue"
 import { useProvideCourtType } from "@/composables/useCourtType"
+import { useInternalUser } from "@/composables/useInternalUser"
 import { useScrollToHash } from "@/composables/useScrollToHash"
 import { useDocumentUnitStore } from "@/stores/documentUnitStore"
 
@@ -71,11 +72,14 @@ const headerOffset = 145
 useScrollToHash(routeHash, headerOffset)
 
 useProvideCourtType(courtTypeRef)
+
+const isInternalUser = useInternalUser()
 </script>
 
 <template>
   <FlexItem class="w-full flex-1 grow flex-col p-24">
     <DocumentUnitCoreData
+      v-if="isInternalUser"
       :id="DocumentUnitCatagoriesEnum.CORE_DATA"
       v-model="coreData"
       class="mb-24"

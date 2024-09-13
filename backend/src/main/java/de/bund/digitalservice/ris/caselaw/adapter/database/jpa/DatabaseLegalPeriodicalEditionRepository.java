@@ -9,5 +9,6 @@ import org.springframework.stereotype.Repository;
 public interface DatabaseLegalPeriodicalEditionRepository
     extends JpaRepository<LegalPeriodicalEditionDTO, UUID> {
 
-  List<LegalPeriodicalEditionDTO> findAllByLegalPeriodicalId(UUID legalPeriodicalId);
+  List<LegalPeriodicalEditionDTO> findAllByLegalPeriodicalIdOrderByCreatedAtDesc(
+      UUID legalPeriodicalId);
 }

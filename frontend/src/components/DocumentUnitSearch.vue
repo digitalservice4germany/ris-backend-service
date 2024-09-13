@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import dayjs from "dayjs"
 import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
+import DateUtil from "../utils/dateUtil"
 import DocumentUnitList from "@/components/DocumentUnitList.vue"
 import DocumentUnitSearchEntryForm, {
   DocumentUnitSearchParameter,
@@ -9,6 +9,7 @@ import DocumentUnitSearchEntryForm, {
 import InfoModal from "@/components/InfoModal.vue"
 import TextButton from "@/components/input/TextButton.vue"
 import Pagination, { Page } from "@/components/Pagination.vue"
+import { useInternalUser } from "@/composables/useInternalUser"
 import { Query } from "@/composables/useQueryFromRoute"
 import { Court } from "@/domain/documentUnit"
 import DocumentUnitListEntry from "@/domain/documentUnitListEntry"
@@ -29,10 +30,15 @@ const searchResponseError = ref()
 const isLoading = ref(false)
 const searchQuery = ref<Query<DocumentUnitSearchParameter>>()
 const pageNumber = ref<number>(0)
+const isInternalUser = useInternalUser()
 
 const emptyStateLabel = computed(() => {
   if (!documentUnitListEntries.value) {
-    return "Starten Sie die Suche oder erstellen Sie eine neue Dokumentationseinheit."
+    if (isInternalUser) {
+      return "Starten Sie die Suche oder erstellen Sie eine neue Dokumentationseinheit."
+    } else {
+      return "Starten Sie die Suche."
+    }
   } else if (documentUnitListEntries.value.length === 0) {
     return errorMessages.SEARCH_RESULTS_NOT_FOUND.title
   }
@@ -247,12 +253,11 @@ const showDefaultLink = computed(() => {
         class="grow"
         :document-unit-list-entries="documentUnitListEntries"
         :empty-state="emptyStateLabel"
-        is-deletable
         :is-loading="isLoading"
         :search-response-error="searchResponseError"
         @delete-document-unit="handleDelete"
       >
-        <template #newlink>
+        <template v-if="isInternalUser" #newlink>
           <TextButton
             v-if="showDefaultLink"
             aria-label="Neue Dokumentationseinheit erstellen"
@@ -279,13 +284,9 @@ const showDefaultLink = computed(() => {
                 <span :class="{ 'text-gray-800': !courtFromQuery }">{{
                   `${courtFromQuery?.label ?? "Gericht unbekannt"}, `
                 }}</span>
-                <span :class="{ 'text-gray-800': !dateFromQuery }">{{
-                  dateFromQuery
-                    ? dayjs(dateFromQuery, "YYYY-MM-DD", true).format(
-                        "DD.MM.YYYY",
-                      )
-                    : "Datum unbekannt"
-                }}</span>
+                <span :class="{ 'text-gray-800': !dateFromQuery }">
+                  {{ DateUtil.formatDate(dateFromQuery) || "Datum unbekannt" }}
+                </span>
               </p>
               <TextButton
                 button-type="tertiary"

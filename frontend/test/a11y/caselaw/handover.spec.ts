@@ -1,4 +1,4 @@
-import AxeBuilder from "@axe-core/playwright"
+import { AxeBuilder } from "@axe-core/playwright"
 import { expect } from "@playwright/test"
 import { navigateToHandover } from "../../e2e/caselaw/e2e-utils"
 import { caselawTest as test } from "../../e2e/caselaw/fixtures"

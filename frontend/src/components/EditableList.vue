@@ -5,6 +5,7 @@ import DataSetSummary from "@/components/DataSetSummary.vue"
 import TextButton from "@/components/input/TextButton.vue"
 import ListItem from "@/domain/editableListItem"
 import IconArrowDown from "~icons/ic/baseline-keyboard-arrow-down"
+import IconAdd from "~icons/material-symbols/add"
 
 interface Props {
   editComponent: Component
@@ -92,6 +93,16 @@ function filterEntries(entries: T[], entryToRemove?: T): T[] {
 function isSelected(entry: T): boolean {
   if (editEntry.value !== undefined) {
     return editEntry.value.equals(entry)
+  }
+  return false
+}
+
+/**
+ * Method to check if entry is given in model value
+ */
+function isSaved(entries: T[], entry?: T): boolean {
+  if (entry) {
+    return entries.some((item) => entry.equals(item))
   }
   return false
 }
@@ -185,6 +196,7 @@ watch(
         v-if="isSelected(entry)"
         v-model="modelValueList[index]"
         class="py-24"
+        :is-saved="isSaved(modelValue, modelValueList[index])"
         :model-value-list="modelValueList"
         @add-entry="updateModel"
         @cancel-edit="cancelEdit"
@@ -197,6 +209,7 @@ watch(
       aria-label="Weitere Angabe"
       button-type="tertiary"
       class="mt-24 first:mt-0"
+      :icon="IconAdd"
       label="Weitere Angabe"
       size="small"
       @click="toggleDisplayDefaultValue(true)"

@@ -120,8 +120,14 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
   @Column(name = "other_long_text")
   String otherLongText;
 
+  @Column(name = "outline")
+  String outline;
+
   @Column(name = "other_headnote")
   String otherHeadnote;
+
+  @Column(name = "dissenting_opinion")
+  private String dissentingOpinion;
 
   @OneToMany(
       mappedBy = "documentationUnit",
@@ -271,4 +277,10 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
   @Builder.Default
   @OrderBy("rank")
   private List<ReferenceDTO> references = new ArrayList<>();
+
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
+  @OrderBy("rank")
+  @Builder.Default
+  private List<JobProfileDTO> jobProfiles = new ArrayList<>();
 }

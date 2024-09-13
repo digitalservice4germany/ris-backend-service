@@ -14,4 +14,6 @@ public interface LegalPeriodicalEditionRepository {
   List<LegalPeriodicalEdition> findAllByLegalPeriodicalId(UUID legalPeriodicalId);
 
   LegalPeriodicalEdition save(LegalPeriodicalEdition legalPeriodicalEdition);
+
+  void delete(LegalPeriodicalEdition legalPeriodicalEdition);
 }

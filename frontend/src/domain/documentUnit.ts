@@ -37,6 +37,7 @@ export type ContentRelatedIndexing = {
   norms?: NormReference[]
   activeCitations?: ActiveCitation[]
   fieldsOfLaw?: FieldOfLaw[]
+  jobProfiles?: string[]
 }
 
 export type DocumentType = {
@@ -58,6 +59,7 @@ export type Procedure = {
   documentationUnitCount: number
   createdAt: string
   documentUnits?: DocumentUnitListEntry[]
+  userGroupId?: string
 }
 
 export type Texts = {
@@ -70,6 +72,9 @@ export type Texts = {
   reasons?: string
   caseFacts?: string
   decisionReasons?: string
+  dissentingOpinion?: string
+  otherLongText?: string
+  outline?: string
 }
 
 export default class DocumentUnit {

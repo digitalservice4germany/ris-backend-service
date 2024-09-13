@@ -3,6 +3,7 @@ package de.bund.digitalservice.ris.caselaw.integration.tests;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,6 +60,7 @@ class HealthEndpointIntegrationTest {
 
   @Autowired MockMvc mockMvc;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
+  @MockBean UserGroupService userGroupService;
 
   @Test
   void shouldExposeHealthEndpoint() throws Exception {

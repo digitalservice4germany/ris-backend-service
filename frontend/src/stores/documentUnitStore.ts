@@ -79,6 +79,7 @@ export const useDocumentUnitStore = defineStore("docunitStore", () => {
 
       try {
         applyPatch(backendPatch)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
         if (documentUnit.value.documentNumber) {
           const response = await loadDocumentUnit(
@@ -132,7 +133,10 @@ export const useDocumentUnitStore = defineStore("docunitStore", () => {
       return {
         status: response.status,
         data: undefined,
-        error: errorMessages.DOCUMENT_UNIT_UPDATE_FAILED,
+        error:
+          response.status === 403
+            ? errorMessages.NOT_ALLOWED
+            : errorMessages.DOCUMENT_UNIT_UPDATE_FAILED,
       }
     }
     return response

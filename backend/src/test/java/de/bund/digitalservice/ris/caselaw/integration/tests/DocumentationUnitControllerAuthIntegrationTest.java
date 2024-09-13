@@ -1,11 +1,13 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.mockUserGroups;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.PUBLISHED;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.PUBLISHING;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.UNPUBLISHED;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.jayway.jsonpath.JsonPath;
+import com.fasterxml.jackson.core.type.TypeReference;
+import de.bund.digitalservice.ris.caselaw.SliceTestImpl;
 import de.bund.digitalservice.ris.caselaw.TestConfig;
 import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberGeneratorService;
@@ -30,31 +32,32 @@ import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.AttachmentService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitListItem;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.PublicationStatus;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -108,6 +111,8 @@ class DocumentationUnitControllerAuthIntegrationTest {
   @MockBean private PatchMapperService patchMapperService;
 
   @MockBean private HandoverService handoverService;
+  @MockBean UserGroupService userGroupService;
+  @MockBean private ProcedureService procedureService;
 
   @MockBean
   private DocumentationUnitDocxMetadataInitializationService
@@ -115,40 +120,32 @@ class DocumentationUnitControllerAuthIntegrationTest {
 
   static Stream<Arguments> getUnauthorizedCases() {
     return Stream.of(
-        Arguments.of("CC-RIS", "BGH", List.of(UNPUBLISHED)),
-        Arguments.of("BGH", "CC-RIS", List.of(UNPUBLISHED)));
+        Arguments.of("CC-RIS", "/BGH", List.of(UNPUBLISHED)),
+        Arguments.of("BGH", "/CC-RIS", List.of(UNPUBLISHED)));
   }
 
   static Stream<Arguments> getAuthorizedCases() {
     return Stream.of(
-        Arguments.of("CC-RIS", "BGH", List.of(PUBLISHED)),
-        Arguments.of("CC-RIS", "BGH", List.of(PUBLISHING)),
-        Arguments.of("BGH", "BGH", List.of(UNPUBLISHED)),
-        Arguments.of("BGH", "BGH", List.of(PUBLISHED)),
-        Arguments.of("BGH", "BGH", List.of(UNPUBLISHED, PUBLISHED)),
-        Arguments.of("BGH", "BGH", List.of(PUBLISHING)),
-        Arguments.of("BGH", "BGH", List.of(UNPUBLISHED, PUBLISHING)),
-        Arguments.of("BGH", "BGH", List.of(UNPUBLISHED, PUBLISHED, UNPUBLISHED)));
+        Arguments.of("CC-RIS", "/BGH", List.of(PUBLISHED)),
+        Arguments.of("CC-RIS", "/BGH", List.of(PUBLISHING)),
+        Arguments.of("BGH", "/BGH", List.of(UNPUBLISHED)),
+        Arguments.of("BGH", "/BGH", List.of(PUBLISHED)),
+        Arguments.of("BGH", "/BGH", List.of(UNPUBLISHED, PUBLISHED)),
+        Arguments.of("BGH", "/BGH", List.of(PUBLISHING)),
+        Arguments.of("BGH", "/BGH", List.of(UNPUBLISHED, PUBLISHING)),
+        Arguments.of("BGH", "/BGH", List.of(UNPUBLISHED, PUBLISHED, UNPUBLISHED)));
   }
 
-  private static final Map<String, String> officeGroupMap =
-      new HashMap<>() {
-        {
-          put("CC-RIS", "/CC-RIS");
-          put("BGH", "/caselaw/BGH");
-        }
-      };
-
-  private static final Map<String, DocumentationOfficeDTO> officeMap = new HashMap<>();
+  private DocumentationOfficeDTO ccRisOffice;
+  private DocumentationOfficeDTO bghOffice;
 
   @BeforeEach
   void setUp() {
     // created via db migration V0_79__caselaw_insert_default_documentation_offices
-    DocumentationOfficeDTO ccRisOffice = documentationOfficeRepository.findByAbbreviation("CC-RIS");
-    DocumentationOfficeDTO bghOffice = documentationOfficeRepository.findByAbbreviation("BGH");
+    ccRisOffice = documentationOfficeRepository.findByAbbreviation("CC-RIS");
+    bghOffice = documentationOfficeRepository.findByAbbreviation("BGH");
 
-    officeMap.put("CC-RIS", ccRisOffice);
-    officeMap.put("BGH", bghOffice);
+    mockUserGroups(userGroupService);
   }
 
   @AfterEach
@@ -157,15 +154,16 @@ class DocumentationUnitControllerAuthIntegrationTest {
   }
 
   @ParameterizedTest
-  @Disabled("waiting for Datenschemamigration to be finished")
   @MethodSource("getAuthorizedCases")
   void testGetAll_shouldBeAccessible(
-      String docUnitOfficeAbbreviation,
-      String userDocOfficeAbbreviation,
-      List<PublicationStatus> publicationStatus) {
+      String docUnitOfficeString, String userGroupPath, List<PublicationStatus> publicationStatus) {
 
-    String userOfficeId = officeGroupMap.get(userDocOfficeAbbreviation);
-    DocumentationOfficeDTO docUnitOffice = officeMap.get(docUnitOfficeAbbreviation);
+    DocumentationOfficeDTO docUnitOffice;
+    if (docUnitOfficeString.equals(bghOffice.getAbbreviation())) {
+      docUnitOffice = bghOffice;
+    } else {
+      docUnitOffice = ccRisOffice;
+    }
 
     DocumentationUnitDTO documentationUnitDTO =
         createNewDocumentationUnitDTO(UUID.randomUUID(), docUnitOffice);
@@ -176,22 +174,27 @@ class DocumentationUnitControllerAuthIntegrationTest {
           Status.builder().publicationStatus(publicationStatus.get(i)).build());
     }
 
-    RisEntityExchangeResult<String> result =
+    Slice<DocumentationUnitListItem> docUnitsSearchResult =
         risWebTestClient
-            .withLogin(userOfficeId)
+            .withLogin(userGroupPath)
             .get()
             .uri("/api/v1/caselaw/documentunits/search?pg=0&sz=10")
             .exchange()
             .expectStatus()
             .isOk()
-            .expectBody(String.class)
-            .returnResult();
+            .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
 
-    assertThat(extractStatusByUuid(result.getResponseBody(), documentationUnitDTO.getId()))
-        .isEqualTo(getResultStatus(publicationStatus).toString());
+    var docUnit =
+        docUnitsSearchResult.stream()
+            .filter(unit -> unit.uuid().equals(documentationUnitDTO.getId()))
+            .findFirst()
+            .get();
+    assertThat(docUnit.status().publicationStatus()).isEqualTo(getResultStatus(publicationStatus));
 
     risWebTestClient
-        .withLogin(userOfficeId)
+        .withLogin(userGroupPath)
         .get()
         .uri("/api/v1/caselaw/documentunits/" + documentationUnitDTO.getDocumentNumber())
         .exchange()
@@ -202,18 +205,21 @@ class DocumentationUnitControllerAuthIntegrationTest {
   }
 
   @ParameterizedTest
-  @Disabled("waiting for Datenschemamigration to be finished")
   @MethodSource("getUnauthorizedCases")
   void testGetAll_shouldNotBeAccessible(
       String docUnitOfficeAbbreviation,
-      String userDocOfficeAbbreviation,
+      String userGroupPath,
       List<PublicationStatus> publicationStatus) {
 
-    String userOfficeId = officeGroupMap.get(userDocOfficeAbbreviation);
-    DocumentationOfficeDTO docUnitOfficeId = officeMap.get(docUnitOfficeAbbreviation);
+    DocumentationOfficeDTO docUnitOffice;
+    if (docUnitOfficeAbbreviation.equals(bghOffice.getAbbreviation())) {
+      docUnitOffice = bghOffice;
+    } else {
+      docUnitOffice = ccRisOffice;
+    }
 
     DocumentationUnitDTO documentationUnitDTO =
-        createNewDocumentationUnitDTO(UUID.randomUUID(), docUnitOfficeId);
+        createNewDocumentationUnitDTO(UUID.randomUUID(), docUnitOffice);
     for (int i = 0; i < publicationStatus.size(); i++) {
       saveToStatusRepository(
           documentationUnitDTO,
@@ -221,22 +227,23 @@ class DocumentationUnitControllerAuthIntegrationTest {
           Status.builder().publicationStatus(publicationStatus.get(i)).build());
     }
 
-    RisEntityExchangeResult<String> result =
+    Slice<DocumentationUnitListItem> docUnitsSearchResult =
         risWebTestClient
-            .withLogin(userOfficeId)
+            .withLogin(userGroupPath)
             .get()
             .uri("/api/v1/caselaw/documentunits/search?pg=0&sz=10")
             .exchange()
             .expectStatus()
             .isOk()
-            .expectBody(String.class)
-            .returnResult();
+            .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
 
-    assertThat(extractDocUnitsByUuid(result.getResponseBody(), documentationUnitDTO.getId()))
-        .isEmpty();
+    assertThat(docUnitsSearchResult)
+        .noneMatch(result -> result.uuid().equals(documentationUnitDTO.getId()));
 
     risWebTestClient
-        .withLogin(userOfficeId)
+        .withLogin(userGroupPath)
         .get()
         .uri("/api/v1/caselaw/documentunits/" + documentationUnitDTO.getDocumentNumber())
         .exchange()
@@ -245,9 +252,9 @@ class DocumentationUnitControllerAuthIntegrationTest {
   }
 
   @Test
-  void testUnpublishedDocumentationUnitIsForbiddenFOrOtherOffice() {
+  void testUnpublishedDocumentationUnitIsForbiddenForOtherOffice() {
     DocumentationUnitDTO documentationUnitDTO =
-        createNewDocumentationUnitDTO(UUID.randomUUID(), officeMap.get("CC-RIS"));
+        createNewDocumentationUnitDTO(UUID.randomUUID(), ccRisOffice);
     saveToStatusRepository(
         documentationUnitDTO,
         Instant.now(),
@@ -255,7 +262,7 @@ class DocumentationUnitControllerAuthIntegrationTest {
 
     // Documentation Office 1
     risWebTestClient
-        .withLogin(officeGroupMap.get("CC-RIS"))
+        .withLogin(("/CC-RIS"))
         .get()
         .uri("/api/v1/caselaw/documentunits/" + documentationUnitDTO.getDocumentNumber())
         .exchange()
@@ -269,7 +276,7 @@ class DocumentationUnitControllerAuthIntegrationTest {
 
     // Documentation Office 2
     risWebTestClient
-        .withLogin(officeGroupMap.get("BGH"))
+        .withLogin("/BGH")
         .get()
         .uri("/api/v1/caselaw/documentunits/" + documentationUnitDTO.getDocumentNumber())
         .exchange()
@@ -282,7 +289,7 @@ class DocumentationUnitControllerAuthIntegrationTest {
         Status.builder().publicationStatus(PUBLISHING).build());
 
     risWebTestClient
-        .withLogin(officeGroupMap.get("BGH"))
+        .withLogin(("/BGH"))
         .get()
         .uri("/api/v1/caselaw/documentunits/" + documentationUnitDTO.getDocumentNumber())
         .exchange()
@@ -300,7 +307,7 @@ class DocumentationUnitControllerAuthIntegrationTest {
         Status.builder().publicationStatus(PUBLISHED).build());
 
     risWebTestClient
-        .withLogin(officeGroupMap.get("BGH"))
+        .withLogin(("/BGH"))
         .get()
         .uri("/api/v1/caselaw/documentunits/" + documentationUnitDTO.getDocumentNumber())
         .exchange()
@@ -342,18 +349,5 @@ class DocumentationUnitControllerAuthIntegrationTest {
             .withError(status.withError())
             .createdAt(createdAt)
             .build());
-  }
-
-  private String extractStatusByUuid(String responseBody, UUID uuid) {
-    List<String> docUnitStatusResults =
-        JsonPath.read(
-            responseBody,
-            String.format("$.content[?(@.uuid=='%s')].status.publicationStatus", uuid));
-    assertThat(docUnitStatusResults).hasSize(1);
-    return docUnitStatusResults.get(0);
-  }
-
-  private List<String> extractDocUnitsByUuid(String responseBody, UUID uuid) {
-    return JsonPath.read(responseBody, String.format("$.content[?(@.uuid=='%s')]", uuid));
   }
 }

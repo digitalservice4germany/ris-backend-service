@@ -59,9 +59,6 @@ public class DocumentationUnitListItemTransformer {
                     documentationUnitListItemDTO.getStatus().stream()
                         .max(Comparator.comparing(StatusDTO::getCreatedAt))
                         .orElse(null)))
-        .documentationOffice(
-            DocumentationOfficeTransformer.transformToDomain(
-                documentationUnitListItemDTO.getDocumentationOffice()))
         .hasNote(
             documentationUnitListItemDTO.getNote() != null
                 && !documentationUnitListItemDTO.getNote().isEmpty());

@@ -35,7 +35,6 @@ const isLoading = computed(
     <DocumentUnitList
       class="grow"
       :document-unit-list-entries="procedure.documentUnits"
-      is-deletable
       :is-loading="isLoading"
       :search-response-error="responseError"
       @delete-document-unit="emit('deleteDocumentUnit', $event, procedure)"

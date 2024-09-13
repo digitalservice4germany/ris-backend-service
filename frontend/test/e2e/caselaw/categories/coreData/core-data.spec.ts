@@ -309,7 +309,7 @@ test.describe("core data", () => {
   })
 
   test(
-    "core data is readonly for external user",
+    "core data is hidden for external user",
     {
       annotation: {
         type: "story",
@@ -323,82 +323,82 @@ test.describe("core data", () => {
         await navigateToCategories(pageWithExternalUser, documentNumber)
       })
 
-      await test.step("Gericht und Fehlerhaftes Gericht sind readonly", async () => {
+      await test.step("Gericht und Fehlerhaftes Gericht sind nicht sichtbar", async () => {
         const court = pageWithExternalUser.locator("[aria-label='Gericht']")
         const deviatingCourt = pageWithExternalUser.getByTestId(
           "chips-input_deviatingCourt",
         )
-        await expect(court).not.toBeEditable()
-        expect(await isReadOnly(deviatingCourt)).toBe(true)
+        await expect(court).toBeHidden()
+        await expect(deviatingCourt).toBeHidden()
       })
 
-      await test.step("Aktenzeichen und abweichendes Aktenzeichen sind readonly", async () => {
+      await test.step("Aktenzeichen und abweichendes Aktenzeichen sind nicht sichtbar", async () => {
         const fileNumber = pageWithExternalUser.getByTestId(
           "chips-input_fileNumber",
         )
         const deviatingFileNumber = pageWithExternalUser.getByTestId(
           "chips-input_deviatingFileNumber",
         )
-        expect(await isReadOnly(fileNumber)).toBe(true)
-        expect(await isReadOnly(deviatingFileNumber)).toBe(true)
+        await expect(fileNumber).toBeHidden()
+        await expect(deviatingFileNumber).toBeHidden()
       })
 
-      await test.step("Entscheidungsdatum und abweichendes Entscheidungsdatum sind readonly", async () => {
+      await test.step("Entscheidungsdatum und abweichendes Entscheidungsdatum sind nicht sichtbar", async () => {
         const decisionDate = pageWithExternalUser.locator(
           "[aria-label='Entscheidungsdatum']",
         )
         const deviatingDecisionDate = pageWithExternalUser.getByTestId(
           "chips-input_deviatingDecisionDates",
         )
-        await expect(decisionDate).not.toBeEditable()
-        expect(await isReadOnly(deviatingDecisionDate)).toBe(true)
+        await expect(decisionDate).toBeHidden()
+        await expect(deviatingDecisionDate).toBeHidden()
       })
 
-      await test.step("Spruchkörper ist readonly", async () => {
+      await test.step("Spruchkörper ist nicht sichtbar", async () => {
         const appraisalBody = pageWithExternalUser.locator(
           "[aria-label='Spruchkörper']",
         )
-        await expect(appraisalBody).not.toBeEditable()
+        await expect(appraisalBody).toBeHidden()
       })
 
-      await test.step("Dokumenttyp ist readonly", async () => {
+      await test.step("Dokumenttyp ist nicht sichtbar", async () => {
         const documentType = pageWithExternalUser.locator(
           "[aria-label='Dokumenttyp']",
         )
-        await expect(documentType).not.toBeEditable()
+        await expect(documentType).toBeHidden()
       })
 
-      await test.step("ECLI und abweichender ECLI sind readonly", async () => {
+      await test.step("ECLI und abweichender ECLI sind nicht sichtbar", async () => {
         const ecli = pageWithExternalUser.locator("[aria-label='ECLI']")
         const deviatingEcli = pageWithExternalUser.getByTestId(
           "chips-input_deviatingEclis",
         )
-        await expect(ecli).not.toBeEditable()
-        expect(await isReadOnly(deviatingEcli)).toBe(true)
+        await expect(ecli).toBeHidden()
+        await expect(deviatingEcli).toBeHidden()
       })
 
-      await test.step("Vorgang ist readonly", async () => {
+      await test.step("Vorgang ist nicht sichtbar", async () => {
         const procedure = pageWithExternalUser.locator("[aria-label='Vorgang']")
-        await expect(procedure).not.toBeEditable()
+        await expect(procedure).toBeHidden()
       })
 
-      await test.step("Rechtskraft ist readonly", async () => {
+      await test.step("Rechtskraft ist nicht sichtbar", async () => {
         const legalEffect = pageWithExternalUser.locator(
           "[aria-label='Rechtskraft']",
         )
-        await expect(legalEffect).toBeDisabled()
+        await expect(legalEffect).toBeHidden()
       })
 
-      await test.step("Region ist readonly", async () => {
+      await test.step("Region ist nicht sichtbar", async () => {
         const region = pageWithExternalUser.locator("[aria-label='Region']")
-        await expect(region).not.toBeEditable()
+        await expect(region).toBeHidden()
       })
 
-      await test.step("Streitjahr ist readonly", async () => {
+      await test.step("Streitjahr ist nicht sichtbar", async () => {
         const yearsOfDispute = pageWithExternalUser.getByTestId(
           "chips-input_yearOfDispute",
         )
-        expect(await isReadOnly(yearsOfDispute)).toBe(true)
+        await expect(yearsOfDispute).toBeHidden()
       })
     },
   )

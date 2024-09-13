@@ -14,6 +14,7 @@ import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.CitationTypeService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.citation.CitationType;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
@@ -64,6 +65,7 @@ class CitationTypeIntegrationTest {
   @MockBean UserService userService;
   @MockBean private DocumentationUnitService documentationUnitService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
+  @MockBean private ProcedureService procedureService;
 
   @AfterEach
   void cleanUp() {

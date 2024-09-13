@@ -3,7 +3,7 @@ import {
   navigateToAttachments,
   uploadTestfile,
   navigateToCategories,
-  copyPasteAllTextFromAttachmentIntoEditor,
+  copyPasteTextFromAttachmentIntoEditor,
 } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
 
@@ -48,7 +48,7 @@ test("copy-paste text with different styles and alignments from side panel", asy
   await test.step("copy and paste document text into text editor field, check that the style is applied", async () => {
     const attachmentLocator = page.getByText("centered").locator("..")
     const inputField = page.locator("[data-testid='Leitsatz']")
-    await copyPasteAllTextFromAttachmentIntoEditor(
+    await copyPasteTextFromAttachmentIntoEditor(
       page,
       attachmentLocator,
       inputField,
@@ -109,7 +109,7 @@ test(
         .getByText("Text", { exact: true })
         .locator("..")
       const inputField = page.locator("[data-testid='Leitsatz']")
-      await copyPasteAllTextFromAttachmentIntoEditor(
+      await copyPasteTextFromAttachmentIntoEditor(
         page,
         attachmentLocator,
         inputField,
@@ -169,7 +169,7 @@ test(
         .getByText("Text", { exact: true })
         .locator("..")
       const inputField = page.locator("[data-testid='Leitsatz']")
-      await copyPasteAllTextFromAttachmentIntoEditor(
+      await copyPasteTextFromAttachmentIntoEditor(
         page,
         attachmentLocator,
         inputField,

@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test"
-import { navigateToCategories, save } from "../../e2e-utils"
+import { getModifier, navigateToCategories, save } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
 import { navigateToHandover } from "~/e2e/caselaw/e2e-utils"
 
@@ -109,6 +109,41 @@ test.describe(
       expect(inputFieldInnerHTML).toContain(orderedList)
 
       await page.locator(`[aria-label='orderedList']:not([disabled])`).click()
+      inputFieldInnerHTML = await inputField.innerHTML()
+      expect(inputFieldInnerHTML).toContain(noList)
+    })
+
+    test("Toggle list types with keyboard shortcut", async ({
+      page,
+      prefilledDocumentUnit,
+    }) => {
+      const bulletList = `<ul class="list-disc"><li><p>This is a list</p></li></ul>`
+      const orderedList = `<ol class="list-decimal"><li><p>This is a list</p></li></ol>`
+      const noList = `<p>This is a list</p>`
+
+      await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
+
+      const inputField = page.locator("[data-testid='Gründe']")
+      await inputField.click()
+      // hide invisible characters
+      await page
+        .locator(`[aria-label='invisible-characters']:not([disabled])`)
+        .click()
+
+      const modifier = await getModifier(page)
+
+      await page.keyboard.type("This is a list")
+      await page.keyboard.press(`${modifier}+Shift+8`)
+
+      let inputFieldInnerHTML = await inputField.innerHTML()
+      // Check text styling
+      expect(inputFieldInnerHTML).toContain(bulletList)
+
+      await page.keyboard.press(`${modifier}+Shift+7`)
+      inputFieldInnerHTML = await inputField.innerHTML()
+      expect(inputFieldInnerHTML).toContain(orderedList)
+
+      await page.keyboard.press(`${modifier}+Shift+7`)
       inputFieldInnerHTML = await inputField.innerHTML()
       expect(inputFieldInnerHTML).toContain(noList)
     })

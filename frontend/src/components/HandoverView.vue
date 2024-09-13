@@ -53,7 +53,7 @@ const errorMessage = computed(
 )
 
 onMounted(async () => {
-  if (fieldsMissing.value) return
+  if (fieldsMissing.value || isOutlineInvalid.value) return
   const previewResponse = await handoverService.getPreview(
     store.documentUnit!.uuid,
   )
@@ -68,6 +68,11 @@ function handoverDocumentUnit() {
   if (fieldsMissing.value) {
     frontendError.value = {
       title: "Es sind noch nicht alle Pflichtfelder befüllt.",
+      description: "Die Dokumentationseinheit kann nicht übergeben werden.",
+    }
+  } else if (isOutlineInvalid.value) {
+    frontendError.value = {
+      title: "Gliederung und Sonstiger Orientierungssatz sind befüllt.",
       description: "Die Dokumentationseinheit kann nicht übergeben werden.",
     }
   } else {
@@ -202,6 +207,12 @@ const fieldsMissing = computed(() => {
     !!missingActiveCitationFields.value?.length
   )
 })
+
+const isOutlineInvalid = computed(
+  () =>
+    // Outline is written into otherHeadnote in jdv -> Only one of the fields may be filled at the same time
+    store.documentUnit?.texts.outline && store.documentUnit.texts.otherHeadnote,
+)
 </script>
 
 <template>
@@ -214,119 +225,124 @@ const fieldsMissing = computed(() => {
       <div class="w-[15.625rem]">
         <p class="ds-subhead">Plausibilitätsprüfung</p>
       </div>
-      <div v-if="fieldsMissing" class="flex flex-row gap-8">
+      <div v-if="fieldsMissing || isOutlineInvalid" class="flex flex-row gap-8">
         <div>
           <IconErrorOutline class="text-red-800" />
         </div>
         <div class="flex flex-col gap-32">
-          <div>
-            <p class="ds-body-01-reg">
-              Die folgenden Rubriken-Pflichtfelder sind nicht befüllt:
-            </p>
-            <ul class="list-disc">
-              <li
-                v-for="field in missingCoreDataFields"
-                :key="field"
-                class="ds-body-01-reg ml-[1rem] list-item"
-              >
-                {{ field }}
-              </li>
-              <li
-                v-if="
-                  missingPreviousDecisionFields &&
-                  missingPreviousDecisionFields.length > 0
-                "
-                class="ds-body-01-reg ml-[1rem] list-item"
-              >
-                Vorgehende Entscheidungen
-                <ul>
-                  <li
-                    v-for="fields in missingPreviousDecisionFields"
-                    :key="missingPreviousDecisionFields.indexOf(fields)"
-                    class="ds-body-01-reg ml-[1rem] list-item"
-                  >
-                    <div v-if="fields && fields.missingFields.length > 0">
-                      <span>{{ fields.identifier }}</span>
-                      -
-                      <span class="ds-label-02-bold">{{
-                        fields.missingFields.join(", ")
-                      }}</span>
-                    </div>
-                  </li>
-                </ul>
-              </li>
-              <li
-                v-if="
-                  missingEnsuingDecisionFields &&
-                  missingEnsuingDecisionFields.length > 0
-                "
-                class="ds-body-01-reg ml-[1rem] list-item"
-              >
-                Nachgehende Entscheidungen
-                <ul>
-                  <li
-                    v-for="fields in missingEnsuingDecisionFields"
-                    :key="missingEnsuingDecisionFields.indexOf(fields)"
-                    class="ds-body-01-reg ml-[1rem] list-item"
-                  >
-                    <div v-if="fields && fields.missingFields.length > 0">
-                      <span>{{ fields.identifier }}</span>
-                      -
-                      <span class="ds-label-02-bold">{{
-                        fields.missingFields.join(", ")
-                      }}</span>
-                    </div>
-                  </li>
-                </ul>
-              </li>
-              <li
-                v-if="missingNormsFields && missingNormsFields.length > 0"
-                class="ds-body-01-reg ml-[1rem] list-item"
-              >
-                Normen
-                <ul>
-                  <li
-                    v-for="fields in missingNormsFields"
-                    :key="missingNormsFields.indexOf(fields)"
-                    class="ds-body-01-reg ml-[1rem] list-item"
-                  >
-                    <div v-if="fields && fields.missingFields.length > 0">
-                      <span>{{ fields.identifier }}</span>
-                      -
-                      <span class="ds-label-02-bold">{{
-                        fields.missingFields.join(", ")
-                      }}</span>
-                    </div>
-                  </li>
-                </ul>
-              </li>
-              <li
-                v-if="
-                  missingActiveCitationFields &&
-                  missingActiveCitationFields.length > 0
-                "
-                class="ds-body-01-reg ml-[1rem] list-item"
-              >
-                Aktivzitierung
-                <ul>
-                  <li
-                    v-for="fields in missingActiveCitationFields"
-                    :key="missingActiveCitationFields.indexOf(fields)"
-                    class="ds-body-01-reg ml-[1rem] list-item"
-                  >
-                    <div v-if="fields && fields.missingFields.length > 0">
-                      <span>{{ fields.identifier }}</span>
-                      -
-                      <span class="ds-label-02-bold">{{
-                        fields.missingFields.join(", ")
-                      }}</span>
-                    </div>
-                  </li>
-                </ul>
-              </li>
-            </ul>
+          <div v-if="fieldsMissing" class="flex flex-col gap-32">
+            <div>
+              <p class="ds-body-01-reg">
+                Die folgenden Rubriken-Pflichtfelder sind nicht befüllt:
+              </p>
+              <ul class="list-disc">
+                <li
+                  v-for="field in missingCoreDataFields"
+                  :key="field"
+                  class="ds-body-01-reg ml-[1rem] list-item"
+                >
+                  {{ field }}
+                </li>
+                <li
+                  v-if="
+                    missingPreviousDecisionFields &&
+                    missingPreviousDecisionFields.length > 0
+                  "
+                  class="ds-body-01-reg ml-[1rem] list-item"
+                >
+                  Vorgehende Entscheidungen
+                  <ul>
+                    <li
+                      v-for="fields in missingPreviousDecisionFields"
+                      :key="missingPreviousDecisionFields.indexOf(fields)"
+                      class="ds-body-01-reg ml-[1rem] list-item"
+                    >
+                      <div v-if="fields && fields.missingFields.length > 0">
+                        <span>{{ fields.identifier }}</span>
+                        -
+                        <span class="ds-label-02-bold">{{
+                          fields.missingFields.join(", ")
+                        }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+                <li
+                  v-if="
+                    missingEnsuingDecisionFields &&
+                    missingEnsuingDecisionFields.length > 0
+                  "
+                  class="ds-body-01-reg ml-[1rem] list-item"
+                >
+                  Nachgehende Entscheidungen
+                  <ul>
+                    <li
+                      v-for="fields in missingEnsuingDecisionFields"
+                      :key="missingEnsuingDecisionFields.indexOf(fields)"
+                      class="ds-body-01-reg ml-[1rem] list-item"
+                    >
+                      <div v-if="fields && fields.missingFields.length > 0">
+                        <span>{{ fields.identifier }}</span>
+                        -
+                        <span class="ds-label-02-bold">{{
+                          fields.missingFields.join(", ")
+                        }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+                <li
+                  v-if="missingNormsFields && missingNormsFields.length > 0"
+                  class="ds-body-01-reg ml-[1rem] list-item"
+                >
+                  Normen
+                  <ul>
+                    <li
+                      v-for="fields in missingNormsFields"
+                      :key="missingNormsFields.indexOf(fields)"
+                      class="ds-body-01-reg ml-[1rem] list-item"
+                    >
+                      <div v-if="fields && fields.missingFields.length > 0">
+                        <span>{{ fields.identifier }}</span>
+                        -
+                        <span class="ds-label-02-bold">{{
+                          fields.missingFields.join(", ")
+                        }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+                <li
+                  v-if="
+                    missingActiveCitationFields &&
+                    missingActiveCitationFields.length > 0
+                  "
+                  class="ds-body-01-reg ml-[1rem] list-item"
+                >
+                  Aktivzitierung
+                  <ul>
+                    <li
+                      v-for="fields in missingActiveCitationFields"
+                      :key="missingActiveCitationFields.indexOf(fields)"
+                      class="ds-body-01-reg ml-[1rem] list-item"
+                    >
+                      <div v-if="fields && fields.missingFields.length > 0">
+                        <span>{{ fields.identifier }}</span>
+                        -
+                        <span class="ds-label-02-bold">{{
+                          fields.missingFields.join(", ")
+                        }}</span>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
           </div>
-
+          <div v-if="isOutlineInvalid">
+            Die Rubriken "Gliederung" und "Sonstiger Orientierungssatz" sind
+            befüllt. Es darf nur eine der beiden Rubriken befüllt sein.
+          </div>
           <RouterLink :to="categoriesRoute">
             <TextButton
               aria-label="Rubriken bearbeiten"
@@ -345,7 +361,12 @@ const fieldsMissing = computed(() => {
     <div class="border-b-1 border-b-gray-400"></div>
 
     <ExpandableContent
-      v-if="!fieldsMissing && preview?.success && !!preview?.xml"
+      v-if="
+        !fieldsMissing &&
+        !isOutlineInvalid &&
+        preview?.success &&
+        !!preview?.xml
+      "
       as-column
       class="border-b-1 border-r-1 border-gray-400 bg-white p-10"
       :data-set="preview"
@@ -421,7 +442,11 @@ const fieldsMissing = computed(() => {
                 </div>
               </div>
               <div class="ds-label-section text-gray-900">ALS</div>
-              <CodeSnippet v-if="!!item?.xml" title="XML" :xml="item.xml" />
+              <CodeSnippet
+                v-if="item.attachments?.[0]"
+                title="XML"
+                :xml="item.attachments?.[0].fileContent!"
+              />
             </div>
             <div
               v-else-if="item.type == EventRecordType.MIGRATION"

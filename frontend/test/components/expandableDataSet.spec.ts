@@ -36,6 +36,7 @@ function renderComponent(options?: {
 
 describe("ExpandableDataSet", () => {
   beforeAll(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     global.ResizeObserver = require("resize-observer-polyfill")
   })
 

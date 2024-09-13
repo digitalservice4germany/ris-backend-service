@@ -1,18 +1,15 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue"
+import { ref, computed } from "vue"
 import { useRoute } from "vue-router"
 import FlexContainer from "@/components/FlexContainer.vue"
 import FlexItem from "@/components/FlexItem.vue"
 import IconBadge from "@/components/IconBadge.vue"
-import FeatureToggleService from "@/services/featureToggleService"
 import useSessionStore from "@/stores/sessionStore"
 import IconPermIdentity from "~icons/ic/baseline-perm-identity"
 
 const route = useRoute()
 const session = useSessionStore()
 const fontColor = ref<string>()
-
-const featureToggle = ref()
 
 const badge = computed(() => {
   const docOffice = session.user?.documentationOffice
@@ -34,12 +31,6 @@ const badge = computed(() => {
       label: docOffice ?? "",
     }
   }
-})
-
-onMounted(async () => {
-  featureToggle.value = (
-    await FeatureToggleService.isEnabled("neuris.legal_periodical_evaluation")
-  ).data
 })
 </script>
 
@@ -76,12 +67,11 @@ onMounted(async () => {
         >Vorgänge
       </router-link>
       <router-link
-        v-if="featureToggle"
         class="ds-label-01-reg p-8 hover:bg-yellow-500 hover:underline"
         :class="{
-          underline: route.path.includes('legal-periodical-editions'),
+          underline: route.path.includes('periodical-evaluation'),
         }"
-        :to="{ name: 'caselaw-legal-periodical-editions' }"
+        :to="{ name: 'caselaw-periodical-evaluation' }"
         >Periodika
       </router-link>
     </div>

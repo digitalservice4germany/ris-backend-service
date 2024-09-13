@@ -20,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -67,7 +68,7 @@ public class DocumentationUnitService {
 
   public Slice<DocumentationUnitListItem> searchByDocumentationUnitSearchInput(
       Pageable pageable,
-      DocumentationOffice documentationOffice,
+      OidcUser oidcUser,
       Optional<String> documentNumber,
       Optional<String> fileNumber,
       Optional<String> courtType,
@@ -98,22 +99,17 @@ public class DocumentationUnitService {
             .build();
 
     return repository.searchByDocumentationUnitSearchInput(
-        PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()),
-        documentationOffice,
-        searchInput);
+        PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()), oidcUser, searchInput);
   }
 
-  public DocumentationUnit getByDocumentNumber(String documentNumber) {
-    try {
-      var optionalDocumentationUnit = repository.findByDocumentNumber(documentNumber);
-      return optionalDocumentationUnit.orElseThrow();
-    } catch (Exception e) {
-      return null;
-    }
+  public DocumentationUnit getByDocumentNumber(String documentNumber)
+      throws DocumentationUnitNotExistsException {
+    return repository.findByDocumentNumber(documentNumber);
   }
 
-  public DocumentationUnit getByUuid(UUID documentationUnitId) {
-    return repository.findByUuid(documentationUnitId).orElseThrow();
+  public DocumentationUnit getByUuid(UUID documentationUnitId)
+      throws DocumentationUnitNotExistsException {
+    return repository.findByUuid(documentationUnitId);
   }
 
   @Transactional(transactionManager = "jpaTransactionManager")
@@ -135,10 +131,7 @@ public class DocumentationUnitService {
           "Die Dokumentationseinheit konnte nicht gelöscht werden, da", relatedEntities);
     }
 
-    DocumentationUnit documentationUnit =
-        repository
-            .findByUuid(documentationUnitId)
-            .orElseThrow(() -> new DocumentationUnitNotExistsException(documentationUnitId));
+    DocumentationUnit documentationUnit = repository.findByUuid(documentationUnitId);
 
     log.debug("Deleting DocumentationUnitDTO " + documentationUnitId);
 
@@ -263,16 +256,13 @@ public class DocumentationUnitService {
 
     repository.save(documentationUnit);
 
-    return repository
-        .findByUuid(documentationUnit.uuid())
-        .orElseThrow(
-            () -> new DocumentationUnitNotExistsException(documentationUnit.documentNumber()));
+    return repository.findByUuid(documentationUnit.uuid());
   }
 
   public Slice<RelatedDocumentationUnit> searchLinkableDocumentationUnits(
       RelatedDocumentationUnit relatedDocumentationUnit,
       DocumentationOffice documentationOffice,
-      String documentNumberToExclude,
+      Optional<String> documentNumberToExclude,
       Pageable pageable) {
 
     if (relatedDocumentationUnit.getFileNumber() != null) {
@@ -280,7 +270,10 @@ public class DocumentationUnitService {
           normalizeSpace(relatedDocumentationUnit.getFileNumber()));
     }
     return repository.searchLinkableDocumentationUnits(
-        relatedDocumentationUnit, documentationOffice, documentNumberToExclude, pageable);
+        relatedDocumentationUnit,
+        documentationOffice,
+        documentNumberToExclude.orElse(null),
+        pageable);
   }
 
   public String validateSingleNorm(SingleNormValidationInfo singleNormValidationInfo) {

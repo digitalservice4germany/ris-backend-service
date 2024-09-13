@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,8 @@ class SendInBlueMailTrackingServiceTest {
   }
 
   @Test
-  void testProcessDeliveredEvent_shouldNotSearchUUIDInDb() {
+  void testProcessDeliveredEvent_shouldNotSearchUUIDInDb()
+      throws DocumentationUnitNotExistsException {
     when(documentationUnitService.getByUuid(TEST_UUID))
         .thenReturn(DocumentationUnit.builder().uuid(TEST_UUID).build());
 
@@ -61,7 +63,8 @@ class SendInBlueMailTrackingServiceTest {
   }
 
   @Test
-  void testProcessDeliveredEventOfKnownUUID_shouldSearchInDb() {
+  void testProcessDeliveredEventOfKnownUUID_shouldSearchInDb()
+      throws DocumentationUnitNotExistsException {
     when(documentationUnitService.getByUuid(TEST_UUID))
         .thenReturn(DocumentationUnit.builder().uuid(TEST_UUID).build());
 
@@ -70,7 +73,9 @@ class SendInBlueMailTrackingServiceTest {
   }
 
   @Test
-  void testProcessFailedDeliveryEventOfUnknownId_shouldSearchInDb() {
+  void testProcessFailedDeliveryEventOfUnknownId_shouldSearchInDb()
+      throws DocumentationUnitNotExistsException {
+
     when(documentationUnitService.getByUuid(TEST_UUID))
         .thenReturn(DocumentationUnit.builder().uuid(TEST_UUID).build());
 

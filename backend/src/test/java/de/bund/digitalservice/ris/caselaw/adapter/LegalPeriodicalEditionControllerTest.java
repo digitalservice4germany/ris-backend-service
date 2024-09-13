@@ -6,9 +6,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseApiKeyRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationOfficeRepository;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalEdition;
 import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalEditionService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.LegalPeriodical;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
 import java.util.List;
@@ -25,11 +31,20 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(controllers = LegalPeriodicalEditionController.class)
-@Import({SecurityConfig.class, TestConfig.class})
+@Import({SecurityConfig.class, TestConfig.class, AuthService.class, KeycloakUserService.class})
 class LegalPeriodicalEditionControllerTest {
   @Autowired private RisWebTestClient risWebTestClient;
+  @Autowired private AuthService authService;
+  @Autowired private KeycloakUserService keycloakUserService;
   @MockBean private LegalPeriodicalEditionService service;
+
+  @MockBean private HandoverService handoverService;
   @MockBean private ClientRegistrationRepository clientRegistrationRepository;
+  @MockBean private DatabaseApiKeyRepository databaseApiKeyRepository;
+  @MockBean private DatabaseDocumentationOfficeRepository databaseDocumentationOfficeRepository;
+  @MockBean private UserGroupService userGroupService;
+  @MockBean private DocumentationUnitService documentationUnitService;
+  @MockBean private ProcedureService procedureService;
 
   private final String EDITION_ENDPOINT = "/api/v1/caselaw/legalperiodicaledition";
 
@@ -39,11 +54,7 @@ class LegalPeriodicalEditionControllerTest {
     var edition =
         LegalPeriodicalEdition.builder()
             .id(UUID.randomUUID())
-            .legalPeriodical(
-                LegalPeriodical.builder()
-                    .legalPeriodicalId(uuid)
-                    .legalPeriodicalAbbreviation("ABC")
-                    .build())
+            .legalPeriodical(LegalPeriodical.builder().uuid(uuid).abbreviation("ABC").build())
             .name("2024 Sonderheft 1")
             .prefix("2024,")
             .suffix("- Sonderheft 1")
@@ -94,21 +105,13 @@ class LegalPeriodicalEditionControllerTest {
         List.of(
             LegalPeriodicalEdition.builder()
                 .id(UUID.randomUUID())
-                .legalPeriodical(
-                    LegalPeriodical.builder()
-                        .legalPeriodicalId(uuid)
-                        .legalPeriodicalAbbreviation("ABC")
-                        .build())
+                .legalPeriodical(LegalPeriodical.builder().uuid(uuid).abbreviation("ABC").build())
                 .name("2024")
                 .prefix("2024,")
                 .build(),
             LegalPeriodicalEdition.builder()
                 .id(UUID.randomUUID())
-                .legalPeriodical(
-                    LegalPeriodical.builder()
-                        .legalPeriodicalId(uuid)
-                        .legalPeriodicalAbbreviation("ABC")
-                        .build())
+                .legalPeriodical(LegalPeriodical.builder().uuid(uuid).abbreviation("ABC").build())
                 .name("2024 Sonderheft 1")
                 .prefix("2024,")
                 .suffix("- Sonderheft 1")
@@ -139,11 +142,7 @@ class LegalPeriodicalEditionControllerTest {
     var edition =
         LegalPeriodicalEdition.builder()
             .id(UUID.randomUUID())
-            .legalPeriodical(
-                LegalPeriodical.builder()
-                    .legalPeriodicalId(uuid)
-                    .legalPeriodicalAbbreviation("ABC")
-                    .build())
+            .legalPeriodical(LegalPeriodical.builder().uuid(uuid).abbreviation("ABC").build())
             .name("2024 Sonderheft 1")
             .prefix("2024,")
             .suffix("- Sonderheft 1")
@@ -172,5 +171,69 @@ class LegalPeriodicalEditionControllerTest {
         .exchange()
         .expectStatus()
         .is4xxClientError();
+  }
+
+  @Test
+  void testSaveLegalPeriodicalEditions_withExternalUser_shouldBeForbidden() {
+    UUID uuid = UUID.randomUUID();
+    var edition =
+        LegalPeriodicalEdition.builder()
+            .id(UUID.randomUUID())
+            .legalPeriodical(LegalPeriodical.builder().uuid(uuid).abbreviation("ABC").build())
+            .name("2024 Sonderheft 1")
+            .prefix("2024,")
+            .suffix("- Sonderheft 1")
+            .build();
+
+    risWebTestClient
+        .withExternalLogin()
+        .put()
+        .uri(EDITION_ENDPOINT)
+        .bodyValue(edition)
+        .exchange()
+        .expectStatus()
+        .isForbidden();
+  }
+
+  @Test
+  void testDeleteLegalPeriodicalEdition_withoutReferences_shouldSucceed() {
+    UUID uuid = UUID.randomUUID();
+    when(service.delete(uuid)).thenReturn(true);
+
+    risWebTestClient
+        .withDefaultLogin()
+        .delete()
+        .uri(EDITION_ENDPOINT + "/" + uuid)
+        .exchange()
+        .expectStatus()
+        .isOk();
+  }
+
+  @Test
+  void testDeleteLegalPeriodicalEdition_withReferences_shouldReturnUnchanged() {
+    UUID uuid = UUID.randomUUID();
+    when(service.delete(uuid)).thenReturn(false);
+
+    risWebTestClient
+        .withDefaultLogin()
+        .delete()
+        .uri(EDITION_ENDPOINT + "/" + uuid)
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+  }
+
+  @Test
+  void testDeleteLegalPeriodicalEditions_withExternalUser_shouldBeForbidden() {
+    UUID uuid = UUID.randomUUID();
+    when(service.delete(uuid)).thenReturn(false);
+
+    risWebTestClient
+        .withExternalLogin()
+        .delete()
+        .uri(EDITION_ENDPOINT + "/" + uuid)
+        .exchange()
+        .expectStatus()
+        .isForbidden();
   }
 }

@@ -1,15 +1,13 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDefaultDocOffice;
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDSDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.mockUserGroups;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.PUBLISHED;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.PUBLISHING;
 import static de.bund.digitalservice.ris.caselaw.domain.PublicationStatus.UNPUBLISHED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -23,6 +21,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.DatabaseProcedureService;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentNumberPatternConfig;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentationUnitController;
 import de.bund.digitalservice.ris.caselaw.adapter.DocxConverterService;
+import de.bund.digitalservice.ris.caselaw.adapter.KeycloakUserService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.CourtDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseCourtRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDeletedDocumentationIdsRepository;
@@ -70,7 +69,7 @@ import de.bund.digitalservice.ris.caselaw.domain.RelatedDocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.SingleNorm;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
 import de.bund.digitalservice.ris.caselaw.domain.Texts;
-import de.bund.digitalservice.ris.caselaw.domain.UserService;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.domain.court.Court;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.documenttype.DocumentType;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
@@ -83,7 +82,6 @@ import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
@@ -93,7 +91,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.util.LinkedMultiValueMap;
@@ -119,7 +116,8 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
       SecurityConfig.class,
       AuthService.class,
       TestConfig.class,
-      DocumentNumberPatternConfig.class
+      DocumentNumberPatternConfig.class,
+      KeycloakUserService.class
     },
     controllers = {DocumentationUnitController.class})
 class DocumentationUnitIntegrationTest {
@@ -149,7 +147,7 @@ class DocumentationUnitIntegrationTest {
   @MockBean private S3AsyncClient s3AsyncClient;
   @MockBean private MailService mailService;
   @MockBean private DocxConverterService docxConverterService;
-  @MockBean private UserService userService;
+  @MockBean private UserGroupService userGroupService;
   @MockBean private ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private AttachmentService attachmentService;
   @MockBean private PatchMapperService patchMapperService;
@@ -163,7 +161,7 @@ class DocumentationUnitIntegrationTest {
   @MockBean DocumentNumberPatternConfig documentNumberPatternConfig;
   @MockBean DatabaseStatusRepository statusRepository;
 
-  private final DocumentationOffice docOffice = buildDefaultDocOffice();
+  private final DocumentationOffice docOffice = buildDSDocOffice();
   private DocumentationOfficeDTO documentationOffice;
 
   @BeforeEach
@@ -171,14 +169,7 @@ class DocumentationUnitIntegrationTest {
     documentationOffice =
         documentationOfficeRepository.findByAbbreviation(docOffice.abbreviation());
 
-    doReturn(docOffice)
-        .when(userService)
-        .getDocumentationOffice(
-            argThat(
-                (OidcUser user) -> {
-                  List<String> groups = user.getAttribute("groups");
-                  return Objects.requireNonNull(groups).get(0).equals("/DS");
-                }));
+    mockUserGroups(userGroupService);
   }
 
   @AfterEach
@@ -688,8 +679,8 @@ class DocumentationUnitIntegrationTest {
         .put()
         .uri(
             "/api/v1/caselaw/documentunits/"
-                + documentNumberToExclude
-                + "/search-linkable-documentation-units?pg=0&sz=20")
+                + "search-linkable-documentation-units?pg=0&sz=20&documentNumber="
+                + documentNumberToExclude)
         .bodyValue(proceedingDecision)
         .exchange()
         .expectStatus()
@@ -713,8 +704,8 @@ class DocumentationUnitIntegrationTest {
         .put()
         .uri(
             "/api/v1/caselaw/documentunits/"
-                + documentNumberToExclude
-                + "/search-linkable-documentation-units?pg=0&sz=20")
+                + "search-linkable-documentation-units?pg=0&sz=20&documentNumber="
+                + documentNumberToExclude)
         .bodyValue(proceedingDecision)
         .exchange()
         .expectStatus()
@@ -735,9 +726,7 @@ class DocumentationUnitIntegrationTest {
 
   @Test
   void testSearchByDocumentationUnitSearchInput() {
-    DocumentationOffice otherDocOffice = buildDocOffice("BGH");
-    UUID otherDocOfficeUuid =
-        documentationOfficeRepository.findByAbbreviation(otherDocOffice.abbreviation()).getId();
+    UUID otherDocOfficeUuid = documentationOfficeRepository.findByAbbreviation("BGH").getId();
 
     List<UUID> docOfficeIds =
         List.of(
@@ -1089,5 +1078,29 @@ class DocumentationUnitIntegrationTest {
 
     List<DeletedDocumentationUnitDTO> allDeletedIds = deletedDocumentationIdsRepository.findAll();
     assertThat(allDeletedIds).isEmpty();
+  }
+
+  @Test
+  void testGenerateNewDocumentationUnit_withInternalUser_shouldSucceed() {
+    when(documentNumberPatternConfig.getDocumentNumberPatterns())
+        .thenReturn(Map.of("DS", "ZZREYYYY*****"));
+    risWebTestClient
+        .withDefaultLogin()
+        .get()
+        .uri("/api/v1/caselaw/documentunits/new")
+        .exchange()
+        .expectStatus()
+        .isCreated();
+  }
+
+  @Test
+  void testGenerateNewDocumentationUnit_withExternalUser_shouldBeForbidden() {
+    risWebTestClient
+        .withExternalLogin()
+        .get()
+        .uri("/api/v1/caselaw/documentunits/new")
+        .exchange()
+        .expectStatus()
+        .isForbidden();
   }
 }

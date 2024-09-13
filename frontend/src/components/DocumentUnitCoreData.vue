@@ -9,7 +9,6 @@ import DropdownInput from "@/components/input/DropdownInput.vue"
 import InputField from "@/components/input/InputField.vue"
 import TextInput from "@/components/input/TextInput.vue"
 import NestedComponent from "@/components/NestedComponents.vue"
-import { useExternalUser } from "@/composables/useExternalUser"
 import { useValidationStore } from "@/composables/useValidationStore"
 import legalEffectTypes from "@/data/legalEffectTypes.json"
 import { CoreData } from "@/domain/documentUnit"
@@ -28,8 +27,6 @@ const validationStore =
   useValidationStore<
     ["decisionDate", "yearsOfDispute", "deviatingDecisionDates"][number]
   >()
-
-const isExternalUser = useExternalUser()
 
 /**
  * Our UI turns the chronological order of the list, so the latest previous procedure is first.
@@ -62,7 +59,6 @@ watch(
           clear-on-choosing-item
           :has-error="slotProps.hasError"
           :item-service="ComboboxItemService.getCourts"
-          :read-only="isExternalUser"
         ></ComboboxInput>
       </InputField>
       <!-- Child  -->
@@ -72,7 +68,6 @@ watch(
             id="deviatingCourt"
             v-model="modelValue.deviatingCourts"
             aria-label="Fehlerhaftes Gericht"
-            :read-only="isExternalUser"
           ></ChipsInput>
         </InputField>
       </template>
@@ -88,7 +83,6 @@ watch(
             id="fileNumber"
             v-model="modelValue.fileNumbers"
             aria-label="Aktenzeichen"
-            :read-only="isExternalUser"
           ></ChipsInput>
         </InputField>
         <!-- Child  -->
@@ -101,7 +95,6 @@ watch(
               id="deviatingFileNumber"
               v-model="modelValue.deviatingFileNumbers"
               aria-label="Abweichendes Aktenzeichen"
-              :read-only="isExternalUser"
             ></ChipsInput>
           </InputField>
         </template>
@@ -122,7 +115,6 @@ watch(
             aria-label="Entscheidungsdatum"
             class="ds-input-medium"
             :has-error="slotProps.hasError"
-            :read-only="isExternalUser"
             @focus="validationStore.remove('decisionDate')"
             @update:validation-error="slotProps.updateValidationError"
           ></DateInput>
@@ -142,7 +134,6 @@ watch(
               v-model="modelValue.deviatingDecisionDates"
               aria-label="Abweichendes Entscheidungsdatum"
               :has-error="slotProps.hasError"
-              :read-only="isExternalUser"
               @focus="validationStore.remove('deviatingDecisionDates')"
               @update:validation-error="slotProps.updateValidationError"
             />
@@ -163,7 +154,6 @@ watch(
           aria-label="Spruchkörper"
           class="ds-input-medium"
           :has-error="slotProps.hasError"
-          :read-only="isExternalUser"
           size="medium"
         ></TextInput>
       </InputField>
@@ -174,7 +164,6 @@ watch(
           v-model="modelValue.documentType"
           aria-label="Dokumenttyp"
           :item-service="ComboboxItemService.getDocumentTypes"
-          :read-only="isExternalUser"
         ></ComboboxInput>
       </InputField>
     </div>
@@ -187,7 +176,6 @@ watch(
             v-model="modelValue.ecli"
             aria-label="ECLI"
             class="ds-input-medium"
-            :read-only="isExternalUser"
             size="medium"
           ></TextInput>
         </InputField>
@@ -198,7 +186,6 @@ watch(
               id="deviatingEclis"
               v-model="modelValue.deviatingEclis"
               aria-label="Abweichender ECLI"
-              :read-only="isExternalUser"
             ></ChipsInput>
           </InputField>
         </template>
@@ -213,7 +200,6 @@ watch(
             :item-service="ComboboxItemService.getProcedures"
             manual-entry
             no-clear
-            :read-only="isExternalUser"
           ></ComboboxInput>
         </InputField>
         <!-- Child  -->
@@ -231,19 +217,13 @@ watch(
     </div>
 
     <div class="flex flex-row gap-24">
-      <InputField
-        id="legalEffect"
-        v-slot="{ id }"
-        label="Rechtskraft *"
-        :read-only="isExternalUser"
-      >
+      <InputField id="legalEffect" v-slot="{ id }" label="Rechtskraft *">
         <DropdownInput
           :id="id"
           v-model="modelValue.legalEffect"
           aria-label="Rechtskraft"
           :items="legalEffectTypes.items"
           placeholder="Bitte auswählen"
-          :read-only="isExternalUser"
         />
       </InputField>
 
@@ -271,7 +251,6 @@ watch(
           aria-label="Streitjahr"
           data-testid="year-of-dispute"
           :has-error="slotProps.hasError"
-          :read-only="isExternalUser"
           @focus="validationStore.remove('yearsOfDispute')"
           @update:validation-error="slotProps.updateValidationError"
         ></ChipsYearInput>
@@ -287,7 +266,6 @@ watch(
           id="leadingDecisionNormReferences"
           v-model="modelValue.leadingDecisionNormReferences"
           aria-label="BGH Nachschlagewerk"
-          :read-only="isExternalUser"
         ></ChipsInput>
       </InputField>
     </div>

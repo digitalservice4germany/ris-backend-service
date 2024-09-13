@@ -29,4 +29,7 @@ export const texts = [
   defineTextEntry("reasons", "Gründe", TextAreaInput),
   defineTextEntry("caseFacts", "Tatbestand", TextAreaInput),
   defineTextEntry("decisionReasons", "Entscheidungsgründe", TextAreaInput),
+  defineTextEntry("dissentingOpinion", "Abweichende Meinung", TextAreaInput),
+  defineTextEntry("otherLongText", "Sonstiger Langtext", TextAreaInput),
+  defineTextEntry("outline", "Gliederung", TextAreaInput),
 ]

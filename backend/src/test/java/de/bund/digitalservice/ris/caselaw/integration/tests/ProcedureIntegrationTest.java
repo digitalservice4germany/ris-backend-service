@@ -1,9 +1,9 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDefaultDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildBGHDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDSDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.mockUserGroups;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -19,6 +19,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumenta
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitProcedureRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseProcedureRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseUserGroupRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationOfficeDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitProcedureDTO;
@@ -43,7 +44,7 @@ import de.bund.digitalservice.ris.caselaw.domain.HandoverReportRepository;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
 import de.bund.digitalservice.ris.caselaw.domain.Procedure;
-import de.bund.digitalservice.ris.caselaw.domain.UserService;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
 import java.util.List;
@@ -59,7 +60,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.jdbc.Sql;
@@ -81,7 +81,12 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
       DatabaseProcedureService.class
     },
     controllers = {DocumentationUnitController.class, ProcedureController.class})
-@Sql(scripts = {"classpath:doc_office_init.sql", "classpath:procedures_init.sql"})
+@Sql(
+    scripts = {
+      "classpath:doc_office_init.sql",
+      "classpath:procedures_init.sql",
+      "classpath:user_group_init.sql"
+    })
 @Sql(
     scripts = {"classpath:procedures_cleanup.sql"},
     executionPhase = AFTER_TEST_METHOD)
@@ -89,6 +94,8 @@ class ProcedureIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgreSQLContainer =
       new PostgreSQLContainer<>("postgres:14").withInitScript("init_db.sql");
+
+  @Autowired private DocumentationUnitService documentationUnitService;
 
   @DynamicPropertySource
   static void registerDynamicProperties(DynamicPropertyRegistry registry) {
@@ -104,12 +111,13 @@ class ProcedureIntegrationTest {
   @Autowired private DatabaseDocumentationOfficeRepository documentationOfficeRepository;
   @Autowired private DatabaseProcedureRepository repository;
   @Autowired private DatabaseDocumentationUnitProcedureRepository linkRepository;
+  @Autowired private DatabaseUserGroupRepository userGroupRepository;
 
   @MockBean private DocumentNumberService numberService;
   @MockBean private DocumentationUnitStatusService statusService;
   @MockBean private DocumentNumberRecyclingService documentNumberRecyclingService;
   @MockBean private HandoverReportRepository handoverReportRepository;
-  @MockBean private UserService userService;
+  @MockBean private UserGroupService userGroupService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private S3AsyncClient s3AsyncClient;
   @MockBean private MailService mailService;
@@ -122,7 +130,7 @@ class ProcedureIntegrationTest {
   private DocumentationUnitDocxMetadataInitializationService
       documentationUnitDocxMetadataInitializationService;
 
-  private final DocumentationOffice docOffice = buildDefaultDocOffice();
+  private final DocumentationOffice docOffice = buildDSDocOffice();
   private DocumentationOfficeDTO docOfficeDTO;
   private DocumentationUnitDTO docUnitDTO;
 
@@ -130,7 +138,7 @@ class ProcedureIntegrationTest {
   void setUp() {
     docOfficeDTO = documentationOfficeRepository.findByAbbreviation(docOffice.abbreviation());
     docUnitDTO = documentationUnitRepository.findByDocumentNumber("1234567890123").get();
-    doReturn(docOffice).when(userService).getDocumentationOffice(any(OidcUser.class));
+    mockUserGroups(userGroupService);
   }
 
   @AfterEach
@@ -569,9 +577,9 @@ class ProcedureIntegrationTest {
   @Test
   void testSearch_withQuery_shouldReturnProceduresWithDateFirst() {
     DocumentationUnitDTO documentationUnitDTO2 =
-        documentationUnitRepository.findByDocumentNumber("documentNumber2").get();
+        documentationUnitRepository.findByDocumentNumber("docNumber00002").get();
     DocumentationUnitDTO documentationUnitDTO3 =
-        documentationUnitRepository.findByDocumentNumber("documentNumber3").get();
+        documentationUnitRepository.findByDocumentNumber("docNumber00003").get();
 
     addProcedureToDocUnit("with date", docUnitDTO);
 
@@ -715,21 +723,23 @@ class ProcedureIntegrationTest {
     ProcedureDTO procedure =
         repository.findAllByLabelAndDocumentationOffice("testProcedure BGH", bghDocOfficeDTO).get();
 
+    var bghDocUnit = documentationUnitRepository.findByDocumentNumber("bghDocument123").get();
+
     DocumentationUnit documentationUnitFromFrontend1 =
         DocumentationUnit.builder()
-            .uuid(docUnitDTO.getId())
-            .documentNumber(docUnitDTO.getDocumentNumber())
+            .uuid(bghDocUnit.getId())
+            .documentNumber(bghDocUnit.getDocumentNumber())
             .coreData(
                 CoreData.builder()
                     .procedure(ProcedureTransformer.transformToDomain(procedure))
-                    .documentationOffice(docOffice)
+                    .documentationOffice(buildBGHDocOffice())
                     .build())
             .build();
 
     risWebTestClient
-        .withDefaultLogin()
+        .withLogin("/BGH")
         .put()
-        .uri("/api/v1/caselaw/documentunits/" + docUnitDTO.getId())
+        .uri("/api/v1/caselaw/documentunits/" + bghDocUnit.getId())
         .bodyValue(documentationUnitFromFrontend1)
         .exchange()
         .expectStatus()
@@ -742,19 +752,63 @@ class ProcedureIntegrationTest {
               assertThat(response.getResponseBody().coreData().previousProcedures()).isEmpty();
             });
 
+    var docUnitList =
+        risWebTestClient
+            .withLogin("/BGH")
+            .get()
+            .uri("/api/v1/caselaw/procedure/" + procedure.getId() + "/documentunits")
+            .exchange()
+            .expectStatus()
+            .is2xxSuccessful()
+            .expectBody(new TypeReference<List<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
+    assertThat(docUnitList.get(0).documentNumber()).isEqualTo(bghDocUnit.getDocumentNumber());
+    assertThat(docUnitList.get(0).isDeletable()).isTrue();
+    assertThat(docUnitList.get(0).isEditable()).isTrue();
+
+    // Without being assigned, the doc unit is read-only for an external user.
+    var docUnitListExternal =
+        risWebTestClient
+            .withLogin("/BGH/Extern", "External")
+            .get()
+            .uri("/api/v1/caselaw/procedure/" + procedure.getId() + "/documentunits")
+            .exchange()
+            .expectStatus()
+            .is2xxSuccessful()
+            .expectBody(new TypeReference<List<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
+    assertThat(docUnitListExternal.get(0).documentNumber())
+        .isEqualTo(bghDocUnit.getDocumentNumber());
+    assertThat(docUnitListExternal.get(0).isDeletable()).isFalse();
+    assertThat(docUnitListExternal.get(0).isEditable()).isFalse();
+
     risWebTestClient
-        .withDefaultLogin()
-        .get()
-        .uri("/api/v1/caselaw/procedure/" + procedure.getId() + "/documentunits")
+        .withLogin("/BGH")
+        .put()
+        .uri(
+            "/api/v1/caselaw/procedure/"
+                + procedure.getId()
+                + "/assign/3b733549-d2cc-40f0-b7f3-9bfa9f3c1b89")
         .exchange()
         .expectStatus()
-        .is2xxSuccessful()
-        .expectBody(new TypeReference<List<DocumentationUnitListItem>>() {})
-        .consumeWith(
-            response -> {
-              assertThat(Objects.requireNonNull(response.getResponseBody()).get(0).documentNumber())
-                  .isEqualTo("1234567890123");
-            });
+        .is2xxSuccessful();
+
+    // After external user is assigned to doc unit via procedure it is editable.
+    var docUnitListExternalAfterAssign =
+        risWebTestClient
+            .withLogin("/BGH/Extern", "External")
+            .get()
+            .uri("/api/v1/caselaw/procedure/" + procedure.getId() + "/documentunits")
+            .exchange()
+            .expectStatus()
+            .is2xxSuccessful()
+            .expectBody(new TypeReference<List<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
+    assertThat(docUnitListExternalAfterAssign.get(0).isDeletable()).isFalse();
+    assertThat(docUnitListExternalAfterAssign.get(0).isEditable()).isTrue();
   }
 
   @Test
@@ -778,6 +832,199 @@ class ProcedureIntegrationTest {
               assertThat(response.getResponseBody().getContent().get(0).label())
                   .isEqualTo("procedure2");
             });
+  }
+
+  @Test
+  void testSearch_withQueryAndWithExternalUser_shouldReturnOnlyAssignedProcedure() {
+    DocumentationUnitDTO unassignedDocUnit =
+        documentationUnitRepository.findByDocumentNumber("docNumber00002").get();
+    addProcedureToDocUnit("procedure2", unassignedDocUnit);
+    assignProcedure(docUnitDTO);
+
+    risWebTestClient
+        .withExternalLogin()
+        .get()
+        .uri("/api/v1/caselaw/procedure?withDocUnits=true&q=procedure&sz=20&pg=0")
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful()
+        .expectBody(new TypeReference<SliceTestImpl<Procedure>>() {})
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody()).hasSize(1);
+              assertThat(response.getResponseBody().getContent().get(0).label())
+                  .isEqualTo("procedure1");
+            });
+  }
+
+  @Test
+  void testSearch_withoutQueryAndWithExternalUser_shouldReturnOnlyAssignedProcedure() {
+    DocumentationUnitDTO unassignedDocUnit =
+        documentationUnitRepository.findByDocumentNumber("docNumber00002").get();
+    addProcedureToDocUnit("procedure2", unassignedDocUnit);
+    assignProcedure(docUnitDTO);
+
+    risWebTestClient
+        .withExternalLogin()
+        .get()
+        .uri("/api/v1/caselaw/procedure?withDocUnits=true&sz=20&pg=0")
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful()
+        .expectBody(new TypeReference<SliceTestImpl<Procedure>>() {})
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody()).hasSize(1);
+              assertThat(response.getResponseBody().getContent().get(0).label())
+                  .isEqualTo("procedure1");
+            });
+  }
+
+  @Test
+  void testAssign_withInternalUser_shouldReturnSuccessMessage() {
+    UUID procedureId = addProcedureToDocUnit("procedure1", docUnitDTO);
+    UUID userGroupId = userGroupRepository.findAll().get(0).getId();
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/assign/" + userGroupId)
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful()
+        .expectBody(String.class)
+        .consumeWith(
+            response -> {
+              String result = response.getResponseBody();
+              assertThat(result)
+                  .isEqualTo("Vorgang 'procedure1' wurde Nutzergruppe 'DS/Extern' zugewiesen.");
+            });
+  }
+
+  @Test
+  void testAssign_withNonExistingProcedureId_shouldResultInBadRequest() {
+    addProcedureToDocUnit("procedure1", docUnitDTO);
+    String nonExistingProcedureId = "non-existing procedureId";
+    UUID userGroupId = userGroupRepository.findAll().get(0).getId();
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + nonExistingProcedureId + "/assign/" + userGroupId)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody(String.class)
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody())
+                  .contains(
+                      "Failed to convert 'procedureUUID' with value: "
+                          + "'non-existing procedureId'\",\"instance\":\""
+                          + "/api/v1/caselaw/procedure/non-existing%20procedureId/assign/"
+                          + userGroupId);
+            });
+  }
+
+  @Test
+  void testAssign_withNonExistingGroupId_shouldResultInBadRequest() {
+    UUID procedureId = addProcedureToDocUnit("procedure1", docUnitDTO);
+    String nonExistingGroupId = "non-existing groupId";
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/assign/" + nonExistingGroupId)
+        .exchange()
+        .expectStatus()
+        .isBadRequest()
+        .expectBody(String.class)
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody())
+                  .contains(
+                      "Failed to convert 'userGroupId' with value: "
+                          + "'non-existing groupId'\",\"instance\":\""
+                          + "/api/v1/caselaw/procedure/"
+                          + procedureId
+                          + "/assign/non-existing%20groupId");
+            });
+  }
+
+  @Test
+  void testUnassign_withInternalUser_shouldReturnSuccessMessage() {
+    UUID procedureId = addProcedureToDocUnit("procedure1", docUnitDTO);
+    UUID userGroupId = userGroupRepository.findAll().get(0).getId();
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/assign/" + userGroupId)
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful()
+        .expectBody(String.class)
+        .consumeWith(
+            response -> {
+              String result = response.getResponseBody();
+              assertThat(result)
+                  .isEqualTo("Vorgang 'procedure1' wurde Nutzergruppe 'DS/Extern' zugewiesen.");
+            });
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/unassign")
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful()
+        .expectBody(String.class)
+        .consumeWith(
+            response -> {
+              String result = response.getResponseBody();
+              assertThat(result)
+                  .isEqualTo("Die Zuweisung aus Vorgang 'procedure1' wurde entfernt.");
+            });
+  }
+
+  @Test
+  void testAssign_withExternalUser_shouldBeForbidden() {
+    UUID procedureId = addProcedureToDocUnit("procedure1", docUnitDTO);
+    UUID userGroupId = userGroupRepository.findAll().get(0).getId();
+
+    risWebTestClient
+        .withExternalLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/assign/" + userGroupId)
+        .exchange()
+        .expectStatus()
+        .isForbidden();
+  }
+
+  @Test
+  void testUnassign_withExternalUser_shouldBeForbidden() {
+    UUID procedureId = addProcedureToDocUnit("procedure1", docUnitDTO);
+
+    risWebTestClient
+        .withExternalLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/unassign")
+        .exchange()
+        .expectStatus()
+        .isForbidden();
+  }
+
+  private void assignProcedure(DocumentationUnitDTO docUnitDTO) {
+    UUID procedureId = addProcedureToDocUnit("procedure1", docUnitDTO);
+    UUID userGroupId = userGroupRepository.findAll().get(0).getId();
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri("/api/v1/caselaw/procedure/" + procedureId + "/assign/" + userGroupId)
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful();
   }
 
   private UUID addProcedureToDocUnit(

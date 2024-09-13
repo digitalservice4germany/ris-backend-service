@@ -222,7 +222,7 @@ onMounted(() => {
             "
           />
           <div v-else class="ds-label-01-reg">
-            Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.
+            Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.
           </div>
         </div>
         <FlexContainer

@@ -80,10 +80,24 @@ async function search() {
   if (activeCitationRef.citationType) {
     delete activeCitationRef["citationType"]
   }
+
+  const urlParams = window.location.pathname.split("/")
+  const documentNumberToExclude =
+    urlParams[urlParams.indexOf("documentunit") + 1]
+
   const response = await documentUnitService.searchByRelatedDocumentation(
-    pageNumber.value,
-    itemsPerPage.value,
     activeCitationRef,
+    {
+      ...(pageNumber.value != undefined
+        ? { pg: pageNumber.value.toString() }
+        : {}),
+      ...(itemsPerPage.value != undefined
+        ? { sz: itemsPerPage.value.toString() }
+        : {}),
+      ...(documentNumberToExclude != undefined
+        ? { documentNumber: documentNumberToExclude.toString() }
+        : {}),
+    },
   )
   if (response.data) {
     searchResultsCurrentPage.value = {

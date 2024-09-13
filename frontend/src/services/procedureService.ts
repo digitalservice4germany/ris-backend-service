@@ -13,6 +13,11 @@ interface ProcedureService {
   getDocumentUnits(
     procedureId: string | undefined,
   ): Promise<ServiceResponse<DocumentUnitListEntry[]>>
+  assignUserGroup(
+    procedureId: string,
+    userGroupId: string,
+  ): Promise<ServiceResponse<unknown>>
+  unassignUserGroup(procedureId: string): Promise<ServiceResponse<unknown>>
 }
 
 const service: ProcedureService = {
@@ -41,6 +46,38 @@ const service: ProcedureService = {
     if (response.status >= 300) {
       response.error = {
         title: errorMessages.DOCUMENT_UNIT_COULD_NOT_BE_LOADED.title,
+      }
+    }
+    return response
+  },
+  async assignUserGroup(procedureId: string, userGroupId: string) {
+    const response = await httpClient.put(
+      `caselaw/procedure/${procedureId}/assign/${userGroupId}`,
+    )
+    if (response.status >= 300) {
+      response.error = {
+        title:
+          response.status == 403
+            ? errorMessages.NOT_ALLOWED.title +
+              ". " +
+              errorMessages.PROCEDURE_COULD_NOT_BE_ASSIGNED.title
+            : errorMessages.PROCEDURE_COULD_NOT_BE_ASSIGNED.title,
+      }
+    }
+    return response
+  },
+  async unassignUserGroup(procedureId: string) {
+    const response = await httpClient.put(
+      `caselaw/procedure/${procedureId}/unassign`,
+    )
+    if (response.status >= 300) {
+      response.error = {
+        title:
+          response.status == 403
+            ? errorMessages.NOT_ALLOWED.title +
+              ". " +
+              errorMessages.PROCEDURE_COULD_NOT_BE_UNASSIGNED.title
+            : errorMessages.PROCEDURE_COULD_NOT_BE_UNASSIGNED.title,
       }
     }
     return response

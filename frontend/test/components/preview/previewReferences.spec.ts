@@ -32,7 +32,7 @@ describe("preview references", () => {
         new Reference({
           citation: "2006, S.3",
           legalPeriodical: {
-            legalPeriodicalAbbreviation: "ABC",
+            abbreviation: "ABC",
             primaryReference: true,
           },
         }),
@@ -44,14 +44,14 @@ describe("preview references", () => {
         new Reference({
           citation: "2006, S.3",
           legalPeriodical: {
-            legalPeriodicalAbbreviation: "ABC",
+            abbreviation: "ABC",
             primaryReference: true,
           },
         }),
         new Reference({
           citation: "2007, S.4",
           legalPeriodical: {
-            legalPeriodicalAbbreviation: "XYZ",
+            abbreviation: "XYZ",
             primaryReference: true,
           },
         }),
@@ -63,7 +63,7 @@ describe("preview references", () => {
         new Reference({
           citation: "2008, S.5",
           legalPeriodical: {
-            legalPeriodicalAbbreviation: "DEF",
+            abbreviation: "DEF",
             primaryReference: false,
           },
         }),
@@ -75,14 +75,14 @@ describe("preview references", () => {
         new Reference({
           citation: "2006, S.3",
           legalPeriodical: {
-            legalPeriodicalAbbreviation: "ABC",
+            abbreviation: "ABC",
             primaryReference: true,
           },
         }),
         new Reference({
           citation: "2008, S.5",
           legalPeriodical: {
-            legalPeriodicalAbbreviation: "DEF",
+            abbreviation: "DEF",
             primaryReference: false,
           },
         }),

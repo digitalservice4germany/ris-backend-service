@@ -9,7 +9,7 @@ import de.bund.digitalservice.ris.caselaw.domain.HandoverReport;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,22 +21,16 @@ class PostgresHandoverResultReportRepositoryImplMailTest {
 
   PostgresHandoverReportRepositoryImpl reportRepository;
   @MockBean private DatabaseHandoverReportRepository handoverReportRepository;
-  @MockBean private DatabaseDocumentationUnitRepository documentationUnitRepository;
 
   @BeforeEach
   public void setup() {
-    this.reportRepository =
-        new PostgresHandoverReportRepositoryImpl(
-            handoverReportRepository, documentationUnitRepository);
+    this.reportRepository = new PostgresHandoverReportRepositoryImpl(handoverReportRepository);
   }
 
   @Test
   void saveAll() {
-    var docUnit = DocumentationUnitDTO.builder().build();
+    UUID entityId = UUID.randomUUID();
     Instant received = Instant.now();
-
-    when(documentationUnitRepository.findByDocumentNumber("ABC126543712683"))
-        .thenReturn(Optional.of(docUnit));
 
     when(handoverReportRepository.saveAll(any(Iterable.class)))
         .thenReturn(
@@ -44,12 +38,12 @@ class PostgresHandoverResultReportRepositoryImplMailTest {
                 HandoverReportDTO.builder()
                     .content("report content")
                     .receivedDate(received)
-                    .documentationUnitId(docUnit.getId())
+                    .entityId(entityId)
                     .build()));
 
     HandoverReport report =
         HandoverReport.builder()
-            .documentNumber("ABC126543712683")
+            .entityId(entityId)
             .content("report content")
             .receivedDate(received)
             .build();
@@ -67,7 +61,7 @@ class PostgresHandoverResultReportRepositoryImplMailTest {
                 HandoverReportDTO.builder()
                     .content("report content")
                     .receivedDate(received)
-                    .documentationUnitId(docUnit.getId())
+                    .entityId(entityId)
                     .id(any())
                     .build()));
   }

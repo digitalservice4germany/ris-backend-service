@@ -6,7 +6,7 @@ import java.util.UUID;
 public interface HandoverRepository {
   HandoverMail save(HandoverMail handoverMail);
 
-  List<HandoverMail> getHandoversByDocumentationUnitId(UUID documentationUnitId);
+  List<HandoverMail> getHandoversByEntity(UUID entityId, HandoverEntityType entityType);
 
-  HandoverMail getLastXmlHandoverMail(UUID documentationUnitId);
+  HandoverMail getLastXmlHandoverMail(UUID entityId);
 }

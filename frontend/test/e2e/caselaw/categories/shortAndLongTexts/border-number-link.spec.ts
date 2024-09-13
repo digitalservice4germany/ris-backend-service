@@ -4,7 +4,7 @@ import {
   navigateToAttachments,
   save,
   uploadTestfile,
-  copyPasteAllTextFromAttachmentIntoEditor,
+  copyPasteTextFromAttachmentIntoEditor,
   getModifier,
 } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
@@ -61,7 +61,7 @@ test("create and validate border number links", async ({
     .locator("..")
     .locator("..")
   const inputField = page.locator("[data-testid='Gründe']")
-  await copyPasteAllTextFromAttachmentIntoEditor(
+  await copyPasteTextFromAttachmentIntoEditor(
     page,
     attachmentLocator,
     inputField,

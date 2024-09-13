@@ -33,12 +33,12 @@ jobs:
         run: |
           echo "GRADLE_VERSION=$(sed -n 's/.*gradle-\([0-9]*\(\.[0-9]*\)*\)-.*/\1/p' ./gradle/wrapper/gradle-wrapper.properties)" >> $GITHUB_ENV
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@b51fcf4d6c62967b980aeba27b7e747d74e20c53
+        uses: gradle/actions/setup-gradle@16bf8bc8fe830fa669c3c9f914d3eb147c629707 # v4.0.1
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Run backend tests
@@ -72,15 +72,13 @@ jobs:
         working-directory: ./backend
         run: |
           echo "GRADLE_VERSION=$(sed -n 's/.*gradle-\([0-9]*\(\.[0-9]*\)*\)-.*/\1/p' ./gradle/wrapper/gradle-wrapper.properties)" >> $GITHUB_ENV
-      - name: Validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@b51fcf4d6c62967b980aeba27b7e747d74e20c53
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@b51fcf4d6c62967b980aeba27b7e747d74e20c53
+        uses: gradle/actions/setup-gradle@16bf8bc8fe830fa669c3c9f914d3eb147c629707 # v4.0.1
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Build backend image
@@ -155,7 +153,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"
@@ -325,7 +323,7 @@ jobs:
       - name: Log into container registry
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        uses: docker/login-action@3b8fed7e4b60203b2aa0ecc6c6d6d91d12c06760
         with:
           registry: ${{ env.CONTAINER_REGISTRY }}
           username: ${{ github.actor }}
@@ -379,7 +377,7 @@ jobs:
       - name: Log into container registry
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        uses: docker/login-action@3b8fed7e4b60203b2aa0ecc6c6d6d91d12c06760
         with:
           registry: ${{ env.CONTAINER_REGISTRY }}
           username: ${{ github.actor }}
@@ -419,7 +417,7 @@ jobs:
     permissions:
       id-token: write # Enable OIDC for gitsign
     steps:
-      - uses: chainguard-dev/actions/setup-gitsign@2faf313e789d339d91d3c4a73445ccdf90e5272d
+      - uses: chainguard-dev/actions/setup-gitsign@29fb6e979a0b3efc79748a17e8cec08d0594cbfd
       - name: Deploy new images
         uses: digitalservicebund/argocd-deploy@4fac1bb67c92ed168f6d9b22f8779ce241a9e412 # v1.0.0
         with:
@@ -602,7 +600,7 @@ jobs:
     permissions:
       id-token: write # Enable OIDC for gitsign
     steps:
-      - uses: chainguard-dev/actions/setup-gitsign@2faf313e789d339d91d3c4a73445ccdf90e5272d
+      - uses: chainguard-dev/actions/setup-gitsign@29fb6e979a0b3efc79748a17e8cec08d0594cbfd
       - name: Deploy new images
         uses: digitalservicebund/argocd-deploy@4fac1bb67c92ed168f6d9b22f8779ce241a9e412 # v1.0.0
         with:
@@ -660,7 +658,7 @@ jobs:
     permissions:
       id-token: write # Enable OIDC for gitsign
     steps:
-      - uses: chainguard-dev/actions/setup-gitsign@2faf313e789d339d91d3c4a73445ccdf90e5272d
+      - uses: chainguard-dev/actions/setup-gitsign@29fb6e979a0b3efc79748a17e8cec08d0594cbfd
       - name: Deploy new images
         uses: digitalservicebund/argocd-deploy@4fac1bb67c92ed168f6d9b22f8779ce241a9e412 # v1.0.0
         with:
@@ -713,13 +711,13 @@ jobs:
         run: |
           echo "GRADLE_VERSION=$(sed -n 's/.*gradle-\([0-9]*\(\.[0-9]*\)*\)-.*/\1/p' ./gradle/wrapper/gradle-wrapper.properties)" >> $GITHUB_ENV
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"
           cache: gradle
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@b51fcf4d6c62967b980aeba27b7e747d74e20c53
+        uses: gradle/actions/setup-gradle@16bf8bc8fe830fa669c3c9f914d3eb147c629707 # v4.0.1
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Migrate database for Entity–relationship model
@@ -749,7 +747,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@67fbd726daaf08212a7b021c1c4d117f94a81dd3
+        uses: actions/setup-java@bcfbca5b713b77435aded8de683c7ee5e79f63cb
         with:
           java-version: "17.0"
           distribution: "temurin"

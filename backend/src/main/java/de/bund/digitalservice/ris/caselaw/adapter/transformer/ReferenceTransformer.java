@@ -1,12 +1,14 @@
 package de.bund.digitalservice.ris.caselaw.adapter.transformer;
 
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LegalPeriodicalDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.ReferenceDTO;
 import de.bund.digitalservice.ris.caselaw.domain.Reference;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.LegalPeriodical;
+import lombok.experimental.UtilityClass;
 
+@UtilityClass
 public class ReferenceTransformer {
-
   public static Reference transformToDomain(ReferenceDTO referenceDTO) {
     LegalPeriodical legalPeriodical = null;
 
@@ -16,12 +18,15 @@ public class ReferenceTransformer {
     }
 
     return Reference.builder()
-        .uuid(referenceDTO.getId())
+        .id(referenceDTO.getId())
         .referenceSupplement(referenceDTO.getReferenceSupplement())
         .legalPeriodical(legalPeriodical)
         .legalPeriodicalRawValue(referenceDTO.getLegalPeriodicalRawValue())
         .citation(referenceDTO.getCitation())
         .footnote(referenceDTO.getFootnote())
+        .documentationUnit(
+            RelatedDocumentationUnitTransformer.transformFromDTO(
+                referenceDTO.getDocumentationUnit()))
         .build();
   }
 
@@ -31,10 +36,17 @@ public class ReferenceTransformer {
 
     if (reference.legalPeriodical() != null) {
       legalPeriodicalDTO = LegalPeriodicalTransformer.transformToDTO(reference.legalPeriodical());
-      legalPeriodicalRawValue = reference.legalPeriodical().legalPeriodicalAbbreviation();
+      legalPeriodicalRawValue = reference.legalPeriodical().abbreviation();
     }
+
+    DocumentationUnitDTO documentationUnitDTO = null;
+    if (reference.documentationUnit() != null) {
+      documentationUnitDTO =
+          DocumentationUnitDTO.builder().id(reference.documentationUnit().getUuid()).build();
+    }
+
     return ReferenceDTO.builder()
-        .id(reference.uuid())
+        .id(reference.id())
         .referenceSupplement(reference.referenceSupplement())
         .legalPeriodical(legalPeriodicalDTO)
         .citation(reference.citation())
@@ -43,10 +55,7 @@ public class ReferenceTransformer {
             legalPeriodicalRawValue != null
                 ? legalPeriodicalRawValue
                 : reference.legalPeriodicalRawValue())
+        .documentationUnit(documentationUnitDTO)
         .build();
-  }
-
-  private ReferenceTransformer() {
-    // utility class
   }
 }

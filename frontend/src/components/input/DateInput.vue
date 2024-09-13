@@ -100,12 +100,12 @@ watch(
 
 watch(inputValue, (is) => {
   if (is === "") emit("update:modelValue", undefined)
-  isValidDate.value &&
-    isInPast.value &&
+  if (isValidDate.value && isInPast.value) {
     emit(
       "update:modelValue",
       dayjs(is, "DD.MM.YYYY", true).format("YYYY-MM-DD"),
     )
+  }
 
   if (inputCompleted.value) {
     validateInput()

@@ -3,7 +3,7 @@ import {
   navigateToCategories,
   navigateToAttachments,
   uploadTestfile,
-  copyPasteAllTextFromAttachmentIntoEditor,
+  copyPasteTextFromAttachmentIntoEditor,
 } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
 
@@ -80,7 +80,7 @@ test.describe(
       let inputFieldInnerText = await editor.innerText()
 
       await test.step("Copy border numbers (Randnummern) from side panel into reasons to have reference data", async () => {
-        await copyPasteAllTextFromAttachmentIntoEditor(
+        await copyPasteTextFromAttachmentIntoEditor(
           page,
           attachmentLocator,
           editor,

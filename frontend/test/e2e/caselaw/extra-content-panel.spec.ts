@@ -43,7 +43,7 @@ test.describe(
           await page.getByLabel("Dokumente anzeigen").click()
           await expect(
             page.getByText(
-              "Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.",
+              "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
             ),
           ).toBeVisible()
         })
@@ -126,7 +126,7 @@ test.describe(
           await page.getByLabel("Dokumente anzeigen").click()
           await expect(
             page.getByText(
-              "Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.",
+              "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
             ),
           ).toBeVisible()
 

@@ -3,6 +3,7 @@ import {
   deleteDocumentUnit,
   deleteProcedure,
   navigateToCategories,
+  navigateToProcedures,
   save,
   waitForInputValue,
 } from "~/e2e/caselaw/e2e-utils"
@@ -14,7 +15,7 @@ test.describe("procedure", () => {
   const testPrefix = "test_" + generateString({ length: 10 })
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage()
-    await page.goto(`/caselaw/procedures?q=${testPrefix}`)
+    await navigateToProcedures(page, testPrefix)
     const listItems = await page.getByLabel("Vorgang Listenelement").all()
     expect(listItems).toHaveLength(0)
   })
@@ -99,8 +100,7 @@ test.describe("procedure", () => {
   })
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage()
-    await page.goto(`/caselaw/procedures?q=${testPrefix}`)
-    await expect(page.getByLabel("Nach Vorgängen suchen")).toBeVisible()
+    await navigateToProcedures(page, testPrefix)
     const listItems = await page.getByLabel("Vorgang Listenelement").all()
 
     for (const listItem of listItems) {

@@ -34,8 +34,12 @@ async function submitSearch(page: number) {
   if (response.data) {
     currentPage.value = response.data
     results.value = response.data.content
-    results.value?.[0] && emit("node:select", results.value[0] as FieldOfLaw)
-    searchStr.value.includes("norm:") && emit("do-show-norms")
+    if (results.value?.[0]) {
+      emit("node:select", results.value[0] as FieldOfLaw)
+    }
+    if (searchStr.value.includes("norm:")) {
+      emit("do-show-norms")
+    }
   } else {
     currentPage.value = undefined
     results.value = undefined

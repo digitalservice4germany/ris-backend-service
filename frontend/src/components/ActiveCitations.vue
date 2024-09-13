@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { computed } from "vue"
 import ActiveCitationInput from "@/components/ActiveCitationInput.vue"
-import ActiveCitationSummary from "@/components/ActiveCitationSummary.vue"
+import DocumentUnitDecisionSummary from "@/components/DocumentUnitDecisionSummary.vue"
 import EditableList from "@/components/EditableList.vue"
 import ActiveCitation from "@/domain/activeCitation"
 import { useDocumentUnitStore } from "@/stores/documentUnitStore"
@@ -27,7 +27,7 @@ const defaultValue = new ActiveCitation() as ActiveCitation
           v-model="activeCitations"
           :default-value="defaultValue"
           :edit-component="ActiveCitationInput"
-          :summary-component="ActiveCitationSummary"
+          :summary-component="DocumentUnitDecisionSummary"
         />
       </div>
     </div>

@@ -43,7 +43,7 @@ export const BorderNumber = Node.create({
           })
 
           // Traverse in reverse to avoid shifting positions
-          borderNumberPositions.reverse().forEach((pos) => {
+          borderNumberPositions.toReversed().forEach((pos) => {
             const borderNumberNode = doc.nodeAt(pos)
 
             if (borderNumberNode) {

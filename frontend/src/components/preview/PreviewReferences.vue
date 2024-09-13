@@ -33,7 +33,7 @@ const secondaryReferences = computed(() =>
 
         <div
           v-for="item in primaryReferences"
-          :key="item.legalPeriodical?.legalPeriodicalId"
+          :key="item.legalPeriodical?.uuid"
         >
           {{ item.renderDecision }}
         </div>
@@ -55,7 +55,7 @@ const secondaryReferences = computed(() =>
         <span class="ds-body-01-bold">Sekundäre Fundstellen</span>
         <div
           v-for="item in secondaryReferences"
-          :key="item.legalPeriodical?.legalPeriodicalId"
+          :key="item.legalPeriodical?.uuid"
         >
           {{ item.renderDecision }}
         </div>

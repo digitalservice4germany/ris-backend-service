@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import { produce } from "immer"
 import { ref, watch } from "vue"
 import IconClear from "~icons/ic/baseline-clear"
 
@@ -26,12 +25,14 @@ const emit = defineEmits<{
 function deleteChip(index: number, value: string) {
   if (props.readOnly) return
 
-  if (!props.modelValue || index >= props.modelValue.length) return
-  const next = produce(props.modelValue, (draft) => {
-    draft.splice(index, 1)
-  })
+  const temp: string[] = props.modelValue
+    ? [...props.modelValue]
+        .map((item, itemIndex) => ({ item, itemIndex }))
+        .filter(({ item, itemIndex }) => item !== value && itemIndex != index)
+        .map(({ item }) => item)
+    : []
 
-  emit("update:modelValue", next.length === 0 ? [] : next)
+  emit("update:modelValue", temp)
   emit("chipDeleted", index, value)
 }
 

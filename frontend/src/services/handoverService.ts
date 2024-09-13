@@ -2,7 +2,7 @@ import httpClient, { ServiceResponse } from "./httpClient"
 import EventRecord from "@/domain/eventRecord"
 import errorMessages from "@/i18n/errors.json"
 
-interface handoverService {
+interface HandoverService {
   handoverDocument(
     documentUnitUuid: string,
   ): Promise<ServiceResponse<EventRecord>>
@@ -10,7 +10,7 @@ interface handoverService {
   getPreview(documentUnitUuid: string): Promise<ServiceResponse<EventRecord>>
 }
 
-const service: handoverService = {
+const service: HandoverService = {
   async handoverDocument(documentUnitUuid: string) {
     const response = await httpClient.put<string, EventRecord>(
       `caselaw/documentunits/${documentUnitUuid}/handover`,

@@ -5,6 +5,7 @@ import { createRouter, createWebHistory } from "vue-router"
 import TextEditor from "@/components/input/TextEditor.vue"
 
 describe("text editor", async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   global.ResizeObserver = require("resize-observer-polyfill")
   const router = createRouter({
     history: createWebHistory(),

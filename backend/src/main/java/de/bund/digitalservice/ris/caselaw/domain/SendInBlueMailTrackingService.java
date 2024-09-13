@@ -1,5 +1,6 @@
 package de.bund.digitalservice.ris.caselaw.domain;
 
+import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -63,14 +64,18 @@ public class SendInBlueMailTrackingService implements MailTrackingService {
     }
 
     if (state == MailStatus.ERROR) {
-      DocumentationUnit documentationUnit =
-          documentationUnitService.getByUuid(parseDocUnitUUID(documentationUnitUuid));
-      log.error(
-          documentationUnit == null
-              ? "Received Mail sending error for forwarded email. Event: {}, Tag {}"
-              : "Failed to send Mail for documentation unit {} because of event {}",
-          documentationUnitUuid,
-          event);
+      try {
+        documentationUnitService.getByUuid(parseDocUnitUUID(documentationUnitUuid));
+        log.error(
+            "Received Mail sending error for forwarded email. Event: {}, Tag {}",
+            documentationUnitUuid,
+            event);
+      } catch (DocumentationUnitNotExistsException ex) {
+        log.error(
+            "Failed to send Mail for documentation unit {} because of event {}",
+            documentationUnitUuid,
+            event);
+      }
     }
 
     return ResponseEntity.status(HttpStatus.OK).build();
