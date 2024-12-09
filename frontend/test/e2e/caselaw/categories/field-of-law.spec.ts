@@ -1,30 +1,39 @@
 import { expect } from "@playwright/test"
 import errorMessages from "@/i18n/errors.json"
 
-import {
-  navigateToCategories,
-  toggleFieldOfLawSection,
-  save,
-} from "~/e2e/caselaw/e2e-utils"
+import { navigateToCategories, save } from "~/e2e/caselaw/e2e-utils"
 import { caselawTest as test } from "~/e2e/caselaw/fixtures"
 
 test.describe("field of law", () => {
-  test("rendering", async ({ page, documentNumber }) => {
-    await navigateToCategories(page, documentNumber)
-    await expect(page.getByText("Sachgebiete")).toBeVisible()
-    await toggleFieldOfLawSection(page)
+  const strafrecht = "SR | Strafrecht"
 
+  test("rendering initial state, switching between 'Direkteingabe' and 'Suche', collapsing inputs", async ({
+    page,
+    documentNumber,
+  }) => {
+    await navigateToCategories(page, documentNumber)
     await expect(
-      page.getByRole("heading", { name: "Ausgewählte Sachgebiete" }),
+      page.getByRole("heading", { name: "Sachgebiete" }),
     ).toBeVisible()
-    await expect(page.getByText("Die Liste ist aktuell leer")).toBeVisible()
-    await expect(page.getByText("Normen anzeigen")).toBeVisible()
     await expect(
-      page.getByRole("heading", { name: "Sachgebietsbaum" }),
+      page.getByRole("button", { name: "Sachgebiete" }),
     ).toBeVisible()
-    await expect(page.getByText("Alle Sachgebiete")).toBeVisible()
-    await expect(page.getByRole("heading", { name: "Suche" })).toBeVisible()
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+
     await expect(page.getByText("Direkteingabe Sachgebiet")).toBeVisible()
+
+    await page.getByLabel("Sachgebietsuche auswählen").click()
+
+    await expect(page.getByLabel("Sachgebietskürzel")).toBeVisible()
+    await expect(page.getByLabel("Sachgebietsbezeichnung")).toBeVisible()
+    await expect(page.getByLabel("Sachgebietsnorm")).toBeVisible()
+    await expect(page.getByLabel("Sachgebietssuche ausführen")).toBeVisible()
+    await expect(page.getByText("Sachgebietsbaum")).toBeVisible()
+
+    await page.getByRole("button", { name: "Fertig" }).click()
+    await expect(
+      page.getByRole("button", { name: "Sachgebiete" }),
+    ).toBeVisible()
   })
 
   // Tree and selection list
@@ -34,7 +43,8 @@ test.describe("field of law", () => {
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -42,7 +52,7 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeHidden()
   })
 
@@ -51,7 +61,8 @@ test.describe("field of law", () => {
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -59,12 +70,12 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeHidden()
 
     await page.getByRole("button", { name: "Strafrecht aufklappen" }).click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeVisible()
   })
 
@@ -73,7 +84,8 @@ test.describe("field of law", () => {
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -81,12 +93,12 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeHidden()
 
     await page.getByRole("button", { name: "Strafrecht aufklappen" }).click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeVisible()
 
     await page
@@ -95,7 +107,7 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht")).toBeHidden()
+    await expect(page.getByText(strafrecht)).toBeHidden()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeHidden()
 
     await page
@@ -104,16 +116,17 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
     await expect(page.getByText("Ordnungswidrigkeitenrecht")).toBeVisible()
   })
 
-  test("open 'Strafrecht' - tree and add 'Ordnungswidrigkeitenrecht'", async ({
+  test("open 'Strafrecht' - tree and add 'Ordnungswidrigkeitenrecht' from tree", async ({
     page,
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -121,7 +134,7 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
 
     await page.getByRole("button", { name: "Strafrecht aufklappen" }).click()
 
@@ -140,12 +153,13 @@ test.describe("field of law", () => {
     ).toBeVisible()
   })
 
-  test("open 'Strafrecht' - tree and add 'Ordnungswidrigkeitenrecht', remove it in the tree", async ({
+  test("open 'Strafrecht' - tree, add and remove 'Ordnungswidrigkeitenrecht', from tree", async ({
     page,
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -153,7 +167,7 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
 
     await page.getByRole("button", { name: "Strafrecht aufklappen" }).click()
 
@@ -167,17 +181,18 @@ test.describe("field of law", () => {
 
     await page.getByLabel("SR-07 Ordnungswidrigkeitenrecht entfernen").click()
 
-    await expect(page.getByText("Die Liste ist aktuell leer")).toBeVisible()
     await expect(
       page.getByLabel("SR-07 Ordnungswidrigkeitenrecht hinzufügen"),
     ).toBeVisible()
   })
+
   test("opening and closing tree nodes, nodes with no children do not display expand icon", async ({
     page,
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -207,11 +222,7 @@ test.describe("field of law", () => {
 
     //last layer: nodes with no children do not display expand icon
 
-    await expect(
-      page.getByText("Zuständigkeiten", {
-        exact: true,
-      }),
-    ).toBeVisible()
+    await expect(page.getByText("Zuständigkeiten")).toBeVisible()
 
     await expect(page.getByLabel("Zuständigkeiten aufklappen")).toBeHidden()
 
@@ -228,12 +239,13 @@ test.describe("field of law", () => {
     await expect(page.getByLabel("OWi-Verfahren aufklappen")).toBeVisible()
   })
 
-  test("open 'Strafrecht' - tree and add 'Ordnungswidrigkeitenrecht', remove it in the selection list", async ({
+  test("add field of law from tree and remove via selection list", async ({
     page,
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
     await page
       .getByRole("button", {
@@ -241,7 +253,7 @@ test.describe("field of law", () => {
       })
       .click()
 
-    await expect(page.getByText("Strafrecht", { exact: true })).toBeVisible()
+    await expect(page.getByText(strafrecht, { exact: true })).toBeVisible()
 
     await page.getByRole("button", { name: "Strafrecht aufklappen" }).click()
 
@@ -249,11 +261,15 @@ test.describe("field of law", () => {
 
     await page.getByLabel("SR-07 Ordnungswidrigkeitenrecht hinzufügen").click()
 
-    await expect(page.getByText("Die Liste ist aktuell leer")).toBeHidden()
+    await expect(
+      page.getByLabel("SR-07 Ordnungswidrigkeitenrecht aus Liste entfernen"),
+    ).toBeVisible()
 
     await page.getByLabel("SR-07 Ordnungswidrigkeitenrecht entfernen").click()
 
-    await expect(page.getByText("Die Liste ist aktuell leer")).toBeVisible()
+    await expect(
+      page.getByLabel("SR-07 Ordnungswidrigkeitenrecht aus Liste entfernen"),
+    ).toBeHidden()
     await expect(
       page.getByLabel("SR-07 Ordnungswidrigkeitenrecht hinzufügen"),
     ).toBeVisible()
@@ -263,9 +279,10 @@ test.describe("field of law", () => {
 
   test("Search without results", async ({ page, documentNumber }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
-    await page.locator("[aria-label='Sachgebiete Suche']").fill("xyz")
+    await page.locator("[aria-label='Sachgebietskürzel']").fill("xyz")
     await page.keyboard.press("Enter")
     await expect(
       page.getByText(errorMessages.SEARCH_RESULTS_NOT_FOUND.title),
@@ -277,9 +294,12 @@ test.describe("field of law", () => {
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
-    await page.locator("[aria-label='Sachgebiete Suche']").fill("Grundstück")
+    await page
+      .locator("[aria-label='Sachgebietsbezeichnung']")
+      .fill("Grundstück")
 
     await page
       .getByRole("button", {
@@ -320,9 +340,12 @@ test.describe("field of law", () => {
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
-    await page.locator("[aria-label='Sachgebiete Suche']").fill("Grundstück")
+    await page
+      .locator("[aria-label='Sachgebietsbezeichnung']")
+      .fill("Grundstück")
     await page.keyboard.press("Enter")
 
     // if these two are visible, it must mean that the tree opened automatically with the first result
@@ -332,51 +355,72 @@ test.describe("field of law", () => {
     ).toBeVisible()
   })
 
-  test("Search with paginated results - click on result opens tree in direct path mode to selected result and can be saved", async ({
+  test("Search with paginated results - click on result opens tree and adds result to list", async ({
     page,
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
-    await page.locator("[aria-label='Sachgebiete Suche']").fill("Grundstück")
+    await page
+      .locator("[aria-label='Sachgebietsbezeichnung']")
+      .fill("Grundstück")
     await page.keyboard.press("Enter")
 
-    const searchResult = page.getByLabel(
-      "BR-01-06-05 Grundstückskaufvertrag im Sachgebietsbaum anzeigen",
-    )
+    const searchResult = page.getByLabel("BR-01-06-05 hinzufügen")
     await expect(searchResult).toBeVisible()
     await searchResult.click()
 
-    const searchResultInTree = page.getByLabel(
-      "BR-01-06-05 Grundstückskaufvertrag hinzufügen",
-    )
-    await expect(searchResultInTree).toBeVisible()
-    await searchResultInTree.click()
+    await expect(
+      page.getByLabel("BR-01-06-05 Grundstückskaufvertrag entfernen"),
+    ).toBeVisible()
 
     await save(page)
   })
 
-  test("Search with both norm string and stext string - sets show norm checkbox to true", async ({
+  test("Search with both norm string and description - sets show norm checkbox to true", async ({
     page,
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
 
-    await page
-      .locator("[aria-label='Sachgebiete Suche']")
-      .fill('norm:"§ 252 BGB" Gewinn')
+    await page.locator("[aria-label='Sachgebietsbezeichnung']").fill("Gewinn")
+    await page.locator("[aria-label='Sachgebietsnorm']").fill("§ 252 BGB")
     await page.keyboard.press("Enter")
 
-    await expect(
-      page.getByLabel(
-        "BR-05-01-06 entgangener Gewinn im Sachgebietsbaum anzeigen",
-      ),
-    ).toBeVisible()
+    await expect(page.getByLabel("BR-05-01-06 hinzufügen")).toBeVisible()
 
     // if this is visible, it means that the "Normen anzeigen" checkbox got set to true
     await expect(page.getByText("§ 251 BGB").first()).toBeVisible()
+  })
+
+  test("click on 'Suche zurücksetzen' empties search inputs, hides search results and collapses tree", async ({
+    page,
+    documentNumber,
+  }) => {
+    await navigateToCategories(page, documentNumber)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
+    await page.getByLabel("Sachgebietsuche auswählen").click()
+
+    await page.locator("[aria-label='Sachgebietskürzel']").fill("BR")
+    await page.locator("[aria-label='Sachgebietsbezeichnung']").fill("Gewinn")
+    await page.locator("[aria-label='Sachgebietsnorm']").fill("§ 252 BGB")
+    await page.keyboard.press("Enter")
+
+    await expect(page.getByLabel("BR-05-01-06 hinzufügen")).toBeVisible()
+
+    await page.getByRole("button", { name: "Suche zurücksetzen" }).click()
+
+    await expect(page.getByLabel("Sachgebietskürzel")).toHaveValue("")
+    await expect(page.getByLabel("Sachgebietsbezeichnung")).toHaveValue("")
+    await expect(page.getByLabel("Sachgebietsnorm")).toHaveValue("")
+    await expect(page.getByLabel("BR-05-01-06 hinzufügen")).toBeHidden()
+    await expect(
+      page.getByRole("button", { name: "Alle Sachgebiete aufklappen" }),
+    ).toBeVisible()
   })
 
   // Direct input
@@ -386,7 +430,7 @@ test.describe("field of law", () => {
     documentNumber,
   }) => {
     await navigateToCategories(page, documentNumber)
-    await toggleFieldOfLawSection(page)
+    await page.getByRole("button", { name: "Sachgebiete" }).click()
 
     await page
       .locator("[aria-label='Direkteingabe-Sachgebietssuche eingeben']")
@@ -401,6 +445,11 @@ test.describe("field of law", () => {
     await expect(
       page.getByLabel(
         "AR-01 Arbeitsvertrag: Abschluss, Klauseln, Arten, Betriebsübergang im Sachgebietsbaum anzeigen",
+      ),
+    ).toBeVisible()
+    await expect(
+      page.getByLabel(
+        "AR-01 Arbeitsvertrag: Abschluss, Klauseln, Arten, Betriebsübergang aus Liste entfernen",
       ),
     ).toBeVisible()
   })

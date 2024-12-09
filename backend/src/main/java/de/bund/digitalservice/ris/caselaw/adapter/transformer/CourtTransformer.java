@@ -16,7 +16,15 @@ public class CourtTransformer {
     String revoked = extractRevoked(courtDTO.getAdditionalInformation());
 
     Court.CourtBuilder builder =
-        Court.builder().id(courtDTO.getId()).type(courtDTO.getType()).revoked(revoked);
+        Court.builder()
+            .id(courtDTO.getId())
+            .type(courtDTO.getType())
+            .responsibleDocOffice(
+                courtDTO.getJurisdictionType() != null
+                    ? DocumentationOfficeTransformer.transformToDomain(
+                        courtDTO.getJurisdictionType().getDocumentationOffice())
+                    : null)
+            .revoked(revoked);
 
     if (Boolean.TRUE.equals(courtDTO.isSuperiorCourt())) {
       return builder.label(courtDTO.getType()).build();
@@ -31,7 +39,7 @@ public class CourtTransformer {
   public static CourtDTO transformToDTO(Court court) {
     if (court == null) return null;
 
-    return CourtDTO.builder().id(court.id()).build();
+    return CourtDTO.builder().id(court.id()).type(court.type()).location(court.location()).build();
   }
 
   private static String extractRevoked(String additional) {

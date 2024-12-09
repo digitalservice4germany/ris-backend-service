@@ -1,10 +1,11 @@
 package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 
 import de.bund.digitalservice.ris.caselaw.domain.Converter;
-import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentUnitDocx;
+import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
 import de.bund.digitalservice.ris.caselaw.domain.docx.DocxImagePart;
 import de.bund.digitalservice.ris.caselaw.domain.docx.ErrorElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.ParagraphElement;
+import de.bund.digitalservice.ris.caselaw.domain.docx.UnhandledElement;
 import jakarta.xml.bind.JAXBElement;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,7 @@ import org.docx4j.wml.P;
 import org.docx4j.wml.Style;
 import org.docx4j.wml.Tbl;
 
-public class DocxConverter implements Converter<DocumentUnitDocx> {
+public class DocxConverter implements Converter<DocumentationUnitDocx> {
   private Map<String, Style> styles;
   private Map<String, DocxImagePart> images;
   private List<ParagraphElement> footers;
@@ -52,7 +53,7 @@ public class DocxConverter implements Converter<DocumentUnitDocx> {
     this.footers = footers;
   }
 
-  public DocumentUnitDocx convert(Object part) {
+  public DocumentationUnitDocx convert(Object part, List<UnhandledElement> unhandledElements) {
     DocxBuilder builder;
 
     if (part instanceof P p) {
@@ -65,11 +66,11 @@ public class DocxConverter implements Converter<DocumentUnitDocx> {
 
     builder.setConverter(this);
 
-    return builder.build();
+    return builder.build(unhandledElements);
   }
 
   private DocxBuilder convertP(P part) {
-    return DocumentUnitDocxBuilder.newInstance().setParagraph(part);
+    return DocumentationUnitDocxBuilder.newInstance().setParagraph(part);
   }
 
   private DocxBuilder convertTbl(Tbl part) {

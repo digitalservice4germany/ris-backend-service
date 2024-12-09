@@ -1,28 +1,76 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "requiredStatusChecks": [
-    "deploy-staging"
+    "deploy-uat"
   ],
   "extends": [
     "config:recommended",
     ":disableDependencyDashboard"
   ],
+  "platformAutomerge": false,
   "rangeStrategy": "bump",
   "labels": [
     "renovate"
-  ],
-  "ignoreDeps": [
-    "de.bund.digitalservice:neuris-juris-xml-export",
-    "de.bund.digitalservice:neuris-caselaw-migration-schema"
   ],
   "lockFileMaintenance": {
     "enabled": false
   },
   "timezone": "Europe/Berlin",
   "automergeSchedule": [
-    "every weekday"
+    "before 5:30am every weekday",
+    "after 7:30pm every weekday"
   ],
+  "automergeType": "pr",
   "packageRules": [
+    {
+      "groupName": "all-frontend-non-major-dependencies",
+      "matchPaths": [
+        "frontend/**"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "labels": [
+        "frontend-updates"
+      ],
+      "automerge": true,
+    },
+    {
+      "groupName": "all-backend-non-major-dependencies",
+      "matchPaths": [
+        "backend/**"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "pin",
+        "pinDigest",
+        "digest"
+      ],
+      "automerge": true,
+      "labels": [
+        "backend-updates"
+      ],
+    },
+    {
+      "packageNames": [
+        "de.bund.digitalservice:neuris-juris-xml-export",
+        "de.bund.digitalservice:neuris-caselaw-migration-schema"
+      ],
+      "automerge": false,
+    },
+    {
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "labels": [
+        "major update"
+      ]
+    },
     {
       "matchUpdateTypes": [
         "minor",
@@ -32,8 +80,6 @@
         "digest"
       ],
       "automerge": true,
-      "platformAutomerge": false,
-      "automergeType": "pr"
     }
   ]
 }

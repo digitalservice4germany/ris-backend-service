@@ -3,8 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/vue"
 import { flushPromises } from "@vue/test-utils"
 import { createRouter, createWebHistory } from "vue-router"
 import TextEditor from "@/components/input/TextEditor.vue"
+import { longTextLabels } from "@/domain/documentUnit"
 
 describe("text editor", async () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   global.ResizeObserver = require("resize-observer-polyfill")
   const router = createRouter({
     history: createWebHistory(),
@@ -35,7 +37,7 @@ describe("text editor", async () => {
     render(TextEditor, {
       props: {
         value: "Test Value",
-        ariaLabel: "Test Editor Feld",
+        ariaLabel: "Gründe",
       },
       global: { plugins: [router] },
     })
@@ -43,7 +45,7 @@ describe("text editor", async () => {
     await flushPromises()
 
     expect(screen.getByText("Test Value")).toBeInTheDocument()
-    expect(screen.getByTestId("Test Editor Feld")).toBeInTheDocument()
+    expect(screen.getByTestId("Gründe")).toBeInTheDocument()
   })
 
   test.each([
@@ -65,7 +67,7 @@ describe("text editor", async () => {
     render(TextEditor, {
       props: {
         value: "Test Value",
-        ariaLabel: "Test Editor Feld",
+        ariaLabel: "Gründe",
         editable: true,
       },
       global: { plugins: [router] },
@@ -73,25 +75,23 @@ describe("text editor", async () => {
 
     await flushPromises()
 
-    const editorField = screen.getByTestId("Test Editor Feld")
+    const editorField = screen.getByTestId("Gründe")
 
     if (editorField.firstElementChild !== null) {
       await fireEvent.focus(editorField.firstElementChild)
     }
 
-    expect(
-      screen.getByLabelText("Test Editor Feld Button Leiste"),
-    ).toBeInTheDocument()
-    expect(screen.getByLabelText("fullview")).toBeEnabled()
-    expect(screen.getByLabelText("undo")).toBeEnabled()
-    expect(screen.getByLabelText("redo")).toBeEnabled()
+    expect(screen.getByLabelText("Gründe Button Leiste")).toBeInTheDocument()
+    expect(screen.getByLabelText("Erweitern")).toBeEnabled()
+    expect(screen.getByLabelText("Rückgängig machen")).toBeEnabled()
+    expect(screen.getByLabelText("Wiederherstellen")).toBeEnabled()
   })
 
   test("disable buttons on blur", async () => {
     render(TextEditor, {
       props: {
         value: "Test Value",
-        ariaLabel: "Test Editor Feld",
+        ariaLabel: "Gründe",
         editable: true,
       },
       global: { plugins: [router] },
@@ -99,18 +99,16 @@ describe("text editor", async () => {
 
     await flushPromises()
 
-    const editorField = screen.getByTestId("Test Editor Feld")
+    const editorField = screen.getByTestId("Gründe")
 
     if (editorField.firstElementChild !== null) {
       await fireEvent.blur(editorField.firstElementChild)
     }
 
-    expect(
-      screen.getByLabelText("Test Editor Feld Button Leiste"),
-    ).toBeInTheDocument()
-    expect(screen.getByLabelText("fullview")).toBeDisabled()
-    expect(screen.getByLabelText("undo")).toBeDisabled()
-    expect(screen.getByLabelText("redo")).toBeDisabled()
+    expect(screen.getByLabelText("Gründe Button Leiste")).toBeInTheDocument()
+    expect(screen.getByLabelText("Erweitern")).toBeDisabled()
+    expect(screen.getByLabelText("Rückgängig machen")).toBeDisabled()
+    expect(screen.getByLabelText("Wiederherstellen")).toBeDisabled()
   })
 
   /*
@@ -130,7 +128,7 @@ describe("text editor", async () => {
     render(TextEditor, {
       props: {
         value: "Test Value",
-        ariaLabel: "Test Editor Feld",
+        ariaLabel: "Gründe",
         editable: true,
       },
       global: { plugins: [router] },
@@ -138,31 +136,134 @@ describe("text editor", async () => {
 
     await flushPromises()
 
-    const editorField = screen.getByTestId("Test Editor Feld")
+    const editorField = screen.getByTestId("Gründe")
 
     if (editorField.firstElementChild !== null) {
       await fireEvent.focus(editorField.firstElementChild)
     }
 
-    expect(screen.getByLabelText("fullview")).toBeInTheDocument()
-    expect(screen.getByLabelText("invisible-characters")).toBeInTheDocument()
-    expect(screen.getByLabelText("bold")).toBeInTheDocument()
-    expect(screen.getByLabelText("italic")).toBeInTheDocument()
-    expect(screen.getByLabelText("underline")).toBeInTheDocument()
-    expect(screen.getByLabelText("strike")).toBeInTheDocument()
-    expect(screen.getByLabelText("superscript")).toBeInTheDocument()
-    expect(screen.getByLabelText("subscript")).toBeInTheDocument()
-    expect(screen.getByLabelText("left")).toBeInTheDocument()
-    expect(screen.getByLabelText("center")).toBeInTheDocument()
-    expect(screen.getByLabelText("right")).toBeInTheDocument()
-    expect(screen.getByLabelText("justify")).toBeInTheDocument()
-    expect(screen.getByLabelText("bulletList")).toBeInTheDocument()
-    expect(screen.getByLabelText("orderedList")).toBeInTheDocument()
-    expect(screen.getByLabelText("outdent")).toBeInTheDocument()
-    expect(screen.getByLabelText("indent")).toBeInTheDocument()
-    expect(screen.getByLabelText("blockquote")).toBeInTheDocument()
-    expect(screen.getByLabelText("deleteBorderNumber")).toBeInTheDocument()
-    expect(screen.getByLabelText("undo")).toBeInTheDocument()
-    expect(screen.getByLabelText("redo")).toBeInTheDocument()
+    expect(screen.getByLabelText("Erweitern")).toBeInTheDocument()
+    expect(screen.getByLabelText("Nicht-druckbare Zeichen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Fett")).toBeInTheDocument()
+    expect(screen.getByLabelText("Kursiv")).toBeInTheDocument()
+    expect(screen.getByLabelText("Unterstrichen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Durchgestrichen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Hochgestellt")).toBeInTheDocument()
+    expect(screen.getByLabelText("Tiefgestellt")).toBeInTheDocument()
+    expect(screen.getByLabelText("Linksbündig")).toBeInTheDocument()
+    expect(screen.getByLabelText("Zentriert")).toBeInTheDocument()
+    expect(screen.getByLabelText("Rechtsbündig")).toBeInTheDocument()
+    expect(screen.getByLabelText("Aufzählungsliste")).toBeInTheDocument()
+    expect(screen.getByLabelText("Nummerierte Liste")).toBeInTheDocument()
+    expect(screen.getByLabelText("Einzug verringern")).toBeInTheDocument()
+    expect(screen.getByLabelText("Einzug vergrößern")).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("Tabelle", { exact: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText("Zitat einfügen")).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("Randnummern neu erstellen"),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText("Randnummern entfernen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Rückgängig machen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Wiederherstellen")).toBeInTheDocument()
+  })
+
+  it("shows all table buttons after menu is expanded", async () => {
+    render(TextEditor, {
+      props: {
+        value: "Test Value",
+        ariaLabel: "Gründe",
+        editable: true,
+      },
+      global: { plugins: [router] },
+    })
+
+    await flushPromises()
+
+    const editorField = screen.getByTestId("Gründe")
+
+    if (editorField.firstElementChild !== null) {
+      await fireEvent.focus(editorField.firstElementChild)
+    }
+
+    expect(
+      screen.getByLabelText("Tabelle", { exact: true }),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText("Tabelle einfügen")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Tabelle löschen")).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText("Spalte rechts einfügen"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText("Zeile darunter einfügen"),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Spalte löschen")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Zeile löschen")).not.toBeInTheDocument()
+
+    await fireEvent.click(screen.getByLabelText("Tabelle", { exact: true }))
+
+    expect(screen.getByLabelText("Tabelle einfügen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Tabelle löschen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Spalte rechts einfügen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Zeile darunter einfügen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Spalte löschen")).toBeInTheDocument()
+    expect(screen.getByLabelText("Zeile löschen")).toBeInTheDocument()
+  })
+
+  it.each([
+    longTextLabels.tenor,
+    longTextLabels.participatingJudges,
+    longTextLabels.outline,
+  ])("hides add border number button for category %s", async (category) => {
+    render(TextEditor, {
+      props: {
+        value: "Test Value",
+        ariaLabel: category,
+        editable: true,
+      },
+      global: { plugins: [router] },
+    })
+
+    await flushPromises()
+
+    const editorField = screen.getByTestId(category!)
+
+    if (editorField.firstElementChild !== null) {
+      await fireEvent.focus(editorField.firstElementChild)
+    }
+
+    expect(
+      screen.queryByText("Randnummern neu erstellen"),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    longTextLabels.reasons,
+    longTextLabels.caseFacts,
+    longTextLabels.decisionReasons,
+    longTextLabels.dissentingOpinion,
+    longTextLabels.otherLongText,
+  ])("shows add border number button for category %s", async (category) => {
+    render(TextEditor, {
+      props: {
+        value: "Test Value",
+        ariaLabel: category,
+        editable: true,
+      },
+      global: { plugins: [router] },
+    })
+
+    await flushPromises()
+
+    const editorField = screen.getByTestId(category!)
+
+    if (editorField.firstElementChild !== null) {
+      await fireEvent.focus(editorField.firstElementChild)
+    }
+
+    expect(
+      screen.getByLabelText("Randnummern neu erstellen"),
+    ).toBeInTheDocument()
   })
 })

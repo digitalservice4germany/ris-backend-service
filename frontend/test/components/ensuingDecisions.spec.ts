@@ -1,15 +1,23 @@
 import { createTestingPinia } from "@pinia/testing"
 import { userEvent } from "@testing-library/user-event"
 import { render, screen } from "@testing-library/vue"
+import { createRouter, createWebHistory } from "vue-router"
 import EnsuingDecisions from "@/components/EnsuingDecisions.vue"
 import { ComboboxItem } from "@/components/input/types"
 import DocumentUnit, { Court, DocumentType } from "@/domain/documentUnit"
 import EnsuingDecision from "@/domain/ensuingDecision"
 import comboboxItemService from "@/services/comboboxItemService"
 import documentUnitService from "@/services/documentUnitService"
+import routes from "~/test-helper/routes"
 
 function renderComponent(ensuingDecisions?: EnsuingDecision[]) {
   const user = userEvent.setup()
+
+  const router = createRouter({
+    history: createWebHistory(),
+    routes: routes,
+  })
+
   return {
     user,
     ...render(EnsuingDecisions, {
@@ -28,6 +36,7 @@ function renderComponent(ensuingDecisions?: EnsuingDecision[]) {
               stubActions: false,
             }),
           ],
+          [router],
         ],
         stubs: { routerLink: { template: "<a><slot/></a>" } },
       },

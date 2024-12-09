@@ -1,5 +1,6 @@
 type DocumentationOffice = {
-  abbreviation?: string
+  id: string
+  abbreviation: string
 }
 
 export default DocumentationOffice

@@ -1,19 +1,21 @@
 <script lang="ts" setup>
 import { useHead } from "@unhead/vue"
 import { storeToRefs } from "pinia"
-import { onMounted, ref, Ref } from "vue"
+import { onMounted, onBeforeUnmount, ref, Ref } from "vue"
 import { useRoute } from "vue-router"
 import DocumentUnitInfoPanel from "@/components/DocumentUnitInfoPanel.vue"
-import ErrorPage from "@/components/ErrorPage.vue"
 import ExtraContentSidePanel from "@/components/ExtraContentSidePanel.vue"
 import FlexContainer from "@/components/FlexContainer.vue"
 import { ValidationError } from "@/components/input/types"
 import NavbarSide from "@/components/NavbarSide.vue"
+import ErrorPage from "@/components/PageError.vue"
 import SideToggle from "@/components/SideToggle.vue"
 import { useCaseLawMenuItems } from "@/composables/useCaseLawMenuItems"
 import useQuery from "@/composables/useQueryFromRoute"
+import DocumentUnit from "@/domain/documentUnit"
 import { ResponseError } from "@/services/httpClient"
 import { useDocumentUnitStore } from "@/stores/documentUnitStore"
+import { useExtraContentSidePanelStore } from "@/stores/extraContentSidePanelStore"
 
 const props = defineProps<{
   documentNumber: string
@@ -24,12 +26,14 @@ useHead({
 })
 
 const store = useDocumentUnitStore()
+const extraContentSidePanelStore = useExtraContentSidePanelStore()
 
+const { documentUnit } = storeToRefs(store) as {
+  documentUnit: Ref<DocumentUnit | undefined>
+}
 const route = useRoute()
 const menuItems = useCaseLawMenuItems(props.documentNumber, route.query)
 const { pushQueryToRoute } = useQuery()
-
-const { documentUnit } = storeToRefs(store)
 
 const validationErrors = ref<ValidationError[]>([])
 const showNavigationPanelRef: Ref<boolean> = ref(
@@ -38,12 +42,9 @@ const showNavigationPanelRef: Ref<boolean> = ref(
 
 const responseError = ref<ResponseError>()
 
-const extraContentSidePanel = ref<InstanceType<
-  typeof ExtraContentSidePanel
-> | null>(null)
-
-const toggleNavigationPanel = () => {
-  showNavigationPanelRef.value = !showNavigationPanelRef.value
+function toggleNavigationPanel(expand?: boolean) {
+  showNavigationPanelRef.value =
+    expand === undefined ? !showNavigationPanelRef.value : expand
   pushQueryToRoute({
     ...route.query,
     showNavigationPanel: showNavigationPanelRef.value.toString(),
@@ -59,26 +60,72 @@ async function requestDocumentUnitFromServer() {
 }
 
 async function attachmentIndexSelected(index: number) {
-  extraContentSidePanel.value?.togglePanel(true)
-  extraContentSidePanel.value?.selectAttachments(index)
+  extraContentSidePanelStore.togglePanel(true)
+  extraContentSidePanelStore.selectAttachments(index)
 }
 
 async function attachmentIndexDeleted(index: number) {
   await requestDocumentUnitFromServer()
-  extraContentSidePanel.value?.onAttachmentDeleted(index)
+  extraContentSidePanelStore.onAttachmentDeleted(
+    index,
+    documentUnit.value ? documentUnit.value.attachments.length - 1 : 0,
+  )
 }
 
 async function attachmentsUploaded(anySuccessful: boolean) {
   if (anySuccessful) {
     await requestDocumentUnitFromServer()
-    extraContentSidePanel.value?.togglePanel(true)
-    extraContentSidePanel.value?.selectAttachments(
+    extraContentSidePanelStore.togglePanel(true)
+    extraContentSidePanelStore.selectAttachments(
       documentUnit.value ? documentUnit.value.attachments.length - 1 : 0,
     )
   }
 }
 
+const handleKeyDown = (event: KeyboardEvent) => {
+  // List of tag names where shortcuts should be disabled
+  const tagName = (event.target as HTMLElement).tagName.toLowerCase()
+
+  // Check if the active element is an input, textarea, or any element with contenteditable
+  if (
+    ["input", "textarea", "select"].includes(tagName) ||
+    (event.target as HTMLElement).isContentEditable
+  ) {
+    if (event.key === "Escape") (event.target as HTMLElement).blur() // Remove focus from the input field
+    return // Do nothing if the user is typing in an input field or editable area
+  }
+
+  switch (event.key) {
+    case "<": // Ctrl + [
+      event.preventDefault()
+      toggleNavigationPanel(extraContentSidePanelStore.togglePanel())
+      break
+    case "n": // Ctrl + N
+      event.preventDefault()
+      extraContentSidePanelStore.togglePanel(true)
+      extraContentSidePanelStore.setSidePanelMode("note")
+      break
+    case "d": // Ctrl + D
+      event.preventDefault()
+      extraContentSidePanelStore.togglePanel(true)
+      extraContentSidePanelStore.setSidePanelMode("attachments")
+      break
+    case "v": // Ctrl + V
+      extraContentSidePanelStore.togglePanel(true)
+      extraContentSidePanelStore.setSidePanelMode("preview")
+      break
+    default:
+      break
+  }
+}
+
+onBeforeUnmount(() => {
+  // Remove the event listener when the component is unmounted
+  window.removeEventListener("keydown", handleKeyDown)
+})
+
 onMounted(async () => {
+  window.addEventListener("keydown", handleKeyDown)
   await requestDocumentUnitFromServer()
 })
 </script>
@@ -105,7 +152,6 @@ onMounted(async () => {
       <DocumentUnitInfoPanel
         v-if="documentUnit && !route.path.includes('preview')"
         data-testid="document-unit-info-panel"
-        :document-unit="documentUnit"
         :heading="documentUnit?.documentNumber ?? ''"
       />
       <div class="flex grow flex-col items-start">
@@ -120,12 +166,13 @@ onMounted(async () => {
         >
           <ExtraContentSidePanel
             v-if="
+              documentUnit &&
               !(
                 route.path.includes('handover') ||
                 route.path.includes('preview')
               )
             "
-            ref="extraContentSidePanel"
+            :document-unit="documentUnit"
           ></ExtraContentSidePanel>
           <router-view
             :validation-errors="validationErrors"

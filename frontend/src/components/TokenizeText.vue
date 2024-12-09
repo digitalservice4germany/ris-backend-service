@@ -9,7 +9,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  "linked-field:select": [node: FieldOfLaw]
+  "linked-field:clicked": [node: FieldOfLaw]
 }>()
 
 type Token = {
@@ -32,22 +32,23 @@ function tokenizeText(): Token[] {
 function handleTokenClick(token: Token) {
   if (!token.isLink) return
   const toNode = createNode(token.content)
-  emit("linked-field:select", toNode)
+  emit("linked-field:clicked", toNode)
 }
 </script>
 
 <template>
-  <button
-    v-for="(token, idx) in tokenizeText()"
-    :key="idx"
+  <!-- eslint-disable vue/require-v-for-key -->
+  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+  <span
+    v-for="token in tokenizeText()"
     class="text-left"
     :class="token.isLink && 'linked-field'"
-    tabindex="0"
+    :tabindex="token.isLink ? 0 : undefined"
     @click="handleTokenClick(token)"
     @keyup.enter="handleTokenClick(token)"
   >
     {{ token.content }}
-  </button>
+  </span>
 </template>
 
 <style lang="scss" scoped>

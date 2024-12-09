@@ -1,5 +1,6 @@
 import { userEvent } from "@testing-library/user-event"
 import { render, screen } from "@testing-library/vue"
+import { describe } from "vitest"
 import { Component, markRaw, ref, h } from "vue"
 import { ComponentExposed } from "vue-component-type-helpers"
 import { withSummarizer } from "@/components/DataSetSummary.vue"
@@ -158,5 +159,55 @@ describe("EditableList", () => {
     await user.click(screen.getByTestId("list-entry-0"))
 
     expect(screen.getAllByLabelText("Listen Eintrag").length).toEqual(2)
+  })
+
+  describe("Scrolling behavior", () => {
+    it("scrolls to the item being edited after cancel", async () => {
+      // Arrange
+      const { user } = await renderComponent()
+      const scrollIntoViewMock = vi.fn()
+      const item = screen.getByTestId("list-entry-0")
+      window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+      await user.click(item)
+
+      // Act
+      await user.click(screen.getByLabelText("Abbrechen"))
+
+      // Assert
+      expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    })
+
+    it("scrolls to the item being edited after 'übernehmen''", async () => {
+      // Arrange
+      const { user } = await renderComponent()
+      const scrollIntoViewMock = vi.fn()
+      const item = screen.getByTestId("list-entry-0")
+      window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+      await user.click(item)
+      expect(screen.getByLabelText("Editier Input")).toBeVisible()
+      await user.type(screen.getByLabelText("Editier Input"), "1")
+      const button = screen.getByLabelText("Listeneintrag speichern")
+
+      // Act
+      await user.click(button)
+
+      // Assert
+      expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    })
+
+    it("scrolls to editable list container if an item has been deleted", async () => {
+      // Arrange
+      const { user } = await renderComponent()
+      const scrollIntoViewMock = vi.fn()
+      const item = screen.getByTestId("list-entry-0")
+      window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+      await user.click(item)
+
+      // Act
+      await user.click(screen.getByLabelText("Eintrag löschen"))
+
+      // Assert
+      expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    })
   })
 })

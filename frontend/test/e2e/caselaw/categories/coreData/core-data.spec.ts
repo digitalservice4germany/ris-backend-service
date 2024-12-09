@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test"
+import { expect, Locator } from "@playwright/test"
 import { deleteDocumentUnit, navigateToCategories, save } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
 
@@ -42,7 +42,7 @@ test.describe("core data", () => {
 
     await page.reload()
 
-    await page.locator("[aria-label='Abweichender ECLI anzeigen']").click()
+    // If deviating data is available, it is automatically expanded
     await expect(page.getByText("two").first()).toBeVisible()
     await expect(page.getByText("three").first()).toBeVisible()
 
@@ -81,9 +81,7 @@ test.describe("core data", () => {
     await save(page)
     await page.reload()
 
-    await page
-      .locator("[aria-label='Abweichendes Aktenzeichen anzeigen']")
-      .click()
+    // If deviating data is available, it is automatically expanded
     await expect(page.getByText("three").first()).toBeVisible()
     await page
       .locator("[aria-label='Abweichendes Aktenzeichen schließen']")
@@ -307,4 +305,183 @@ test.describe("core data", () => {
       "NSW Fundstelle is visible for other courts",
     ).toBeHidden()
   })
+
+  test(
+    "core data is hidden for external user",
+    {
+      annotation: {
+        type: "story",
+        description:
+          "https://digitalservicebund.atlassian.net/browse/RISDEV-4523",
+      },
+      tag: ["@RISDEV-4523"],
+    },
+    async ({ pageWithExternalUser, documentNumber }) => {
+      await test.step("Navigiere zu Rubriken als external Nutzer", async () => {
+        await navigateToCategories(pageWithExternalUser, documentNumber)
+      })
+
+      await test.step("Gericht und Fehlerhaftes Gericht sind nicht sichtbar", async () => {
+        const court = pageWithExternalUser.locator("[aria-label='Gericht']")
+        const deviatingCourt = pageWithExternalUser.getByTestId(
+          "chips-input_deviatingCourt",
+        )
+        await expect(court).toBeHidden()
+        await expect(deviatingCourt).toBeHidden()
+      })
+
+      await test.step("Aktenzeichen und abweichendes Aktenzeichen sind nicht sichtbar", async () => {
+        const fileNumber = pageWithExternalUser.getByTestId(
+          "chips-input_fileNumber",
+        )
+        const deviatingFileNumber = pageWithExternalUser.getByTestId(
+          "chips-input_deviatingFileNumber",
+        )
+        await expect(fileNumber).toBeHidden()
+        await expect(deviatingFileNumber).toBeHidden()
+      })
+
+      await test.step("Entscheidungsdatum und abweichendes Entscheidungsdatum sind nicht sichtbar", async () => {
+        const decisionDate = pageWithExternalUser.locator(
+          "[aria-label='Entscheidungsdatum']",
+        )
+        const deviatingDecisionDate = pageWithExternalUser.getByTestId(
+          "chips-input_deviatingDecisionDates",
+        )
+        await expect(decisionDate).toBeHidden()
+        await expect(deviatingDecisionDate).toBeHidden()
+      })
+
+      await test.step("Spruchkörper ist nicht sichtbar", async () => {
+        const appraisalBody = pageWithExternalUser.locator(
+          "[aria-label='Spruchkörper']",
+        )
+        await expect(appraisalBody).toBeHidden()
+      })
+
+      await test.step("Dokumenttyp ist nicht sichtbar", async () => {
+        const documentType = pageWithExternalUser.locator(
+          "[aria-label='Dokumenttyp']",
+        )
+        await expect(documentType).toBeHidden()
+      })
+
+      await test.step("ECLI und abweichender ECLI sind nicht sichtbar", async () => {
+        const ecli = pageWithExternalUser.locator("[aria-label='ECLI']")
+        const deviatingEcli = pageWithExternalUser.getByTestId(
+          "chips-input_deviatingEclis",
+        )
+        await expect(ecli).toBeHidden()
+        await expect(deviatingEcli).toBeHidden()
+      })
+
+      await test.step("Vorgang ist nicht sichtbar", async () => {
+        const procedure = pageWithExternalUser.locator("[aria-label='Vorgang']")
+        await expect(procedure).toBeHidden()
+      })
+
+      await test.step("Rechtskraft ist nicht sichtbar", async () => {
+        const legalEffect = pageWithExternalUser.locator(
+          "[aria-label='Rechtskraft']",
+        )
+        await expect(legalEffect).toBeHidden()
+      })
+
+      await test.step("Region ist nicht sichtbar", async () => {
+        const region = pageWithExternalUser.locator("[aria-label='Region']")
+        await expect(region).toBeHidden()
+      })
+
+      await test.step("Streitjahr ist nicht sichtbar", async () => {
+        const yearsOfDispute = pageWithExternalUser.getByTestId(
+          "chips-input_yearOfDispute",
+        )
+        await expect(yearsOfDispute).toBeHidden()
+      })
+    },
+  )
+
+  test(
+    "core data is editable for internal user",
+    {
+      annotation: {
+        type: "story",
+        description:
+          "https://digitalservicebund.atlassian.net/browse/RISDEV-4523",
+      },
+      tag: ["@RISDEV-4523"],
+    },
+    async ({ page, documentNumber }) => {
+      await test.step("Navigiere zu Rubriken als interner Nutzer", async () => {
+        await navigateToCategories(page, documentNumber)
+      })
+
+      await test.step("Gericht und Fehlerhaftes Gericht sind bearbeitbar", async () => {
+        const court = page.locator("[aria-label='Gericht']")
+        const deviatingCourt = page.getByTestId("chips-input_deviatingCourt")
+        await expect(court).toBeEditable()
+        expect(await isReadOnly(deviatingCourt)).toBe(false)
+      })
+
+      await test.step("Aktenzeichen und abweichendes Aktenzeichen sind bearbeitbar", async () => {
+        const fileNumber = page.getByTestId("chips-input_fileNumber")
+        const deviatingFileNumber = page.getByTestId(
+          "chips-input_deviatingFileNumber",
+        )
+        await expect(fileNumber).toBeEditable()
+        expect(await isReadOnly(deviatingFileNumber)).toBe(false)
+      })
+
+      await test.step("Entscheidungsdatum und abweichendes Entscheidungsdatum sind bearbeitbar", async () => {
+        const decisionDate = page.locator("[aria-label='Entscheidungsdatum']")
+        const deviatingDecisionDate = page.getByTestId(
+          "chips-input_deviatingDecisionDates",
+        )
+        await expect(decisionDate).toBeEditable()
+        expect(await isReadOnly(deviatingDecisionDate)).toBe(false)
+      })
+
+      await test.step("Spruchkörper ist bearbeitbar", async () => {
+        const appraisalBody = page.locator("[aria-label='Spruchkörper']")
+        await expect(appraisalBody).toBeEditable()
+      })
+
+      await test.step("Dokumenttyp ist bearbeitbar", async () => {
+        const documentType = page.locator("[aria-label='Dokumenttyp']")
+        await expect(documentType).toBeEditable()
+      })
+
+      await test.step("ECLI und abweichender ECLI sind bearbeitbar", async () => {
+        const ecli = page.locator("[aria-label='ECLI']")
+        const deviatingEcli = page.getByTestId("chips-input_deviatingEclis")
+        await expect(ecli).toBeEditable()
+        expect(await isReadOnly(deviatingEcli)).toBe(false)
+      })
+
+      await test.step("Vorgang ist bearbeitbar", async () => {
+        const procedure = page.locator("[aria-label='Vorgang']")
+        await expect(procedure).toBeEditable()
+      })
+
+      await test.step("Rechtskraft ist bearbeitbar", async () => {
+        const legalEffect = page.locator("[aria-label='Rechtskraft']")
+        await expect(legalEffect).toBeEnabled()
+      })
+
+      await test.step("Region ist readonly", async () => {
+        const region = page.locator("[aria-label='Region']")
+        await expect(region).not.toBeEditable()
+      })
+
+      await test.step("Streitjahr ist bearbeitbar", async () => {
+        const yearsOfDispute = page.locator("[aria-label='Streitjahr']")
+        expect(await isReadOnly(yearsOfDispute)).toBe(false)
+      })
+    },
+  )
+
+  const isReadOnly = async (locator: Locator) => {
+    const classAttribute = await locator.getAttribute("class")
+    return classAttribute?.split(" ").includes("!bg-blue-300")
+  }
 })

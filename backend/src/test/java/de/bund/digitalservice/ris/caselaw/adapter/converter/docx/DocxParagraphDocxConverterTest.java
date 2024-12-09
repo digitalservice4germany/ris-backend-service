@@ -1,13 +1,14 @@
 package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import de.bund.digitalservice.ris.caselaw.domain.docx.TableElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.TextElement;
 import jakarta.xml.bind.JAXBElement;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import javax.xml.namespace.QName;
 import org.docx4j.wml.P;
 import org.docx4j.wml.PPr;
@@ -33,7 +34,7 @@ class DocxParagraphDocxConverterTest {
     Tbl table = new Tbl();
     JAXBElement<Tbl> tblElement = new JAXBElement<>(new QName("table"), Tbl.class, table);
 
-    var result = converter.convert(tblElement);
+    var result = converter.convert(tblElement, new ArrayList<>());
 
     assertTrue(result instanceof TableElement);
   }
@@ -48,7 +49,7 @@ class DocxParagraphDocxConverterTest {
     run.getContent().add(element);
     paragraph.getContent().add(run);
 
-    var result = converter.convert(paragraph);
+    var result = converter.convert(paragraph, new ArrayList<>());
 
     assertTrue(result instanceof TextElement);
   }
@@ -63,13 +64,13 @@ class DocxParagraphDocxConverterTest {
     pPr.setInd(ind);
     paragraph.setPPr(pPr);
 
-    var result = converter.convert(paragraph);
+    var result = converter.convert(paragraph, new ArrayList<>());
 
-    assertTrue(result.toHtmlString().contains("margin-left: " + expectedMarginLeft + ".0px"));
+    assertThat(result.toHtmlString()).contains("margin-left: " + expectedMarginLeft + ".0px");
   }
 
   @ParameterizedTest
-  @CsvSource({"5, 5, 0", "5, 1, 40", "5, 0, 40"})
+  @CsvSource({"5, 5, 0", "5, 1, 40", "5, 0, 40", "1500, 720, 80"})
   void testConvert_withLeftAndHangingIndent(
       BigInteger leftIndentation, BigInteger hangingIndentation, int expectedMarginLeft) {
     P paragraph = new P();
@@ -80,9 +81,9 @@ class DocxParagraphDocxConverterTest {
     pPr.setInd(ind);
     paragraph.setPPr(pPr);
 
-    var result = converter.convert(paragraph);
+    var result = converter.convert(paragraph, new ArrayList<>());
 
-    assertTrue(result.toHtmlString().contains("margin-left: " + expectedMarginLeft + ".0px"));
+    assertThat(result.toHtmlString()).contains("margin-left: " + expectedMarginLeft + ".0px");
   }
 
   @Test
@@ -102,16 +103,27 @@ class DocxParagraphDocxConverterTest {
     run.getContent().add(element);
     paragraph.getContent().add(run);
 
-    var result = converter.convert(paragraph);
+    var result = converter.convert(paragraph, new ArrayList<>());
 
-    assertTrue(result.toHtmlString().contains("text"));
-    assertFalse(result.toHtmlString().contains("margin-left:"));
+    assertThat(result.toHtmlString()).contains("text");
+    assertThat(result.toHtmlString()).doesNotContain("margin-left:");
+  }
+
+  @Test
+  void testConvert_withCr() {
+    P paragraph = new P();
+    R run = new R();
+    JAXBElement<R.Cr> element = new JAXBElement<>(new QName("cr"), R.Cr.class, new R.Cr());
+    run.getContent().add(element);
+    paragraph.getContent().add(run);
+    var result = converter.convert(paragraph, new ArrayList<>());
+    assertThat(result.toHtmlString()).isEqualTo("<p><br/></p>");
   }
 
   @Test
   void testConvert_withUnknownElement() {
 
-    var result = converter.convert(new Object());
+    var result = converter.convert(new Object(), new ArrayList<>());
 
     assertEquals("unknown element: java.lang.Object", result.toString());
   }

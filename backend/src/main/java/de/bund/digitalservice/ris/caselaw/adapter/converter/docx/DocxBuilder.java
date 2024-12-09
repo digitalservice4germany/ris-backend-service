@@ -1,6 +1,8 @@
 package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 
-import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentUnitDocx;
+import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
+import de.bund.digitalservice.ris.caselaw.domain.docx.UnhandledElement;
+import java.util.List;
 
 public abstract class DocxBuilder {
   protected DocxConverter converter;
@@ -10,5 +12,5 @@ public abstract class DocxBuilder {
     return this;
   }
 
-  public abstract DocumentUnitDocx build();
+  public abstract DocumentationUnitDocx build(List<UnhandledElement> unhandledElements);
 }

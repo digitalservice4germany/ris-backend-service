@@ -1,6 +1,7 @@
 package de.bund.digitalservice.ris.caselaw.adapter.database.jpa;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -36,5 +37,15 @@ public interface DatabaseDocumentTypeRepository extends JpaRepository<DocumentTy
               + "WHERE concat LIKE UPPER('%'||:searchStr||'%') AND document_category_id = :category "
               + "ORDER BY weight, concat")
   List<DocumentTypeDTO> findCaselawBySearchStrAndCategory(
+      @Param("searchStr") String searchStr, @Param("category") UUID category);
+
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT * "
+              + "FROM incremental_migration.document_type "
+              + "WHERE (abbreviation = :searchStr OR label = :searchStr) "
+              + "AND document_category_id = :category ")
+  Optional<DocumentTypeDTO> findUniqueCaselawBySearchStrAndCategory(
       @Param("searchStr") String searchStr, @Param("category") UUID category);
 }

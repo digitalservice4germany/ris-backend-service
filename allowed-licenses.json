@@ -61,6 +61,11 @@
     {
       "moduleLicense": "ISC"
     },
+    {
+      "moduleLicense": "Mozilla Public License Version 2.0",
+      "moduleVersion": "12.5",
+      "moduleName": "net.sf.saxon:Saxon-HE"
+    },
 
     {
       "moduleLicense": null,

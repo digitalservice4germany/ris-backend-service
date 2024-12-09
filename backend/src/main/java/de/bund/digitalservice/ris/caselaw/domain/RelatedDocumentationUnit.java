@@ -28,6 +28,7 @@ public class RelatedDocumentationUnit {
   protected LocalDate decisionDate;
   protected String fileNumber;
   protected DocumentType documentType;
+  protected UUID createdByReference;
   protected boolean referenceFound;
 
   @Transient
@@ -38,6 +39,7 @@ public class RelatedDocumentationUnit {
         && court == null
         && decisionDate == null
         && fileNumber == null
-        && documentType == null;
+        && documentType == null
+        && createdByReference == null;
   }
 }

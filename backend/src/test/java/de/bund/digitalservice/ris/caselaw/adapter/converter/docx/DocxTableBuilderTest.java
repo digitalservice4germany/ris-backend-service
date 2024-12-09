@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentUnitDocx;
+import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
 import de.bund.digitalservice.ris.caselaw.domain.docx.TableElement;
 import jakarta.xml.bind.JAXBElement;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ class DocxTableBuilderTest {
                 List.of("cell r2c1", "cell r2c2", "cell r2c3"),
                 List.of("cell r3c1", "cell r3c2", "cell r3c3")));
     table.setTblPr(new TblPr());
-    var result = builder.setTable(table).build();
+    var result = builder.setTable(table).build(new ArrayList<>());
 
     assertTrue(result instanceof TableElement);
     TableElement tableElement = (TableElement) result;
@@ -90,7 +91,7 @@ class DocxTableBuilderTest {
     Tbl table = new Tbl();
     table.getContent().add(new Object());
 
-    var result = builder.setTable(table).build();
+    var result = builder.setTable(table).build(new ArrayList<>());
 
     assertTrue(result instanceof TableElement);
     assertTrue(((TableElement) result).rows.isEmpty());
@@ -121,7 +122,7 @@ class DocxTableBuilderTest {
     table.setTblPr(tblPr);
 
     DocxTableBuilder builder = DocxTableBuilder.newInstance();
-    var result = builder.setTable(table).build();
+    var result = builder.setTable(table).build(new ArrayList<>());
     assertTrue(result.toHtmlString().contains("border-top: 3px solid #a64d79;"));
     assertTrue(result.toHtmlString().contains("border-right: 3px solid #a64d79;"));
     assertTrue(result.toHtmlString().contains("border-bottom: 6px solid #abc;"));
@@ -170,7 +171,7 @@ class DocxTableBuilderTest {
     var builder = DocxTableBuilder.newInstance();
     builder.setTable(tbl);
 
-    var result = builder.build().toHtmlString();
+    var result = builder.build(new ArrayList<>()).toHtmlString();
 
     // cell should have colspan
     assertTrue(result.contains("colspan=\"2\""));
@@ -205,7 +206,11 @@ class DocxTableBuilderTest {
 
     var converter = new DocxConverter();
     converter.setStyles(styles);
-    var result = DocxTableBuilder.newInstance().setTable(table).setConverter(converter).build();
+    var result =
+        DocxTableBuilder.newInstance()
+            .setTable(table)
+            .setConverter(converter)
+            .build(new ArrayList<>());
 
     assertThat(result).isInstanceOf(TableElement.class);
     TableElement tableElement = (TableElement) result;
@@ -242,7 +247,11 @@ class DocxTableBuilderTest {
 
     var converter = new DocxConverter();
     converter.setStyles(styles);
-    var result = DocxTableBuilder.newInstance().setTable(table).setConverter(converter).build();
+    var result =
+        DocxTableBuilder.newInstance()
+            .setTable(table)
+            .setConverter(converter)
+            .build(new ArrayList<>());
 
     assertThat(result).isInstanceOf(TableElement.class);
     TableElement tableElement = (TableElement) result;
@@ -282,7 +291,11 @@ class DocxTableBuilderTest {
 
     var converter = new DocxConverter();
     converter.setStyles(styles);
-    var result = DocxTableBuilder.newInstance().setTable(table).setConverter(converter).build();
+    var result =
+        DocxTableBuilder.newInstance()
+            .setTable(table)
+            .setConverter(converter)
+            .build(new ArrayList<>());
 
     assertThat(result).isInstanceOf(TableElement.class);
     TableElement tableElement = (TableElement) result;
@@ -309,7 +322,11 @@ class DocxTableBuilderTest {
 
     var converter = new DocxConverter();
     converter.setStyles(styles);
-    var result = DocxTableBuilder.newInstance().setTable(table).setConverter(converter).build();
+    var result =
+        DocxTableBuilder.newInstance()
+            .setTable(table)
+            .setConverter(converter)
+            .build(new ArrayList<>());
 
     assertThat(result).isInstanceOf(TableElement.class);
     TableElement tableElement = (TableElement) result;
@@ -335,7 +352,7 @@ class DocxTableBuilderTest {
           borderLeft);
     }
 
-    private DocumentUnitDocx documentUnit(Integer ctCnfInt) {
+    private DocumentationUnitDocx createDocumentationUnit(Integer ctCnfInt) {
       Tbl table = generateTable(List.of(List.of("table cell")));
       TblPr tblPr = new TblPr();
       TblStyle tblStyle = new TblStyle();
@@ -357,12 +374,15 @@ class DocxTableBuilderTest {
 
       var converter = new DocxConverter();
       converter.setStyles(styles);
-      return DocxTableBuilder.newInstance().setTable(table).setConverter(converter).build();
+      return DocxTableBuilder.newInstance()
+          .setTable(table)
+          .setConverter(converter)
+          .build(new ArrayList<>());
     }
 
     @Test
     void testAllPropertySet() {
-      var result = documentUnit(4097);
+      var result = createDocumentationUnit(4097);
 
       assertThat(result).isInstanceOf(TableElement.class);
       TableElement tableElement = (TableElement) result;
@@ -371,7 +391,7 @@ class DocxTableBuilderTest {
 
     @Test
     void testOnePropertySetWhichDoesntMatchCell() {
-      var result = documentUnit(32);
+      var result = createDocumentationUnit(32);
 
       assertThat(result).isInstanceOf(TableElement.class);
       TableElement tableElement = (TableElement) result;
@@ -380,7 +400,7 @@ class DocxTableBuilderTest {
 
     @Test
     void testOnePropertySetWhichMatchesCell() {
-      var result = documentUnit(512);
+      var result = createDocumentationUnit(512);
 
       assertThat(result).isInstanceOf(TableElement.class);
       TableElement tableElement = (TableElement) result;

@@ -2,12 +2,13 @@ package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 
 import de.bund.digitalservice.ris.caselaw.domain.docx.BlockElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.Border;
-import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentUnitDocx;
+import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
 import de.bund.digitalservice.ris.caselaw.domain.docx.ParagraphElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.RunTextElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.TableCellElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.TableElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.TableRowElement;
+import de.bund.digitalservice.ris.caselaw.domain.docx.UnhandledElement;
 import jakarta.xml.bind.JAXBElement;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -49,8 +50,8 @@ public class DocxTableBuilder extends DocxBuilder {
     return this;
   }
 
-  public DocumentUnitDocx build() {
-    var tableElement = new TableElement(parseTable(table));
+  public DocumentationUnitDocx build(List<UnhandledElement> unhandledElements) {
+    var tableElement = new TableElement(parseTable(table, unhandledElements));
     addTableStyleProperties(tableElement);
     addTableProperties(tableElement);
 
@@ -445,7 +446,7 @@ public class DocxTableBuilder extends DocxBuilder {
     return "#ffffff";
   }
 
-  private List<TableRowElement> parseTable(Tbl table) {
+  private List<TableRowElement> parseTable(Tbl table, List<UnhandledElement> unhandledElements) {
     List<TableRowElement> rows = new ArrayList<>();
 
     table
@@ -453,7 +454,7 @@ public class DocxTableBuilder extends DocxBuilder {
         .forEach(
             element -> {
               if (element instanceof Tr tr) {
-                rows.add(parseTr(tr));
+                rows.add(parseTr(tr, unhandledElements));
               } else {
                 LOGGER.error("unknown table element: {}", element.getClass());
               }
@@ -467,7 +468,7 @@ public class DocxTableBuilder extends DocxBuilder {
     return rows;
   }
 
-  private TableRowElement parseTr(Tr tr) {
+  private TableRowElement parseTr(Tr tr, List<UnhandledElement> unhandledElements) {
     List<TableCellElement> cells = new ArrayList<>();
 
     AtomicInteger usedStyles = new AtomicInteger();
@@ -487,7 +488,8 @@ public class DocxTableBuilder extends DocxBuilder {
             element -> {
               if (element instanceof JAXBElement<?> jaxbElement) {
                 if (jaxbElement.getDeclaredType() == Tc.class) {
-                  cells.add(parseTc((Tc) jaxbElement.getValue(), usedStyles.get()));
+                  cells.add(
+                      parseTc((Tc) jaxbElement.getValue(), usedStyles.get(), unhandledElements));
                 } else {
                   LOGGER.error("unknown tc element: {}", jaxbElement.getDeclaredType());
                 }
@@ -539,7 +541,8 @@ public class DocxTableBuilder extends DocxBuilder {
     cells.get(cells.size() - 1).setRightBorder(null);
   }
 
-  private TableCellElement parseTc(Tc tc, Integer trUsedStyles) {
+  private TableCellElement parseTc(
+      Tc tc, Integer trUsedStyles, List<UnhandledElement> unhandledElements) {
     Integer usedStyles = trUsedStyles;
     if (tc.getTcPr() != null && tc.getTcPr().getCnfStyle() != null) {
       int value = Integer.parseInt(tc.getTcPr().getCnfStyle().getVal(), 2);
@@ -550,12 +553,12 @@ public class DocxTableBuilder extends DocxBuilder {
       }
     }
 
-    List<DocumentUnitDocx> paragraphElements = new ArrayList<>();
+    List<DocumentationUnitDocx> paragraphElements = new ArrayList<>();
     tc.getContent()
         .forEach(
             element -> {
               if (element instanceof P p) {
-                paragraphElements.add(ParagraphConverter.convert(p, converter));
+                paragraphElements.add(ParagraphConverter.convert(p, converter, unhandledElements));
               } else {
                 LOGGER.error("unknown tr element: {}", element);
               }

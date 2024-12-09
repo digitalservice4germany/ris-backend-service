@@ -119,7 +119,7 @@ jobs:
           sonar-scanner
         working-directory: ./frontend
       - name: Check SonarQube Quality Gate
-        uses: sonarsource/sonarqube-quality-gate-action@72f24ebf1f81eda168a979ce14b8203273b7c3ad
+        uses: sonarsource/sonarqube-quality-gate-action@07d1da262a6b176308ed4e842d04bff152e8024c
         with:
           scanMetadataReportFile: frontend/.scannerwork/report-task.txt
         timeout-minutes: 3

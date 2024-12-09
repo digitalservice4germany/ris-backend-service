@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import dayjs from "dayjs"
 import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
+import DateUtil from "../utils/dateUtil"
 import DocumentUnitList from "@/components/DocumentUnitList.vue"
 import DocumentUnitSearchEntryForm, {
   DocumentUnitSearchParameter,
@@ -9,6 +9,7 @@ import DocumentUnitSearchEntryForm, {
 import InfoModal from "@/components/InfoModal.vue"
 import TextButton from "@/components/input/TextButton.vue"
 import Pagination, { Page } from "@/components/Pagination.vue"
+import { useInternalUser } from "@/composables/useInternalUser"
 import { Query } from "@/composables/useQueryFromRoute"
 import { Court } from "@/domain/documentUnit"
 import DocumentUnitListEntry from "@/domain/documentUnitListEntry"
@@ -29,10 +30,15 @@ const searchResponseError = ref()
 const isLoading = ref(false)
 const searchQuery = ref<Query<DocumentUnitSearchParameter>>()
 const pageNumber = ref<number>(0)
+const isInternalUser = useInternalUser()
 
 const emptyStateLabel = computed(() => {
   if (!documentUnitListEntries.value) {
-    return "Starten Sie die Suche oder erstellen Sie eine neue Dokumentationseinheit."
+    if (isInternalUser.value) {
+      return "Starten Sie die Suche oder erstellen Sie eine neue Dokumentationseinheit."
+    } else {
+      return "Starten Sie die Suche."
+    }
   } else if (documentUnitListEntries.value.length === 0) {
     return errorMessages.SEARCH_RESULTS_NOT_FOUND.title
   }
@@ -58,6 +64,7 @@ async function search() {
   })
   if (response.data) {
     currentPage.value = response.data
+    searchResponseError.value = undefined
   }
   if (response.error) {
     searchResponseError.value = response.error
@@ -114,13 +121,37 @@ async function handleDelete(documentUnitListEntry: DocumentUnitListEntry) {
 }
 
 /**
+ * Updates the status from 'Fremdanlage' to 'Unveröffentlicht'
+ * @param {DocumentUnitListEntry} documentUnitListEntry - The entry in the list to be updated
+ */
+async function handleTakeOver(documentUnitListEntry: DocumentUnitListEntry) {
+  const response = await service.takeOver(
+    documentUnitListEntry.documentNumber as string,
+  )
+
+  if (response.error) {
+    alert(response.error.title)
+  } else if (documentUnitListEntries.value) {
+    const index = documentUnitListEntries.value.findIndex(
+      (entry) => entry.uuid === documentUnitListEntry.uuid,
+    )
+
+    if (index !== -1) {
+      // Replace the old entry with the updated one
+      documentUnitListEntries.value[index] =
+        response.data as DocumentUnitListEntry
+    }
+  }
+}
+
+/**
  * When using the navigation a new page number is set, the search is triggered,
  * with the given page number.
  * @param {number} page - The page to be updated
  */
 async function updatePage(page: number) {
   pageNumber.value = page
-  search()
+  await search()
 }
 
 /**
@@ -132,7 +163,7 @@ async function updatePage(page: number) {
 async function updateQuery(value: Query<DocumentUnitSearchParameter>) {
   searchQuery.value = value
   pageNumber.value = 0
-  search()
+  await search()
 }
 
 /**
@@ -167,7 +198,7 @@ async function createFromSearchQuery() {
     : []
   docUnit.coreData.decisionDate = dateFromQuery.value
   docUnit.coreData.court = courtFromQuery.value
-  await store.loadDocumentUnit(docUnit.documentNumber!)
+  await store.loadDocumentUnit(docUnit.documentNumber)
   store.documentUnit = docUnit
 
   const updateResponse = await store.updateDocumentUnit()
@@ -247,12 +278,16 @@ const showDefaultLink = computed(() => {
         class="grow"
         :document-unit-list-entries="documentUnitListEntries"
         :empty-state="emptyStateLabel"
-        is-deletable
         :is-loading="isLoading"
         :search-response-error="searchResponseError"
-        @delete-document-unit="handleDelete"
+        :show-publication-date="
+          !!searchQuery?.publicationDate ||
+          searchQuery?.scheduledOnly === 'true'
+        "
+        @delete-documentation-unit="handleDelete"
+        @take-over-documentation-unit="handleTakeOver"
       >
-        <template #newlink>
+        <template v-if="isInternalUser" #newlink>
           <TextButton
             v-if="showDefaultLink"
             aria-label="Neue Dokumentationseinheit erstellen"
@@ -279,13 +314,9 @@ const showDefaultLink = computed(() => {
                 <span :class="{ 'text-gray-800': !courtFromQuery }">{{
                   `${courtFromQuery?.label ?? "Gericht unbekannt"}, `
                 }}</span>
-                <span :class="{ 'text-gray-800': !dateFromQuery }">{{
-                  dateFromQuery
-                    ? dayjs(dateFromQuery, "YYYY-MM-DD", true).format(
-                        "DD.MM.YYYY",
-                      )
-                    : "Datum unbekannt"
-                }}</span>
+                <span :class="{ 'text-gray-800': !dateFromQuery }">
+                  {{ DateUtil.formatDate(dateFromQuery) || "Datum unbekannt" }}
+                </span>
               </p>
               <TextButton
                 button-type="tertiary"

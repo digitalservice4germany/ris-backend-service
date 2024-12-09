@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,7 +24,7 @@ class SendInBlueMailTrackingServiceTest {
 
   @SpyBean private SendInBlueMailTrackingService service;
 
-  @MockBean private DocumentUnitService documentUnitService;
+  @MockBean private DocumentationUnitService documentationUnitService;
 
   private static final UUID TEST_UUID = UUID.fromString("88888888-4444-4444-4444-121212121212");
 
@@ -52,30 +53,35 @@ class SendInBlueMailTrackingServiceTest {
   }
 
   @Test
-  void testProcessDeliveredEvent_shouldNotSearchUUIDInDb() {
-    when(documentUnitService.getByUuid(TEST_UUID))
-        .thenReturn(DocumentUnit.builder().uuid(TEST_UUID).build());
+  void testProcessDeliveredEvent_shouldNotSearchUUIDInDb()
+      throws DocumentationUnitNotExistsException {
+    when(documentationUnitService.getByUuid(TEST_UUID))
+        .thenReturn(DocumentationUnit.builder().uuid(TEST_UUID).build());
 
     service.processMailSendingState("88888888-4444-4444-4444-121212121212", "delivered");
-    verifyNoInteractions(documentUnitService);
+    verifyNoInteractions(documentationUnitService);
   }
 
   @Test
-  void testProcessDeliveredEventOfKnownUUID_shouldSearchInDb() {
-    when(documentUnitService.getByUuid(TEST_UUID))
-        .thenReturn(DocumentUnit.builder().uuid(TEST_UUID).build());
+  void testProcessDeliveredEventOfKnownUUID_shouldSearchInDb()
+      throws DocumentationUnitNotExistsException {
+    when(documentationUnitService.getByUuid(TEST_UUID))
+        .thenReturn(DocumentationUnit.builder().uuid(TEST_UUID).build());
 
     service.processMailSendingState(TEST_UUID.toString(), "error");
-    verify(documentUnitService).getByUuid(TEST_UUID);
+    verify(documentationUnitService).getByUuid(TEST_UUID);
   }
 
   @Test
-  void testProcessFailedDeliveryEventOfUnknownId_shouldSearchInDb() {
-    when(documentUnitService.getByUuid(TEST_UUID))
-        .thenReturn(DocumentUnit.builder().uuid(TEST_UUID).build());
+  void testProcessFailedDeliveryEventOfUnknownId_shouldSearchInDb()
+      throws DocumentationUnitNotExistsException {
+
+    when(documentationUnitService.getByUuid(TEST_UUID))
+        .thenReturn(DocumentationUnit.builder().uuid(TEST_UUID).build());
 
     service.processMailSendingState("88888888-4444-4444-4444-121212121212", "error");
-    verify(documentUnitService).getByUuid(UUID.fromString("88888888-4444-4444-4444-121212121212"));
+    verify(documentationUnitService)
+        .getByUuid(UUID.fromString("88888888-4444-4444-4444-121212121212"));
   }
 
   @ParameterizedTest
@@ -90,6 +96,6 @@ class SendInBlueMailTrackingServiceTest {
     ResponseEntity<String> responseEntity =
         service.processMailSendingState(TEST_UUID.toString(), event);
     assertThat(responseEntity.getStatusCode().isSameCodeAs(HttpStatusCode.valueOf(204))).isTrue();
-    verifyNoInteractions(documentUnitService);
+    verifyNoInteractions(documentationUnitService);
   }
 }

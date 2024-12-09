@@ -4,15 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentTypeController;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentTypeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentTypeRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentTypeService;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.documenttype.DocumentType;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
@@ -36,7 +37,7 @@ import org.testcontainers.junit.jupiter.Container;
       FlywayConfig.class,
       PostgresDocumentTypeRepositoryImpl.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class
     },
     controllers = {DocumentTypeController.class})
@@ -61,7 +62,8 @@ class DocumentTypeIntegrationTest {
   @Autowired private DatabaseDocumentTypeRepository repository;
   @MockBean private UserService userService;
   @MockBean private ClientRegistrationRepository clientRegistrationRepository;
-  @MockBean private DocumentUnitService service;
+  @MockBean private DocumentationUnitService service;
+  @MockBean private ProcedureService procedureService;
 
   @Test
   void testGetAllDocumentTypes() {
@@ -76,12 +78,32 @@ class DocumentTypeIntegrationTest {
         .consumeWith(
             response -> {
               assertThat(response.getResponseBody())
-                  .extracting("jurisShortcut", "label")
+                  .extracting("label", "jurisShortcut")
                   .containsExactly(
                       Tuple.tuple("Amtsrechtliche Anordnung", "AmA"),
                       Tuple.tuple("Anordnung", "Ao"),
                       Tuple.tuple("Beschluss", "Bes"),
                       Tuple.tuple("Urteil", "Ur"));
+            });
+  }
+
+  @Test
+  void testGetAllDependantLiteratureDocumentTypes() {
+    risWebTestClient
+        .withDefaultLogin()
+        .get()
+        .uri("/api/v1/caselaw/documenttypes/dependent-literature")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(new TypeReference<List<DocumentType>>() {})
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody())
+                  .extracting("label", "jurisShortcut")
+                  .containsExactly(
+                      Tuple.tuple("Anmerkung", "Ean"),
+                      Tuple.tuple("Entscheidungsbesprechung", "Ebs"));
             });
   }
 
@@ -98,10 +120,28 @@ class DocumentTypeIntegrationTest {
         .consumeWith(
             response -> {
               assertThat(response.getResponseBody())
-                  .extracting("jurisShortcut", "label")
+                  .extracting("label", "jurisShortcut")
                   .containsExactly(
-                      Tuple.tuple("Anordnung", "Ao"),
-                      Tuple.tuple("Amtsrechtliche Anordnung", "AmA"));
+                      Tuple.tuple("Amtsrechtliche Anordnung", "AmA"),
+                      Tuple.tuple("Anordnung", "Ao"));
+            });
+  }
+
+  @Test
+  void testGetDependantLiteratureDocumentTypesWithQuery() {
+    risWebTestClient
+        .withDefaultLogin()
+        .get()
+        .uri("/api/v1/caselaw/documenttypes/dependent-literature?q=Ea")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(new TypeReference<List<DocumentType>>() {})
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody())
+                  .extracting("label", "jurisShortcut")
+                  .containsExactly(Tuple.tuple("Anmerkung", "Ean"));
             });
   }
 }

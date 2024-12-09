@@ -1,36 +1,25 @@
 <script lang="ts" setup>
-import { ref, computed } from "vue"
-import KeywordsChipsInput from "@/components/input/KeywordsChipsInput.vue"
-import { ResponseError } from "@/services/httpClient"
+import { computed } from "vue"
+import ListInput from "@/components/input/listInput/ListInput.vue"
 import { useDocumentUnitStore } from "@/stores/documentUnitStore"
 
-const errorMessage = ref<ResponseError>()
+const emit = defineEmits<{
+  reset: []
+}>()
 
 const store = useDocumentUnitStore()
 
 const keywords = computed({
-  get: () => store.documentUnit!.contentRelatedIndexing.keywords,
-  set: (newValues) => {
+  get: () => store.documentUnit!.contentRelatedIndexing.keywords ?? [],
+  set: (newValues: string[]) => {
     store.documentUnit!.contentRelatedIndexing.keywords = newValues
   },
 })
 </script>
 
 <template>
-  <div class="flex flex-col gap-24 bg-white p-32">
-    <h2 class="ds-heading-03-bold">Inhaltliche Erschließung</h2>
-    <div aria-label="Vorgehende Entscheidung">
-      <h2 class="ds-heading-03-reg mb-24">Schlagwörter</h2>
-      <div class="flex flex-row">
-        <div class="flex-1">
-          <KeywordsChipsInput
-            id="keywords"
-            v-model="keywords"
-            aria-label="Schlagwörter"
-            :error="errorMessage"
-          ></KeywordsChipsInput>
-        </div>
-      </div>
-    </div>
+  <div>
+    <h2 class="ds-label-01-bold mb-16">Schlagwörter</h2>
+    <ListInput v-model="keywords" label="Schlagwörter" @reset="emit('reset')" />
   </div>
 </template>

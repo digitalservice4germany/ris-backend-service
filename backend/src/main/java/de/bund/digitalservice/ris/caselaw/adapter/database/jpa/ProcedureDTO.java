@@ -53,4 +53,9 @@ public class ProcedureDTO {
       inverseJoinColumns = @JoinColumn(name = "documentation_unit_id"),
       joinColumns = @JoinColumn(name = "procedure_id"))
   List<DocumentationUnitDTO> documentationUnits;
+
+  @Include
+  @ManyToOne()
+  @JoinColumn(name = "documentation_office_user_group_id")
+  UserGroupDTO userGroupDTO;
 }

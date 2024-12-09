@@ -16,4 +16,14 @@ public class StatusTransformer {
         .publicationStatus(statusDTO.getPublicationStatus())
         .build();
   }
+
+  public static StatusDTO transformToDTO(Status status) {
+    if (status == null) {
+      return null;
+    }
+    return StatusDTO.builder()
+        .withError(status.withError())
+        .publicationStatus(status.publicationStatus())
+        .build();
+  }
 }

@@ -1,6 +1,7 @@
 <script lang="ts" setup>
+import { useScrollLock } from "@vueuse/core"
 import { storeToRefs } from "pinia"
-import { computed, Ref, ref } from "vue"
+import { computed, Ref, ref, watch } from "vue"
 import AttachmentList from "@/components/AttachmentList.vue"
 import FileUpload from "@/components/FileUpload.vue"
 import FlexItem from "@/components/FlexItem.vue"
@@ -35,14 +36,8 @@ const errorTitle = computed(() => {
   } else return ""
 })
 
-const getAttachment = (index: number) => {
-  return computed(() => {
-    return attachments.value[index]
-  })
-}
-
 const handleDeleteAttachment = async (index: number) => {
-  const fileToDelete = getAttachment(index).value
+  const fileToDelete = attachments.value[index]
   if (fileToDelete.s3path == undefined) {
     console.error("file path is undefined", index)
     return
@@ -73,8 +68,8 @@ const handleOnDelete = (index: number) => {
   openDeleteModal()
 }
 
-const deleteFile = (index: number) => {
-  handleDeleteAttachment(index)
+const deleteFile = async (index: number) => {
+  await handleDeleteAttachment(index)
   closeDeleteModal()
 }
 
@@ -90,7 +85,7 @@ async function upload(files: FileList) {
       )
       if (response.status === 200 && response.data) {
         anySuccessful = true
-      } else if (response.error?.description) {
+      } else if (response.error?.title) {
         errors.value.push(
           file.name +
             " " +
@@ -107,24 +102,19 @@ async function upload(files: FileList) {
   }
 }
 
+const scrollLock = useScrollLock(document)
+watch(showDeleteModal, () => (scrollLock.value = showDeleteModal.value))
+
 function openDeleteModal() {
   const attachmentToBeDeleted =
-    documentUnit.value!.attachments?.[deletingAttachmentIndex.value]?.name
+    attachments.value?.[deletingAttachmentIndex.value]?.name
   if (attachmentToBeDeleted != null) {
     showDeleteModal.value = true
-    const scrollLeft = document.documentElement.scrollLeft
-    const scrollTop = document.documentElement.scrollTop
-    window.onscroll = () => {
-      window.scrollTo(scrollLeft, scrollTop)
-    }
   }
 }
 
 function closeDeleteModal() {
   showDeleteModal.value = false
-  window.onscroll = () => {
-    return
-  }
 }
 
 const hasAttachments = computed<boolean>(() => {
@@ -142,50 +132,52 @@ const attachments = computed({
 <template>
   <FlexItem
     v-if="documentUnit"
-    class="w-full flex-1 grow space-y-20 p-24"
+    class="w-full flex-1 grow p-24"
     data-testid="document-unit-attachments"
   >
-    <PopupModal
-      v-if="showDeleteModal"
-      :aria-label="deleteModalHeaderText"
-      cancel-button-type="tertiary"
-      confirm-button-type="destructive"
-      confirm-text="Löschen"
-      :content-text="`Möchten Sie den Anhang ${getAttachment(deletingAttachmentIndex).value.name} wirklich dauerhaft löschen?`"
-      :header-text="deleteModalHeaderText"
-      @close-modal="closeDeleteModal"
-      @confirm-action="deleteFile(deletingAttachmentIndex)"
-    />
-    <TitleElement class="mb-0">Dokumente</TitleElement>
-    <AttachmentList
-      v-if="hasAttachments"
-      id="file-table"
-      :files="attachments"
-      @delete="handleOnDelete"
-      @select="handleOnSelect"
-    />
-    <InfoModal
-      v-if="errors.length > 0 && !isLoading"
-      class="mt-8"
-      :description="errors"
-      :title="errorTitle"
-    />
-    <div class="flex-grow">
-      <div class="flex h-full flex-col items-start">
-        <FileUpload
-          :accept="acceptedFileFormats.toString()"
-          :is-loading="isLoading"
-          @files-selected="(files) => upload(files)"
-        />
+    <div class="flex w-full flex-1 grow flex-col gap-24">
+      <PopupModal
+        v-if="showDeleteModal"
+        :aria-label="deleteModalHeaderText"
+        cancel-button-type="tertiary"
+        confirm-button-type="destructive"
+        confirm-text="Löschen"
+        :content-text="`Möchten Sie den Anhang ${attachments?.[deletingAttachmentIndex]?.name} wirklich dauerhaft löschen?`"
+        :header-text="deleteModalHeaderText"
+        @close-modal="closeDeleteModal"
+        @confirm-action="deleteFile(deletingAttachmentIndex)"
+      />
+      <TitleElement>Dokumente</TitleElement>
+      <AttachmentList
+        v-if="hasAttachments"
+        id="file-table"
+        :files="attachments"
+        @delete="handleOnDelete"
+        @select="handleOnSelect"
+      />
+      <InfoModal
+        v-if="errors.length > 0 && !isLoading"
+        class="mt-8"
+        :description="errors"
+        :title="errorTitle"
+      />
+      <div class="flex-grow">
+        <div class="flex h-full flex-col items-start">
+          <FileUpload
+            :accept="acceptedFileFormats.toString()"
+            :is-loading="isLoading"
+            @files-selected="(files) => upload(files)"
+          />
+        </div>
       </div>
-    </div>
-    <div class="flex flex-row justify-between">
-      <div class="ds-label-02-reg text-gray-900">
-        Zulässige Dateiformate:
-        {{ acceptedFileFormats.toString().replace(/\./g, " ") }}
-      </div>
-      <div class="ds-label-02-reg text-gray-900">
-        Maximale Dateigröße: 20 MB
+      <div class="flex flex-row justify-between">
+        <div class="ds-label-02-reg text-gray-900">
+          Zulässige Dateiformate:
+          {{ acceptedFileFormats.toString().replace(/\./g, " ") }}
+        </div>
+        <div class="ds-label-02-reg text-gray-900">
+          Maximale Dateigröße: 20 MB
+        </div>
       </div>
     </div>
   </FlexItem>

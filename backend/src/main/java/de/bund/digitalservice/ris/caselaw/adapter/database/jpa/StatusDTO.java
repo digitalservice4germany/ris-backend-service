@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -20,7 +21,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(schema = "incremental_migration", name = "status")
@@ -39,7 +40,7 @@ public class StatusDTO {
   @NotNull
   private boolean withError;
 
-  @ManyToOne
-  @JoinColumn(name = "documentation_unit_id", nullable = false)
-  DocumentationUnitDTO documentationUnitDTO;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "documentation_unit_id")
+  private DocumentationUnitDTO documentationUnit;
 }

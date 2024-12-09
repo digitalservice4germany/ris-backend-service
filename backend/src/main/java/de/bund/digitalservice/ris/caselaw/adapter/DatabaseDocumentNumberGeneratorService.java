@@ -105,8 +105,8 @@ public class DatabaseDocumentNumberGeneratorService implements DocumentNumberSer
   /**
    * Validate document number not exists in the database
    *
-   * @param documentNumber
-   * @throws DocumentationUnitExistsException
+   * @param documentNumber document number
+   * @throws DocumentationUnitExistsException if no documentation unit for the document number exist
    */
   public void assertNotExists(String documentNumber) throws DocumentationUnitExistsException {
     if (databaseDocumentationUnitRepository.findByDocumentNumber(documentNumber).isPresent()) {
@@ -117,15 +117,14 @@ public class DatabaseDocumentNumberGeneratorService implements DocumentNumberSer
 
   @Transactional(transactionManager = "jpaTransactionManager")
   public Optional<String> recycle(String documentationOfficeAbbreviation) {
-    var optionalDeletedDocumentationUnitID =
-        documentNumberRecyclingService.findDeletedDocumentNumber(
-            documentationOfficeAbbreviation, Year.now());
-
-    if (optionalDeletedDocumentationUnitID.isPresent()) {
-      var recycledDocumentNumber = optionalDeletedDocumentationUnitID.get();
+    try {
+      var recycledDocumentNumber =
+          documentNumberRecyclingService.recycleFromDeletedDocumentationUnit(
+              documentationOfficeAbbreviation, Year.now());
       documentNumberRecyclingService.delete(recycledDocumentNumber);
       return Optional.of(recycledDocumentNumber);
+    } catch (Exception e) {
+      return Optional.empty();
     }
-    return Optional.empty();
   }
 }

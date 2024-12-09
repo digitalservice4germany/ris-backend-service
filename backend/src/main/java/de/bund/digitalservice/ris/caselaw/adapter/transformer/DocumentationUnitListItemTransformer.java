@@ -1,12 +1,12 @@
 package de.bund.digitalservice.ris.caselaw.adapter.transformer;
 
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitListItemDTO;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.StatusDTO;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitListItem;
 import de.bund.digitalservice.ris.caselaw.domain.RelatedDocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.RelatedDocumentationUnit.RelatedDocumentationUnitBuilder;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
-import java.util.Comparator;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -39,6 +39,9 @@ public class DocumentationUnitListItemTransformer {
         .documentNumber(documentationUnitListItemDTO.getDocumentNumber())
         .referencedDocumentationUnitId(documentationUnitListItemDTO.getId())
         .decisionDate(documentationUnitListItemDTO.getDecisionDate())
+        .scheduledPublicationDateTime(
+            documentationUnitListItemDTO.getScheduledPublicationDateTime())
+        .lastPublicationDateTime(documentationUnitListItemDTO.getLastPublicationDateTime())
         .appraisalBody(documentationUnitListItemDTO.getJudicialBody())
         .hasHeadnoteOrPrinciple(hasHeadnoteOrPrinciple(documentationUnitListItemDTO))
         .hasAttachments(!documentationUnitListItemDTO.getAttachments().isEmpty())
@@ -51,20 +54,28 @@ public class DocumentationUnitListItemTransformer {
                     || documentationUnitListItemDTO.getFileNumbers().isEmpty()
                 ? null
                 : documentationUnitListItemDTO.getFileNumbers().get(0).getValue())
-        .status(
-            documentationUnitListItemDTO.getStatus() == null
-                    || documentationUnitListItemDTO.getStatus().isEmpty()
+        .status(StatusTransformer.transformToDomain(documentationUnitListItemDTO.getStatus()))
+        .note(documentationUnitListItemDTO.getNote())
+        .creatingDocumentationOffice(
+            documentationUnitListItemDTO.getCreatingDocumentationOffice() == null
                 ? null
-                : StatusTransformer.transformToDomain(
-                    documentationUnitListItemDTO.getStatus().stream()
-                        .max(Comparator.comparing(StatusDTO::getCreatedAt))
-                        .orElse(null)))
+                : DocumentationOfficeTransformer.transformToDomain(
+                    documentationUnitListItemDTO.getCreatingDocumentationOffice()))
         .documentationOffice(
             DocumentationOfficeTransformer.transformToDomain(
                 documentationUnitListItemDTO.getDocumentationOffice()))
-        .hasNote(
-            documentationUnitListItemDTO.getNote() != null
-                && !documentationUnitListItemDTO.getNote().isEmpty());
+        .source(
+            documentationUnitListItemDTO.getSource().stream()
+                .map(
+                    source ->
+                        Optional.ofNullable(source.getReference())
+                            .map(
+                                referenceDTO ->
+                                    referenceDTO.getLegalPeriodicalRawValue()
+                                        + " "
+                                        + referenceDTO.getCitation())
+                            .orElse(source.getValue()))
+                .collect(Collectors.joining(", ")));
     return builder.build();
   }
 
@@ -72,12 +83,13 @@ public class DocumentationUnitListItemTransformer {
    * Checks if a headnote or a guiding principle is given in a documentation unit, to display the
    * information in a list
    *
-   * @param documentationUnitListItemDTO
+   * @param documentationUnitListItemDTO documentation unit to check for headline or principle
    * @return a boolean value if either the headnote or the guiding principle are filled in (i.e. one
    *     or both of these fields)
    */
   private static boolean hasHeadnoteOrPrinciple(
       DocumentationUnitListItemDTO documentationUnitListItemDTO) {
+
     String headnote = documentationUnitListItemDTO.getHeadnote();
     String guidingPrinciple = documentationUnitListItemDTO.getGuidingPrinciple();
 
@@ -120,9 +132,6 @@ public class DocumentationUnitListItemTransformer {
   }
 
   private static Status getStatus(DocumentationUnitListItemDTO documentationUnitListItemDTO) {
-    return StatusTransformer.transformToDomain(
-        documentationUnitListItemDTO.getStatus().stream()
-            .max(Comparator.comparing(StatusDTO::getCreatedAt))
-            .orElse(null));
+    return StatusTransformer.transformToDomain(documentationUnitListItemDTO.getStatus());
   }
 }

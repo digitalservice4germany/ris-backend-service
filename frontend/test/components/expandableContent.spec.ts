@@ -21,12 +21,13 @@ function renderComponent(options?: {
     marginLevel: options?.marginLevel,
   }
   const utils = render(ExpandableContentnt, { slots, props })
-  // eslint-disable-next-line testing-library/await-async-events
+
   const user = userEvent.setup()
   return { user, ...utils }
 }
 
 describe("ExpandableContent", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   global.ResizeObserver = require("resize-observer-polyfill")
   it("displays given header property as regular text", () => {
     renderComponent({ header: "test header" })

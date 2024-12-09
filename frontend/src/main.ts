@@ -6,6 +6,9 @@ import "@/styles/global.scss"
 import App from "./App.vue"
 import router from "./router"
 import useSessionStore from "./stores/sessionStore"
+import { filterConsoleWarnings } from "@/utils/filterConsoleWarnings"
+
+filterConsoleWarnings()
 
 const app = createApp(App)
 app.use(createHead())
@@ -31,6 +34,10 @@ if (import.meta.env.PROD) {
     tracesSampleRate: 0.1, // Capture 100% of the transactions, reduce in production!
     attachProps: true,
     logErrors: true,
+    ignoreErrors: [
+      // Irrelevant ProseMirror warning, see {@link filterConsoleWarnings} for details
+      "TextSelection endpoint not pointing into a node with inline content",
+    ],
   })
 }
 

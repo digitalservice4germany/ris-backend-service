@@ -76,6 +76,21 @@ describe.each([
   },
   { status: PublicationState.DELETING, withError: false, expected: "Löschen" },
   { status: PublicationState.DELETING, withError: true, expected: "Löschen" },
+  {
+    status: PublicationState.EXTERNAL_HANDOVER_PENDING,
+    withError: undefined,
+    expected: "Fremdanlage",
+  },
+  {
+    status: PublicationState.EXTERNAL_HANDOVER_PENDING,
+    withError: true,
+    expected: "Fremdanlage",
+  },
+  {
+    status: PublicationState.EXTERNAL_HANDOVER_PENDING,
+    withError: false,
+    expected: "Fremdanlage",
+  },
 ])("useStatusBadge", ({ status, withError, expected }) => {
   test(`'${status}' with error '${withError}' should return '${expected}'`, () => {
     const publicationStatus = {

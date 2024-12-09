@@ -1,26 +1,29 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDefaultDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDSDocOffice;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import de.bund.digitalservice.ris.caselaw.EntityBuilderTestUtil;
 import de.bund.digitalservice.ris.caselaw.SliceTestImpl;
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberGeneratorService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberRecyclingService;
-import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentUnitStatusService;
+import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentationUnitStatusService;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentNumberPatternConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.DocumentUnitController;
+import de.bund.digitalservice.ris.caselaw.adapter.DocumentationUnitController;
 import de.bund.digitalservice.ris.caselaw.adapter.DocxConverterService;
+import de.bund.digitalservice.ris.caselaw.adapter.LdmlExporterService;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.CourtDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseCourtRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentCategoryRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentTypeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationOfficeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseFileNumberRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseHandoverReportRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentCategoryDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentTypeDTO;
@@ -31,30 +34,30 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDeltaMigr
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentationUnitRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresHandoverReportRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PreviousDecisionDTO;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.StatusDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentTypeTransformer;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.AttachmentService;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
 import de.bund.digitalservice.ris.caselaw.domain.PreviousDecision;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.PublicationStatus;
 import de.bund.digitalservice.ris.caselaw.domain.RelatedDocumentationUnit;
-import de.bund.digitalservice.ris.caselaw.domain.Status;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.court.Court;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.documenttype.DocumentType;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisBodySpec;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
-import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -76,9 +79,9 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @RISIntegrationTest(
     imports = {
-      DocumentUnitService.class,
+      DocumentationUnitService.class,
       PostgresDeltaMigrationRepositoryImpl.class,
-      DatabaseDocumentUnitStatusService.class,
+      DatabaseDocumentationUnitStatusService.class,
       DatabaseDocumentNumberRecyclingService.class,
       DatabaseDocumentNumberGeneratorService.class,
       PostgresDocumentationUnitRepositoryImpl.class,
@@ -86,11 +89,11 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
       PostgresJPAConfig.class,
       FlywayConfig.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class,
       DocumentNumberPatternConfig.class
     },
-    controllers = {DocumentUnitController.class})
+    controllers = {DocumentationUnitController.class})
 class PreviousDecisionIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgreSQLContainer =
@@ -111,10 +114,11 @@ class PreviousDecisionIntegrationTest {
   @Autowired private RisWebTestClient risWebTestClient;
   @Autowired private DatabaseDocumentationUnitRepository repository;
   @Autowired private DatabaseDocumentTypeRepository databaseDocumentTypeRepository;
-  @Autowired private DatabaseCourtRepository courtRepository;
+  @Autowired private DatabaseCourtRepository databaseCourtRepository;
   @Autowired private DatabaseDocumentationOfficeRepository documentationOfficeRepository;
   @Autowired private DatabaseHandoverReportRepository databaseHandoverReportRepository;
   @Autowired private DatabaseDocumentCategoryRepository databaseDocumentCategoryRepository;
+  @Autowired private DatabaseFileNumberRepository databaseFileNumberRepository;
 
   @MockBean UserService userService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
@@ -124,8 +128,14 @@ class PreviousDecisionIntegrationTest {
   @MockBean AttachmentService attachmentService;
   @MockBean private PatchMapperService patchMapperService;
   @MockBean private HandoverService handoverService;
+  @MockBean private ProcedureService procedureService;
+  @MockBean private LdmlExporterService ldmlExporterService;
 
-  private final DocumentationOffice docOffice = buildDefaultDocOffice();
+  @MockBean
+  private DocumentationUnitDocxMetadataInitializationService
+      documentationUnitDocxMetadataInitializationService;
+
+  private final DocumentationOffice docOffice = buildDSDocOffice();
   private DocumentationOfficeDTO documentationOfficeDTO;
   private final AtomicInteger courtJurisId = new AtomicInteger(100);
 
@@ -140,7 +150,7 @@ class PreviousDecisionIntegrationTest {
             DocumentCategoryDTO.builder().label("R").build());
 
     testCourt =
-        courtRepository.save(
+        databaseCourtRepository.save(
             CourtDTO.builder()
                 .type("Court1")
                 .location("Berlin")
@@ -157,14 +167,17 @@ class PreviousDecisionIntegrationTest {
     repository.deleteAll();
     databaseDocumentTypeRepository.deleteAll();
     databaseHandoverReportRepository.deleteAll();
-    courtRepository.deleteAll();
+    databaseCourtRepository.deleteAll();
     databaseDocumentCategoryRepository.delete(category);
+    databaseFileNumberRepository.deleteAll();
   }
 
   @Test
   void
       testGetDocumentationUnit_withPreviousDecision_shouldReturnDocumentationUnitWithListOfExistingPreviousDecsion() {
-    DocumentationUnitDTO parentDocumentUnitDTO =
+
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository,
         DocumentationUnitDTO.builder()
             .documentationOffice(documentationOfficeDTO)
             .documentNumber("documntnumber")
@@ -174,9 +187,7 @@ class PreviousDecisionIntegrationTest {
                         .fileNumber("test")
                         .deviatingFileNumber("deviatest")
                         .rank(1)
-                        .build()))
-            .build();
-    repository.save(parentDocumentUnitDTO);
+                        .build())));
 
     risWebTestClient
         .withDefaultLogin()
@@ -185,10 +196,10 @@ class PreviousDecisionIntegrationTest {
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
-              DocumentUnit responseBody = response.getResponseBody();
+              DocumentationUnit responseBody = response.getResponseBody();
               assertThat(responseBody.previousDecisions())
                   .extracting("fileNumber")
                   .containsExactly("test");
@@ -200,16 +211,13 @@ class PreviousDecisionIntegrationTest {
 
   @Test
   void testAddPreviousDecisionToEmptyPreviousDecisionList_shouldContainTheNewEntry() {
-    DocumentationUnitDTO parentDocumentUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentationOffice(documentationOfficeDTO)
-            .documentNumber("documntnumber")
-            .build();
-    repository.save(parentDocumentUnitDTO);
+    DocumentationUnitDTO parentDocumentationUnitDTO =
+        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+            repository, documentationOfficeDTO, "documntnumber");
 
-    DocumentUnit documentUnit =
-        DocumentUnit.builder()
-            .uuid(parentDocumentUnitDTO.getId())
+    DocumentationUnit documentationUnit =
+        DocumentationUnit.builder()
+            .uuid(parentDocumentationUnitDTO.getId())
             .documentNumber("docnr12345678")
             .previousDecisions(List.of(PreviousDecision.builder().fileNumber("test").build()))
             .coreData(CoreData.builder().documentationOffice(docOffice).build())
@@ -218,45 +226,41 @@ class PreviousDecisionIntegrationTest {
     risWebTestClient
         .withDefaultLogin()
         .put()
-        .uri("/api/v1/caselaw/documentunits/" + parentDocumentUnitDTO.getId())
-        .bodyValue(documentUnit)
+        .uri("/api/v1/caselaw/documentunits/" + parentDocumentationUnitDTO.getId())
+        .bodyValue(documentationUnit)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
-            response -> {
-              assertThat(Objects.requireNonNull(response.getResponseBody()).previousDecisions())
-                  .extracting("fileNumber")
-                  .containsExactly("test");
-            });
+            response ->
+                assertThat(Objects.requireNonNull(response.getResponseBody()).previousDecisions())
+                    .extracting("fileNumber")
+                    .containsExactly("test"));
   }
 
   @Test
   void testLinkExistingPreviousDecision() {
-    DocumentationUnitDTO parentDocumentUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentationOffice(documentationOfficeDTO)
-            .documentNumber("1234567890123")
-            .build();
-    parentDocumentUnitDTO = repository.save(parentDocumentUnitDTO);
+    DocumentationUnitDTO parentDocumentationUnitDTO =
+        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+            repository, documentationOfficeDTO, "1234567890123");
 
-    DocumentationUnitDTO childDocumentUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentNumber("abcdefghjikl")
-            .decisionDate(LocalDate.parse("2021-01-01"))
-            .documentationOffice(documentationOfficeDTO)
-            .build();
-    childDocumentUnitDTO = repository.save(childDocumentUnitDTO);
+    var childDocumentationUnitDTO =
+        repository.save(
+            DocumentationUnitDTO.builder()
+                .documentNumber("abcdefghjikl")
+                .decisionDate(LocalDate.parse("2021-01-01"))
+                .documentationOffice(documentationOfficeDTO)
+                .build());
 
-    DocumentUnit documentUnit =
-        DocumentUnit.builder()
-            .uuid(parentDocumentUnitDTO.getId())
+    DocumentationUnit documentationUnit =
+        DocumentationUnit.builder()
+            .uuid(parentDocumentationUnitDTO.getId())
             .documentNumber("docnr12345678")
             .previousDecisions(
                 List.of(
                     PreviousDecision.builder()
-                        .documentNumber(childDocumentUnitDTO.getDocumentNumber())
+                        .documentNumber(childDocumentationUnitDTO.getDocumentNumber())
                         .deviatingFileNumber("deviatest")
                         .build()))
             .coreData(CoreData.builder().documentationOffice(docOffice).build())
@@ -265,12 +269,12 @@ class PreviousDecisionIntegrationTest {
     risWebTestClient
         .withDefaultLogin()
         .put()
-        .uri("/api/v1/caselaw/documentunits/" + parentDocumentUnitDTO.getId())
-        .bodyValue(documentUnit)
+        .uri("/api/v1/caselaw/documentunits/" + parentDocumentationUnitDTO.getId())
+        .bodyValue(documentationUnit)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
               assertThat(response.getResponseBody().previousDecisions())
@@ -286,18 +290,18 @@ class PreviousDecisionIntegrationTest {
 
   @Test
   void testRemovePreviousDecision_withEmptyList_shouldRemoveAllPreviousDecisions() {
-    DocumentationUnitDTO parentDocumentUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentationOffice(documentationOfficeDTO)
-            .documentNumber("1234567890123")
-            .previousDecisions(
-                List.of(PreviousDecisionDTO.builder().fileNumber("test").rank(1).build()))
-            .build();
-    parentDocumentUnitDTO = repository.save(parentDocumentUnitDTO);
+    DocumentationUnitDTO parentDocumentationUnitDTO =
+        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+            repository,
+            DocumentationUnitDTO.builder()
+                .documentationOffice(documentationOfficeDTO)
+                .documentNumber("1234567890123")
+                .previousDecisions(
+                    List.of(PreviousDecisionDTO.builder().fileNumber("test").rank(1).build())));
 
-    DocumentUnit documentUnit =
-        DocumentUnit.builder()
-            .uuid(parentDocumentUnitDTO.getId())
+    DocumentationUnit documentationUnit =
+        DocumentationUnit.builder()
+            .uuid(parentDocumentationUnitDTO.getId())
             .documentNumber("docnr12345678")
             .previousDecisions(Collections.emptyList())
             .coreData(CoreData.builder().documentationOffice(docOffice).build())
@@ -306,47 +310,38 @@ class PreviousDecisionIntegrationTest {
     risWebTestClient
         .withDefaultLogin()
         .put()
-        .uri("/api/v1/caselaw/documentunits/" + parentDocumentUnitDTO.getId())
-        .bodyValue(documentUnit)
+        .uri("/api/v1/caselaw/documentunits/" + parentDocumentationUnitDTO.getId())
+        .bodyValue(documentationUnit)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody().previousDecisions()).isEmpty();
-            });
+            response -> assertThat(response.getResponseBody().previousDecisions()).isEmpty());
   }
 
   @Test
-  void testLinkTheSameDocumentUnitsTwice() {
-    DocumentationUnitDTO childDocumentUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentNumber("xxx")
-            .documentationOffice(documentationOfficeDTO)
-            .build();
-    childDocumentUnitDTO = repository.save(childDocumentUnitDTO);
-    final UUID childDocumentationUnitUuid = childDocumentUnitDTO.getId();
+  void testLinkTheSameDocumentationUnitsTwice() {
+    DocumentationUnitDTO childDocumentationUnitDTO =
+        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+            repository, documentationOfficeDTO, "xxx");
 
-    DocumentationUnitDTO parentDocumentUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentationOffice(documentationOfficeDTO)
-            .documentNumber("1234567890123")
-            .build();
-    parentDocumentUnitDTO = repository.save(parentDocumentUnitDTO);
+    DocumentationUnitDTO parentDocumentationUnitDTO =
+        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+            repository, documentationOfficeDTO, "1234567890123");
 
-    DocumentUnit documentUnit =
-        DocumentUnit.builder()
-            .uuid(parentDocumentUnitDTO.getId())
+    DocumentationUnit documentationUnit =
+        DocumentationUnit.builder()
+            .uuid(parentDocumentationUnitDTO.getId())
             .documentNumber("docnr12345678")
             .previousDecisions(
                 List.of(
                     PreviousDecision.builder()
-                        .uuid(childDocumentationUnitUuid)
+                        .uuid(childDocumentationUnitDTO.getId())
                         .documentNumber("xxx")
                         .build(),
                     PreviousDecision.builder()
-                        .uuid(childDocumentationUnitUuid)
+                        .uuid(childDocumentationUnitDTO.getId())
                         .documentNumber("xxx")
                         .build()))
             .coreData(CoreData.builder().documentationOffice(docOffice).build())
@@ -355,12 +350,12 @@ class PreviousDecisionIntegrationTest {
     risWebTestClient
         .withDefaultLogin()
         .put()
-        .uri("/api/v1/caselaw/documentunits/" + parentDocumentUnitDTO.getId())
-        .bodyValue(documentUnit)
+        .uri("/api/v1/caselaw/documentunits/" + parentDocumentationUnitDTO.getId())
+        .bodyValue(documentationUnit)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
               assertThat(response.getResponseBody().previousDecisions()).hasSize(2);
@@ -371,8 +366,8 @@ class PreviousDecisionIntegrationTest {
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_noSearchCriteria_shouldMatchAll() {
-    prepareDocumentUnitDTOs();
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_noSearchCriteria_shouldMatchAll() {
+    prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(PreviousDecision.builder().build())
             .returnResult()
@@ -382,21 +377,21 @@ class PreviousDecisionIntegrationTest {
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_onlyDate_shouldMatchOne() {
-    LocalDate date1 = prepareDocumentUnitDTOs();
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_onlyDate_shouldMatchOne() {
+    LocalDate date1 = prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(PreviousDecision.builder().decisionDate(date1).build())
             .returnResult()
             .getResponseBody()
             .getContent();
     assertThat(content).hasSize(1);
-    PreviousDecision documentUnit = (PreviousDecision) content.get(0);
-    assertThat(documentUnit.getDecisionDate()).isEqualTo(date1);
+    PreviousDecision documentationUnit = content.get(0);
+    assertThat(documentationUnit.getDecisionDate()).isEqualTo(date1);
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_onlyCourt_shouldMatchThree() {
-    prepareDocumentUnitDTOs();
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_onlyCourt_shouldMatchThree() {
+    prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(
                 PreviousDecision.builder().court(Court.builder().type("Court1").build()).build())
@@ -404,26 +399,27 @@ class PreviousDecisionIntegrationTest {
             .getResponseBody()
             .getContent();
     assertThat(content).hasSize(3);
-    PreviousDecision documentUnit = (PreviousDecision) content.get(0);
-    assertThat(documentUnit.getCourt()).extracting("type").isEqualTo("Court1");
+    PreviousDecision documentationUnit = content.get(0);
+    assertThat(documentationUnit.getCourt()).extracting("type").isEqualTo("Court1");
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_onlyFileNumber_shouldMatchTwo() {
-    prepareDocumentUnitDTOs();
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_onlyFileNumber_shouldMatchTwo() {
+    prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(PreviousDecision.builder().fileNumber("AkteX").build())
             .returnResult()
             .getResponseBody()
             .getContent();
     assertThat(content).hasSize(2);
-    PreviousDecision documentUnit = (PreviousDecision) content.get(0);
-    assertThat(documentUnit.getFileNumber()).isEqualTo("AkteX");
+    PreviousDecision documentationUnit = content.get(0);
+    assertThat(documentationUnit.getFileNumber()).isEqualTo("AkteX");
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_onlyFileNumber_shouldNotMatchDocNumber() {
-    prepareDocumentUnitDTOs();
+  void
+      testSearchForDocumentationUnitsByPreviousDecisionInput_onlyFileNumber_shouldNotMatchDocNumber() {
+    prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(PreviousDecision.builder().fileNumber("XX").build())
             .returnResult()
@@ -433,8 +429,8 @@ class PreviousDecisionIntegrationTest {
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_onlyDocumentType_shouldMatchOne() {
-    prepareDocumentUnitDTOs();
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_onlyDocumentType_shouldMatchOne() {
+    prepareDocumentationUnitDTOs();
     DocumentType documentType =
         DocumentTypeTransformer.transformToDomain(
             databaseDocumentTypeRepository.findFirstByAbbreviationAndCategory("GH", category));
@@ -444,13 +440,13 @@ class PreviousDecisionIntegrationTest {
             .getResponseBody()
             .getContent();
     assertThat(content).hasSize(1);
-    PreviousDecision documentUnit = (PreviousDecision) content.get(0);
-    assertThat(documentUnit.getDocumentType().jurisShortcut()).isEqualTo("GH");
+    PreviousDecision documentationUnit = content.get(0);
+    assertThat(documentationUnit.getDocumentType().jurisShortcut()).isEqualTo("GH");
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_nullDocumentType_shouldAll() {
-    prepareDocumentUnitDTOs();
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_nullDocumentType_shouldAll() {
+    prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(PreviousDecision.builder().documentType(null).build())
             .returnResult()
@@ -461,8 +457,8 @@ class PreviousDecisionIntegrationTest {
 
   @Test
   void
-      testSearchForDocumentUnitsByPreviousDecisionInput_threeMatchingOneDoesNot_shouldMatchNothing() {
-    LocalDate date1 = prepareDocumentUnitDTOs();
+      testSearchForDocumentationUnitsByPreviousDecisionInput_threeMatchingOneDoesNot_shouldMatchNothing() {
+    LocalDate date1 = prepareDocumentationUnitDTOs();
     List<PreviousDecision> content =
         simulateAPICall(
                 PreviousDecision.builder()
@@ -479,70 +475,51 @@ class PreviousDecisionIntegrationTest {
   }
 
   @Test
-  void testSearchForDocumentUnitsByPreviousDecisionInput_shouldOnlyFindPublishedOrMine() {
+  void testSearchForDocumentationUnitsByPreviousDecisionInput_shouldOnlyFindPublishedOrMine() {
     LocalDate date = LocalDate.parse("2023-02-02");
 
     var du1 =
-        createDocumentUnit(
-            date,
-            List.of("AkteZ"),
-            "EF",
-            "DS",
-            Status.builder().publicationStatus(PublicationStatus.UNPUBLISHED).build());
+        createDocumentationUnit(date, List.of("AkteZ"), "EF", "DS", PublicationStatus.UNPUBLISHED);
     var du2 =
-        createDocumentUnit(
-            date,
-            List.of("AkteZ"),
-            "EF",
-            "DS",
-            Status.builder().publicationStatus(PublicationStatus.PUBLISHED).build());
-
+        createDocumentationUnit(date, List.of("AkteZ"), "EF", "DS", PublicationStatus.PUBLISHED);
+    var du3 =
+        createDocumentationUnit(
+            date, List.of("AkteZ"), "EF", "DS", PublicationStatus.EXTERNAL_HANDOVER_PENDING);
+    var du4 =
+        createDocumentationUnit(
+            date, List.of("AkteZ"), "EF", "CC-RIS", PublicationStatus.UNPUBLISHED);
     var du5 =
-        createDocumentUnit(
-            date,
-            List.of("AkteZ"),
-            "EF",
-            "CC-RIS",
-            Status.builder().publicationStatus(PublicationStatus.PUBLISHED).build());
+        createDocumentationUnit(
+            date, List.of("AkteZ"), "EF", "CC-RIS", PublicationStatus.PUBLISHED);
+    var du6 =
+        createDocumentationUnit(
+            date, List.of("AkteZ"), "EF", "CC-RIS", PublicationStatus.EXTERNAL_HANDOVER_PENDING);
 
     List<PreviousDecision> content =
         simulateAPICall(PreviousDecision.builder().fileNumber("AkteZ").build())
             .returnResult()
             .getResponseBody()
             .getContent();
-    assertThat(content).hasSize(3);
+    assertThat(content).hasSize(4);
     assertThat(content)
         .extracting(RelatedDocumentationUnit::getUuid)
-        .containsExactlyInAnyOrder(du1.getId(), du2.getId(), du5.getId());
+        .doesNotContain(du4.getId(), du6.getId())
+        .containsExactlyInAnyOrder(du1.getId(), du2.getId(), du3.getId(), du5.getId());
   }
 
-  private LocalDate prepareDocumentUnitDTOs() {
+  private LocalDate prepareDocumentationUnitDTOs() {
     LocalDate date1 = LocalDate.parse("2023-01-02");
 
-    createDocumentUnit(
-        date1,
-        List.of("AkteX", "AkteY"),
-        "CD",
-        "DS",
-        Status.builder().publicationStatus(PublicationStatus.PUBLISHED).build());
+    createDocumentationUnit(
+        date1, List.of("AkteX", "AkteY"), "CD", "DS", PublicationStatus.PUBLISHED);
 
     LocalDate date2 = LocalDate.parse("2023-02-03");
 
-    createDocumentUnit(
-        date2,
-        null,
-        "EF",
-        "DS",
-        Status.builder().publicationStatus(PublicationStatus.PUBLISHED).build());
+    createDocumentationUnit(date2, null, "EF", "DS", PublicationStatus.PUBLISHED);
 
     LocalDate date3 = LocalDate.parse("2023-03-04");
 
-    createDocumentUnit(
-        date3,
-        List.of("AkteX"),
-        "GH",
-        "DS",
-        Status.builder().publicationStatus(PublicationStatus.PUBLISHED).build());
+    createDocumentationUnit(date3, List.of("AkteX"), "GH", "DS", PublicationStatus.PUBLISHED);
     return date1;
   }
 
@@ -552,7 +529,7 @@ class PreviousDecisionIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri(
-            "/api/v1/caselaw/documentunits/KORE000000000/search-linkable-documentation-units?pg=0&sz=30")
+            "/api/v1/caselaw/documentunits/search-linkable-documentation-units?pg=0&sz=30&documentNumber=KORE000000000")
         .bodyValue(previousDecision)
         .exchange()
         .expectStatus()
@@ -560,12 +537,12 @@ class PreviousDecisionIntegrationTest {
         .expectBody(new TypeReference<>() {});
   }
 
-  private DocumentationUnitDTO createDocumentUnit(
+  private DocumentationUnitDTO createDocumentationUnit(
       LocalDate decisionDate,
       List<String> fileNumbers,
       String documentTypeJurisShortcut,
       String documentOfficeLabel,
-      Status status) {
+      PublicationStatus status) {
 
     DocumentTypeDTO documentTypeDTO = null;
     if (documentTypeJurisShortcut != null) {
@@ -590,7 +567,8 @@ class PreviousDecisionIntegrationTest {
         documentationOfficeRepository.findByAbbreviation(documentOfficeLabel);
     assertThat(documentOffice).isNotNull();
 
-    DocumentationUnitDTO documentationUnitDTO =
+    return EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository,
         DocumentationUnitDTO.builder()
             .id(UUID.randomUUID())
             .documentationOffice(documentOffice)
@@ -599,43 +577,13 @@ class PreviousDecisionIntegrationTest {
             .decisionDate(decisionDate)
             .documentType(documentTypeDTO)
             .documentationOffice(documentOffice)
-            .build();
-    documentationUnitDTO = repository.save(documentationUnitDTO);
-
-    UUID docUnitId = documentationUnitDTO.getId();
-
-    documentationUnitDTO = repository.findById(docUnitId).get();
-
-    documentationUnitDTO =
-        documentationUnitDTO.toBuilder()
-            .status(
-                status == null
-                    ? null
-                    : List.of(
-                        StatusDTO.builder()
-                            .id(UUID.randomUUID())
-                            .publicationStatus(status.publicationStatus())
-                            .withError(status.withError())
-                            .documentationUnitDTO(documentationUnitDTO)
-                            .createdAt(Instant.now())
-                            .build()))
-            .build();
-
-    if (fileNumbers != null) {
-      documentationUnitDTO.setFileNumbers(
-          fileNumbers.stream()
-              .map(
-                  fn ->
-                      FileNumberDTO.builder()
-                          .value(fn)
-                          .rank(1L)
-                          .documentationUnit(DocumentationUnitDTO.builder().id(docUnitId).build())
-                          .build())
-              .toList());
-    }
-
-    documentationUnitDTO = repository.save(documentationUnitDTO);
-
-    return documentationUnitDTO;
+            .fileNumbers(
+                fileNumbers == null
+                    ? new ArrayList<>()
+                    : new ArrayList<>(
+                        fileNumbers.stream()
+                            .map(fn -> FileNumberDTO.builder().value(fn).rank(1L).build())
+                            .toList())),
+        status);
   }
 }

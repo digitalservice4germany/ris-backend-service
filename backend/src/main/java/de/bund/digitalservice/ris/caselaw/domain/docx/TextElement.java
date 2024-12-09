@@ -3,7 +3,7 @@ package de.bund.digitalservice.ris.caselaw.domain.docx;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 
-public abstract class TextElement extends StyledElement implements DocumentUnitDocx {
+public abstract class TextElement extends StyledElement implements DocumentationUnitDocx {
   private static final DecimalFormat DECIMAL_FORMATTER;
 
   static {

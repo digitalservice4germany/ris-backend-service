@@ -1,15 +1,22 @@
 import { createTestingPinia } from "@pinia/testing"
 import { userEvent } from "@testing-library/user-event"
 import { render, screen } from "@testing-library/vue"
+import { createRouter, createWebHistory } from "vue-router"
 import { ComboboxItem } from "@/components/input/types"
 import PreviousDecisions from "@/components/PreviousDecisions.vue"
 import DocumentUnit, { Court, DocumentType } from "@/domain/documentUnit"
 import PreviousDecision from "@/domain/previousDecision"
 import comboboxItemService from "@/services/comboboxItemService"
 import documentUnitService from "@/services/documentUnitService"
+import routes from "~/test-helper/routes"
 
 function renderComponent(previousDecisions?: PreviousDecision[]) {
   const user = userEvent.setup()
+
+  const router = createRouter({
+    history: createWebHistory(),
+    routes: routes,
+  })
   return {
     user,
     ...render(PreviousDecisions, {
@@ -23,13 +30,15 @@ function renderComponent(previousDecisions?: PreviousDecision[]) {
                   documentUnit: new DocumentUnit("foo", {
                     documentNumber: "1234567891234",
                     coreData: {},
-                    texts: {},
+                    shortTexts: {},
+                    longTexts: {},
                     previousDecisions: previousDecisions ?? [],
                   }),
                 },
               },
             }),
           ],
+          [router],
         ],
       },
     }),

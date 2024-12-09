@@ -6,5 +6,5 @@ public interface MailTrackingService {
 
   MailStatus mapEventToStatus(String mailTrackingEvent);
 
-  ResponseEntity<String> processMailSendingState(String documentUnitUuid, String event);
+  ResponseEntity<String> processMailSendingState(String documentationUnitUuid, String event);
 }

@@ -1,4 +1,5 @@
 import * as jsonpatch from "fast-json-patch"
+import { Operation } from "fast-json-patch"
 import { defineStore } from "pinia"
 import { ref } from "vue"
 import fields from "@/data/fieldNames.json"
@@ -41,35 +42,14 @@ export const useDocumentUnitStore = defineStore("docunitStore", () => {
     }
 
     // Create JSON Patch
-    const patch = jsonpatch.compare(
+    const frontendPatch = jsonpatch.compare(
       originalDocumentUnit.value,
       documentUnit.value,
     )
 
-    // If there are no updates in the client, get the current version from backend
-    // if (patch.length === 0 && documentUnit.value.documentNumber) {
-    //   const response = await loadDocumentUnit(documentUnit.value.documentNumber)
-    //   if (response.data) {
-    //     return {
-    //       status: response.status,
-    //       data: {
-    //         documentationUnitVersion: response.data.version,
-    //         patch: [],
-    //         errorPaths: [],
-    //       },
-    //     }
-    //   } else {
-    //     return {
-    //       status: 404,
-    //       data: undefined,
-    //       error: errorMessages.DOCUMENT_UNIT_COULD_NOT_BE_LOADED,
-    //     }
-    //   }
-    // }
-
     const response = await documentUnitService.update(documentUnit.value.uuid, {
       documentationUnitVersion: documentUnit.value.version,
-      patch,
+      patch: frontendPatch,
       errorPaths: [],
     })
 
@@ -77,10 +57,31 @@ export const useDocumentUnitStore = defineStore("docunitStore", () => {
       //Apply backend patch to original documentunit reference, with updated version
       const backendPatch = response.data as RisJsonPatch
 
+      // Here, the patch from the frontend was successfully applied in the backend database.
       try {
-        applyPatch(backendPatch)
+        // We apply the changes from the backend response to our local docUnit
+        documentUnit.value = getPatchApplyResult(
+          new DocumentUnit(documentUnit.value.uuid, {
+            ...JSON.parse(JSON.stringify(documentUnit.value)),
+          }),
+          backendPatch.patch,
+        )
+        // We apply the local changes that were successfully saved in the backend on our docUnit backend reperesentation
+        originalDocumentUnit.value = getPatchApplyResult(
+          new DocumentUnit(documentUnit.value.uuid, {
+            ...JSON.parse(JSON.stringify(originalDocumentUnit.value)),
+          }),
+          frontendPatch,
+        )
+        // We apply the backend response changes to our backend docUnit representation.
+        originalDocumentUnit.value = getPatchApplyResult(
+          new DocumentUnit(documentUnit.value.uuid, {
+            ...JSON.parse(JSON.stringify(originalDocumentUnit.value)),
+          }),
+          backendPatch.patch,
+        )
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (error) {
-        console.log("apply patch: ", error)
         if (documentUnit.value.documentNumber) {
           const response = await loadDocumentUnit(
             documentUnit.value.documentNumber,
@@ -105,11 +106,6 @@ export const useDocumentUnitStore = defineStore("docunitStore", () => {
       }
       documentUnit.value.version = backendPatch.documentationUnitVersion
 
-      // Deep copy
-      originalDocumentUnit.value = new DocumentUnit(documentUnit.value.uuid, {
-        ...JSON.parse(JSON.stringify(documentUnit.value)),
-      })
-
       if (
         backendPatch.errorPaths != undefined &&
         backendPatch.errorPaths.length > 0
@@ -133,19 +129,25 @@ export const useDocumentUnitStore = defineStore("docunitStore", () => {
       return {
         status: response.status,
         data: undefined,
-        error: errorMessages.DOCUMENT_UNIT_UPDATE_FAILED,
+        error:
+          response.status === 403
+            ? errorMessages.NOT_ALLOWED
+            : errorMessages.DOCUMENT_UNIT_UPDATE_FAILED,
       }
     }
     return response
   }
 
-  function applyPatch(backendPatch: RisJsonPatch) {
+  function getPatchApplyResult(
+    docUnit: DocumentUnit,
+    backendPatch: Operation[],
+  ) {
     if (!documentUnit.value?.uuid) {
       throw new Error("Can't apply patch on an empty uuid")
     }
-    jsonpatch.applyPatch(documentUnit.value, backendPatch.patch)
-    documentUnit.value = new DocumentUnit(documentUnit.value.uuid, {
-      ...JSON.parse(JSON.stringify(documentUnit.value)),
+    jsonpatch.applyPatch(docUnit, backendPatch)
+    return new DocumentUnit(docUnit.uuid, {
+      ...JSON.parse(JSON.stringify(docUnit)),
     })
   }
 

@@ -3,6 +3,7 @@ package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 import static org.mockito.Mockito.mock;
 
 import de.bund.digitalservice.ris.caselaw.domain.docx.ParagraphElement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.docx4j.wml.P;
@@ -22,11 +23,11 @@ class FooterConverterTest {
         Mockito.mockStatic(ParagraphConverter.class)) {
       ParagraphElement mockParagraphElement = new ParagraphElement();
       mockedStatic
-          .when(() -> ParagraphConverter.convert(mockP, mockConverter))
+          .when(() -> ParagraphConverter.convert(mockP, mockConverter, new ArrayList<>()))
           .thenReturn(mockParagraphElement);
       List<Object> content = Arrays.asList(mockP);
 
-      ParagraphElement result = FooterConverter.convert(content, mockConverter);
+      ParagraphElement result = FooterConverter.convert(content, mockConverter, new ArrayList<>());
 
       Assertions.assertNotNull(result);
       Assertions.assertEquals(mockParagraphElement, result);

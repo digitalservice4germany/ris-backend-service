@@ -1,5 +1,12 @@
 import { Mark, markInputRule } from "@tiptap/core"
 
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    BorderNumberLink: {
+      setBorderNumberLink: () => ReturnType
+    }
+  }
+}
 export const BorderNumberLink = Mark.create({
   name: "BorderNumberLink",
   inclusive: false,
@@ -15,7 +22,8 @@ export const BorderNumberLink = Mark.create({
   renderHTML({ mark }) {
     const styleClasses =
       mark.attrs.valid === "true"
-        ? 'text-white bg-blue-700 before:content-["Rd_"]'
+        ? // Padding / margin so that caret is still visible, see RISUP-185
+          'text-white bg-blue-700 before:content-["Rd_"] ml-1 pr-1'
         : 'text-red-900 bg-red-200 before:content-["⚠Rd_"]'
     return [
       "border-number-link",

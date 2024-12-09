@@ -66,7 +66,7 @@ watch(localIsExpanded, () => emit("update:isExpanded", localIsExpanded.value))
       <button
         v-if="props.iconsOnLeft"
         :aria-label="ariaLabel"
-        class="icon self-start focus:outline-none focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-blue-800"
+        class="icon self-start text-blue-800 focus:outline-none focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-blue-800"
         data-testid="icons-open-close"
         :style="{ marginLeft: `${marginLevel * 24}px` }"
         @click.stop="toggleContentVisibilityOnButton"
@@ -86,7 +86,7 @@ watch(localIsExpanded, () => emit("update:isExpanded", localIsExpanded.value))
       <button
         v-if="!props.iconsOnLeft"
         :aria-label="ariaLabel"
-        class="focus:outline-none focus-visible:outline-blue-800"
+        class="text-blue-800 focus:outline-none focus-visible:outline-blue-800"
         data-testid="icons-open-close"
         @click.stop="toggleContentVisibilityOnButton"
       >

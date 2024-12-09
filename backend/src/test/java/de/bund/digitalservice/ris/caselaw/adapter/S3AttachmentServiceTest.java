@@ -33,6 +33,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
@@ -56,7 +57,11 @@ class S3AttachmentServiceTest {
   @SpyBean S3AttachmentService service;
 
   @MockBean AttachmentRepository repository;
-  @MockBean S3Client s3Client;
+
+  @MockBean
+  @Qualifier("docxS3Client")
+  S3Client s3Client;
+
   @MockBean DatabaseDocumentationUnitRepository documentationUnitRepository;
 
   private DocumentationUnitDTO documentationUnitDTO;
@@ -75,7 +80,7 @@ class S3AttachmentServiceTest {
   }
 
   @Test
-  void testAttachFileToDocumentUnit() {
+  void testAttachFileToDocumentationUnit() {
     var byteBuffer = ByteBuffer.wrap(new byte[] {});
     var headerMap = new LinkedMultiValueMap<String, String>();
     headerMap.put("Content-Type", List.of("content/extension"));
@@ -105,7 +110,7 @@ class S3AttachmentServiceTest {
   }
 
   @Test
-  void testAttachFileToDocumentUnit_withoutFileName() {
+  void testAttachFileToDocumentationUnit_withoutFileName() {
     var byteBuffer = ByteBuffer.wrap(new byte[] {});
     var headerMap = new LinkedMultiValueMap<String, String>();
     headerMap.put("Content-Type", List.of("content/extension"));
@@ -196,7 +201,7 @@ class S3AttachmentServiceTest {
   }
 
   @Test
-  void testGenerateNewDocumentUnitAndAttachFile_withExceptionFromBucket() throws S3Exception {
+  void testGenerateNewDocumentationUnitAndAttachFile_withExceptionFromBucket() throws S3Exception {
     var byteBuffer = ByteBuffer.wrap(new byte[] {});
 
     doNothing().when(service).checkDocx(any(ByteBuffer.class));

@@ -1,6 +1,6 @@
-import AxeBuilder from "@axe-core/playwright"
 import { expect } from "@playwright/test"
 import { caselawTest as test } from "../../e2e/caselaw/fixtures"
+import { useAxeBuilder } from "~/a11y/caselaw/a11y.utils"
 import {
   navigateToAttachments,
   navigateToHandover,
@@ -18,7 +18,7 @@ test.describe("a11y of document page (/caselaw/documentunit/{documentNumber}/fil
 
     await uploadTestfile(page, "sample.docx")
     await expect(tableView).toBeVisible()
-    const accessibilityScanResults = await new AxeBuilder({ page }).analyze()
+    const accessibilityScanResults = await useAxeBuilder(page).analyze()
     expect(accessibilityScanResults.violations).toEqual([])
   })
 
@@ -33,7 +33,7 @@ test.describe("a11y of document page (/caselaw/documentunit/{documentNumber}/fil
     await page.getByRole("button", { name: "Löschen", exact: true }).click()
     await expect(tableView).toBeHidden()
 
-    const accessibilityScanResults = await new AxeBuilder({ page }).analyze()
+    const accessibilityScanResults = await useAxeBuilder(page).analyze()
     expect(accessibilityScanResults.violations).toEqual([])
   })
 
@@ -43,7 +43,7 @@ test.describe("a11y of document page (/caselaw/documentunit/{documentNumber}/fil
     await page.getByLabel("Datei löschen").click()
     await page.locator("[aria-label='Anhang löschen']").click()
 
-    const accessibilityScanResults = await new AxeBuilder({ page }).analyze()
+    const accessibilityScanResults = await useAxeBuilder(page).analyze()
     expect(accessibilityScanResults.violations).toEqual([])
   })
 
@@ -59,7 +59,7 @@ test.describe("a11y of document page (/caselaw/documentunit/{documentNumber}/fil
       ),
     ).toBeVisible()
 
-    const accessibilityScanResults = await new AxeBuilder({ page }).analyze()
+    const accessibilityScanResults = await useAxeBuilder(page).analyze()
     expect(accessibilityScanResults.violations).toEqual([])
   })
 })
@@ -67,20 +67,17 @@ test.describe("a11y of document page (/caselaw/documentunit/{documentNumber}/fil
 test.describe("a11y of handover page (/caselaw/documentunit/{documentNumber}/handover)", () => {
   test("handover", async ({ page, documentNumber }) => {
     await navigateToHandover(page, documentNumber)
-    const accessibilityScanResults = await new AxeBuilder({ page }).analyze()
+    const accessibilityScanResults = await useAxeBuilder(page).analyze()
     expect(accessibilityScanResults.violations).toEqual([])
   })
 
   test("handover not possible", async ({ page, documentNumber }) => {
     await navigateToHandover(page, documentNumber)
-    await page
-      .locator("[aria-label='Dokumentationseinheit an jDV übergeben']")
-      .click()
     await expect(
-      page.getByText("Es sind noch nicht alle Pflichtfelder befüllt."),
-    ).toBeVisible()
+      page.getByLabel("Dokumentationseinheit an jDV übergeben"),
+    ).toBeDisabled()
 
-    const accessibilityScanResults = await new AxeBuilder({ page }).analyze()
+    const accessibilityScanResults = await useAxeBuilder(page).analyze()
     expect(accessibilityScanResults.violations).toEqual([])
   })
 })

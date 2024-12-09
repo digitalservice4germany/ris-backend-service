@@ -19,4 +19,9 @@ public class EnvironmentService {
   public String getEnvironment() {
     return currentEnvironment.name();
   }
+
+  @Bean
+  public String getAccountManagementUrl() {
+    return currentEnvironment.accountManagementUrl();
+  }
 }

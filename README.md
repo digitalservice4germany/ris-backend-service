@@ -117,8 +117,10 @@ Now you can generate a new `.env` file containig the secrets:
 ### Local Migration
 
 The caselaw application requires the initialization of lookup tables by the migration application.
+
 Follow the steps in [run_migration_locally.md](run_migration_locally.md)
 
+WIP: Run docker image in [migration_image.md](migration_image.md)
 ## Development
 
 ```bash

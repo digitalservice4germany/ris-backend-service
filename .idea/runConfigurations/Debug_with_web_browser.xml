@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Debug with web browser" type="ChromiumRemoteDebugType" factoryName="Chromium Remote" port="9229">
+    <method v="2">
+      <option name="LaunchBrowser.Before.Run" url="http://127.0.0.1/" withDebugger="true" />
+    </method>
+  </configuration>
+</component>

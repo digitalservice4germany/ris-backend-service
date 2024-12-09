@@ -1,8 +1,10 @@
-import { expect, Locator, Page } from "@playwright/test"
+import { expect } from "@playwright/test"
 import {
   navigateToAttachments,
   uploadTestfile,
   navigateToCategories,
+  copyPasteTextFromAttachmentIntoEditor,
+  clickCategoryButton,
 } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
 
@@ -27,7 +29,7 @@ test("copy-paste text with different styles and alignments from side panel", asy
   const leftAlignTextWithStyle = `<span style="color: rgb(0, 0, 0)">${leftAlignText}</span>`
   const rightAlignTextWithStyle = `<p style="text-align: right"><span style="color: rgb(0, 0, 0)">${rightAlignText}</span></p>`
   const centerAlignTextWithStyle = `<p style="text-align: center">${centerAlignText}</p>`
-  const justifyAlignTextWithStyle = `<p style="text-align: justify">${justifyAlignText}</p>`
+  const justifyAlignTextWithoutStyle = `<p>${justifyAlignText}</p>`
 
   await test.step("upload document", async () => {
     await uploadTestfile(page, "some-text-aligment.docx")
@@ -45,8 +47,14 @@ test("copy-paste text with different styles and alignments from side panel", asy
   })
 
   await test.step("copy and paste document text into text editor field, check that the style is applied", async () => {
-    const originalFileParagraph = page.getByText("centered")
-    const inputField = await copyPaste(originalFileParagraph, page)
+    const attachmentLocator = page.getByText("centered").locator("..")
+    await clickCategoryButton("Leitsatz", page)
+    const inputField = page.locator("[data-testid='Leitsatz']")
+    await copyPasteTextFromAttachmentIntoEditor(
+      page,
+      attachmentLocator,
+      inputField,
+    )
 
     // Check all text copied
     const inputFieldAllText = await inputField.allTextContents()
@@ -55,18 +63,12 @@ test("copy-paste text with different styles and alignments from side panel", asy
     expect(inputFieldAllText[0]).toContain(centerAlignText)
     expect(inputFieldAllText[0]).toContain(justifyAlignText)
 
-    // hide invisible characters
-    await inputField.click()
-    await page
-      .locator(`[aria-label='invisible-characters']:not([disabled])`)
-      .click()
-
     const inputFieldInnerHTML = await inputField.innerHTML()
     // Check all text copied with style
     expect(inputFieldInnerHTML).toContain(leftAlignTextWithStyle)
     expect(inputFieldInnerHTML).toContain(rightAlignTextWithStyle)
     expect(inputFieldInnerHTML).toContain(centerAlignTextWithStyle)
-    expect(inputFieldInnerHTML).toContain(justifyAlignTextWithStyle)
+    expect(inputFieldInnerHTML).toContain(justifyAlignTextWithoutStyle)
   })
 })
 
@@ -105,8 +107,16 @@ test(
     })
 
     await test.step("copy and paste document text into text editor field, check that the style is applied", async () => {
-      const originalFileParagraph = page.getByText("Text", { exact: true })
-      const inputField = await copyPaste(originalFileParagraph, page)
+      const attachmentLocator = page
+        .getByText("Text", { exact: true })
+        .locator("..")
+      await clickCategoryButton("Leitsatz", page)
+      const inputField = page.locator("[data-testid='Leitsatz']")
+      await copyPasteTextFromAttachmentIntoEditor(
+        page,
+        attachmentLocator,
+        inputField,
+      )
 
       // Check all text copied
       const inputFieldAllText = await inputField.allTextContents()
@@ -114,12 +124,6 @@ test(
       expect(inputFieldAllText[0]).toContain(noIndentationText)
       expect(inputFieldAllText[0]).toContain(doubleIndentationText)
       expect(inputFieldAllText[0]).toContain(tripleIndentationText)
-
-      // hide invisible characters
-      await inputField.click()
-      await page
-        .locator(`[aria-label='invisible-characters']:not([disabled])`)
-        .click()
 
       const inputFieldInnerHTML = await inputField.innerHTML()
       // Check all text copied with style
@@ -164,10 +168,16 @@ test(
     })
 
     await test.step("copy and paste document text into text editor field, check that the style is applied", async () => {
-      const originalFileParagraph = page.getByText("Text", {
-        exact: true,
-      })
-      const inputField = await copyPaste(originalFileParagraph, page)
+      const attachmentLocator = page
+        .getByText("Text", { exact: true })
+        .locator("..")
+      await clickCategoryButton("Leitsatz", page)
+      const inputField = page.locator("[data-testid='Leitsatz']")
+      await copyPasteTextFromAttachmentIntoEditor(
+        page,
+        attachmentLocator,
+        inputField,
+      )
 
       // Check all text copied
       const inputFieldAllText = await inputField.allTextContents()
@@ -176,12 +186,6 @@ test(
       expect(inputFieldAllText[0]).toContain(orderedListItemText)
       expect(inputFieldAllText[0]).toContain(orderedListSecondItemText)
 
-      // hide invisible characters
-      await inputField.click()
-      await page
-        .locator(`[aria-label='invisible-characters']:not([disabled])`)
-        .click()
-
       const inputFieldInnerHTML = await inputField.innerHTML()
       // Check all text copied with style
       expect(inputFieldInnerHTML).toContain(bulletList)
@@ -189,41 +193,3 @@ test(
     })
   },
 )
-
-async function copyPaste(originalFileParagraph: Locator, page: Page) {
-  await expect(originalFileParagraph).toBeVisible()
-
-  // Selected all text from sidepanel
-  await originalFileParagraph.evaluate((element) => {
-    const originalFile = element.parentElement
-
-    if (!originalFile) {
-      throw new Error("No original file available.")
-    }
-
-    const selection = window.getSelection()
-    const elementChildsLength = originalFile.childNodes.length
-    const startOffset = 0
-    const range = document.createRange()
-    range.setStart(originalFile.childNodes[0], startOffset)
-    range.setEnd(originalFile.childNodes[elementChildsLength - 1], startOffset)
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-  })
-
-  // copy from sidepanel to clipboard
-  // eslint-disable-next-line playwright/no-conditional-in-test
-  const modifier = (await page.evaluate(() => navigator.platform))
-    .toLowerCase()
-    .includes("mac")
-    ? "Meta"
-    : "Control"
-  await page.keyboard.press(`${modifier}+KeyC`)
-
-  // paste from clipboard into input field "Leitsatz"
-  const inputField = page.locator("[data-testid='Leitsatz']")
-  await inputField.click()
-  await page.keyboard.press(`${modifier}+KeyV`)
-
-  return inputField
-}

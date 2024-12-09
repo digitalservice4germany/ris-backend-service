@@ -7,6 +7,7 @@ import { ResponseError } from "@/services/httpClient"
 
 const props = defineProps<{
   procedure: Procedure
+  docUnits: DocumentUnitListEntry[]
   responseError?: ResponseError
 }>()
 
@@ -18,22 +19,21 @@ const emit = defineEmits<{
 }>()
 
 /**
- * Sets loading state to true, when mismatch between the documentUnitCount and the actual loaded documentUnits
+ * Sets loading state to true, when mismatch between the documentationUnitCount and the actual loaded documentUnits
  */
 const isLoading = computed(
-  () => !props.procedure.documentUnits && props.procedure.documentUnitCount > 0,
+  () => !props.docUnits?.length && props.procedure.documentationUnitCount > 0,
 )
 </script>
 
 <template>
-  <div v-if="procedure.documentUnitCount > 0" class="pb-12 pl-24 pr-48 pt-36">
+  <div v-if="procedure.documentationUnitCount > 0">
     <DocumentUnitList
       class="grow"
-      :document-unit-list-entries="procedure.documentUnits"
-      is-deletable
+      :document-unit-list-entries="docUnits"
       :is-loading="isLoading"
       :search-response-error="responseError"
-      @delete-document-unit="emit('deleteDocumentUnit', $event, procedure)"
+      @delete-documentation-unit="emit('deleteDocumentUnit', $event, procedure)"
     >
     </DocumentUnitList>
   </div>

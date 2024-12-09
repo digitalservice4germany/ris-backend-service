@@ -9,6 +9,7 @@ import TextInput from "@/components/input/TextInput.vue"
 import YearInput from "@/components/input/YearInput.vue"
 import { useInjectCourtType } from "@/composables/useCourtType"
 import { useValidationStore } from "@/composables/useValidationStore"
+import constitutionalCourtTypes from "@/data/constitutionalCourtTypes.json"
 import LegalForce from "@/domain/legalForce"
 import SingleNorm, { SingleNormValidationInfo } from "@/domain/singleNorm"
 import ComboboxItemService from "@/services/comboboxItemService"
@@ -33,14 +34,6 @@ const legalForceValidationStore =
 const singleNormInput = ref<InstanceType<typeof TextInput> | null>(null)
 
 const courtTypeRef = useInjectCourtType()
-const courtTypesWithLegalForce = [
-  "BVerfG",
-  "VerfGH",
-  "VerfG",
-  "StGH",
-  "VGH",
-  "OVG",
-]
 
 const singleNorm = computed({
   get: () => {
@@ -112,7 +105,7 @@ const legalForceRegion = computed({
 })
 
 const isCourtWithLegalForce = computed(() => {
-  return courtTypesWithLegalForce.includes(courtTypeRef.value)
+  return constitutionalCourtTypes.items.includes(courtTypeRef.value)
 })
 
 /**
@@ -250,7 +243,7 @@ onMounted(async () => {
         <TextInput
           id="singleNorm"
           ref="singleNormInput"
-          v-model="singleNorm.singleNorm"
+          v-model.trim="singleNorm.singleNorm"
           aria-label="Einzelnorm der Norm"
           :has-error="slotProps.hasError"
           size="medium"

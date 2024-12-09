@@ -34,17 +34,17 @@ public class PageableTestImpl implements Pageable {
 
   @Override
   public Pageable next() {
-    return next();
+    return null;
   }
 
   @Override
   public Pageable previousOrFirst() {
-    return previousOrFirst();
+    return null;
   }
 
   @Override
   public Pageable first() {
-    return first();
+    return null;
   }
 
   @Override

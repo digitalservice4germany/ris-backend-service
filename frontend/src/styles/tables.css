@@ -1,0 +1,74 @@
+div.tiptap[contenteditable="true"] .invisible-table::after {
+  content: "";
+  position: absolute;
+  border-collapse: collapse;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 1px dotted theme("colors.blue.300");
+  pointer-events: none;
+}
+
+.tiptap {
+  :first-child {
+    margin-top: 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: 0;
+    overflow: hidden;
+    table-layout: fixed;
+    width: 100%;
+
+    td,
+    th {
+      box-sizing: border-box;
+      font-weight: unset;
+      text-align: left;
+      min-width: 1em;
+      padding: 6px 8px;
+      position: relative;
+      vertical-align: top;
+
+      > * {
+        margin-bottom: 0;
+        z-index: 3;
+        position: relative;
+      }
+    }
+
+    .selectedCell:after {
+      background: Highlight;
+      content: "";
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      pointer-events: none;
+      position: absolute;
+      z-index: 2;
+    }
+
+    .column-resize-handle {
+      background-color: #4466ff;
+      bottom: -2px;
+      pointer-events: none;
+      position: absolute;
+      right: -2px;
+      top: 0;
+      width: 4px;
+    }
+  }
+
+  .tableWrapper {
+    margin: 1.5rem 0;
+    overflow-x: auto;
+  }
+
+  &.resize-cursor {
+    cursor: ew-resize;
+    cursor: col-resize;
+  }
+}

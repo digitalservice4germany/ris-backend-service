@@ -16,11 +16,7 @@ public interface FieldOfLawRepository {
 
   Slice<FieldOfLaw> findAllByOrderByIdentifierAsc(Pageable pageable);
 
-  List<FieldOfLaw> findBySearchTerms(String[] searchTerms);
+  List<FieldOfLaw> findByIdentifier(String searchStr, Pageable pageable);
 
-  List<FieldOfLaw> findByNormStr(String normStr);
-
-  List<FieldOfLaw> findByNormStrAndSearchTerms(String normStr, String[] searchTerms);
-
-  List<FieldOfLaw> findByIdentifierSearch(String searchStr);
+  List<FieldOfLaw> findByCombinedCriteria(String identifier, String[] searchTerms, String[] norm);
 }

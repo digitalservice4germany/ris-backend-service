@@ -6,6 +6,8 @@ const props = defineProps<{
   items: DropdownItem[]
   modelValue?: DropdownInputModelType
   placeholder?: string
+  readOnly?: boolean
+  isSmall?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +21,11 @@ const localModelValue = computed({
   },
 })
 
+const conditionalClasses = computed(() => ({
+  "ds-select-small": props.isSmall,
+  "ds-select-medium": !props.isSmall,
+}))
+
 const hasPlaceholder = computed(() =>
   Boolean(!props.modelValue && props.placeholder),
 )
@@ -29,8 +36,10 @@ const hasPlaceholder = computed(() =>
   <!-- eslint-disable vuejs-accessibility/form-control-has-label -->
   <select
     v-model="localModelValue"
-    class="ds-select ds-select-medium"
+    class="ds-select"
+    :class="conditionalClasses"
     :data-placeholder="hasPlaceholder ? true : undefined"
+    :disabled="readOnly"
     tabindex="0"
   >
     <option v-if="placeholder && !localModelValue" disabled value="">

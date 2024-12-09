@@ -10,6 +10,7 @@ interface Props {
   modelValue?: string[]
   ariaLabel: string
   hasError?: boolean
+  readOnly?: boolean
 }
 const props = defineProps<Props>()
 
@@ -37,7 +38,7 @@ const chips = computed<string[]>({
 
   set: (newValue: string[]) => {
     if (!newValue || newValue.length === 0) {
-      emit("update:modelValue", undefined)
+      emit("update:modelValue", [])
       return
     }
 
@@ -86,6 +87,7 @@ dayjs.extend(customParseFormat)
     data-testid="deviating-decision-dates"
     :has-error="hasError"
     maska="##.##.####"
+    :read-only="readOnly"
     @update:validation-error="validateInput($event)"
   />
 </template>

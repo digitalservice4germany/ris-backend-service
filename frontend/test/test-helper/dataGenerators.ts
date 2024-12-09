@@ -1,3 +1,5 @@
+import { Schema } from "prosemirror-model"
+
 const ALPHABET_CHARACTERS = "abcdefghijklmnopqrstuvwxyz"
 
 export function generateRandomNumber(minimum = 0, maximum = 10): number {
@@ -20,4 +22,43 @@ export function generateString(options?: {
   }
 
   return output
+}
+
+export function createDocWithBorderNumber(schema: Schema) {
+  const numberNode = schema.nodes.borderNumberNumber.create(
+    {},
+    schema.text("1"),
+  )
+
+  const paragraphNode = schema.nodes.paragraph.create(
+    {},
+    schema.text("This is a paragraph within a border number."),
+  )
+
+  const contentNode = schema.nodes.borderNumberContent.create({}, paragraphNode)
+
+  const borderNumberNode = schema.nodes.borderNumber.create({}, [
+    numberNode,
+    contentNode,
+  ])
+
+  return schema.nodes.doc.create({}, [borderNumberNode])
+}
+
+export function createDocWithEmptyBorderNumber(schema: Schema) {
+  const numberNode = schema.nodes.borderNumberNumber.create(
+    {},
+    schema.text("1"),
+  )
+
+  const paragraphNode = schema.nodes.paragraph.create()
+
+  const contentNode = schema.nodes.borderNumberContent.create({}, paragraphNode)
+
+  const borderNumberNode = schema.nodes.borderNumber.create({}, [
+    numberNode,
+    contentNode,
+  ])
+
+  return schema.nodes.doc.create({}, [borderNumberNode])
 }

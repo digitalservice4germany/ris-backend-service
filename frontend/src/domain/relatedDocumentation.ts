@@ -15,6 +15,7 @@ export default class RelatedDocumentation {
   public decisionDate?: string
   public fileNumber?: string
   public documentType?: DocumentType
+  public createdByReference?: string
   public referenceFound?: boolean
 
   get hasForeignSource(): boolean {
@@ -35,7 +36,7 @@ export default class RelatedDocumentation {
     )
   }
 
-  private getStatusLabel(status: PublicationStatus) {
+  public static getStatusLabel(status: PublicationStatus) {
     if (!status) return ""
 
     switch (status.publicationStatus) {
@@ -51,6 +52,8 @@ export default class RelatedDocumentation {
         return Label.LOCKED
       case PublicationState.DELETING:
         return Label.DELETING
+      case PublicationState.EXTERNAL_HANDOVER_PENDING:
+        return Label.EXTERNAL_HANDOVER_PENDING
       default:
         return ""
     }
@@ -64,7 +67,9 @@ export default class RelatedDocumentation {
         : []),
       ...(this.fileNumber ? [this.fileNumber] : []),
       ...(this.documentType?.label ? [this.documentType.label] : []),
-      ...(this.status ? [this.getStatusLabel(this.status)] : []),
+      ...(this.status
+        ? [RelatedDocumentation.getStatusLabel(this.status)]
+        : []),
     ].join(", ")
   }
 }

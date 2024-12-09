@@ -17,6 +17,12 @@ Requires the all but backend to be running in docker:
 
 - Use the checked in run config in `../.idea/runConfigurations/`. If you open just this `backend`
   folder with IntelliJ, you will need to copy and adjust it.
+- Alternatively:
+  - Install the [EnvFile plugin](https://plugins.jetbrains.com/plugin/7861-envfile)
+  - Add a Run/Debug configuration for Spring Boot
+  - Set the active profile to `local`
+  - Activate EnvFile and also activate the "Experimental integration" checkbox.
+  - Add your `.env` file from project root to the list
 
 **Start backend with VS Code:**
 
@@ -201,8 +207,12 @@ To run a scan locally:
 
 ```bash
 ./gradlew bootBuildImage
+TRIVY_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db" \
+TRIVY_JAVA_DB_REPOSITORY="ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db" \
 trivy image --severity HIGH,CRITICAL ghcr.io/digitalservicebund/ris-backend-service:latest
 ```
+
+Run with `--format json` to get an extended report.
 
 ## License Scanning
 

@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths-ignore:
-      - '**/README.md'
+      - '**/*.md'
   pull_request:
     branches: [ main ]
   schedule:
@@ -33,12 +33,12 @@ jobs:
         run: |
           echo "GRADLE_VERSION=$(sed -n 's/.*gradle-\([0-9]*\(\.[0-9]*\)*\)-.*/\1/p' ./gradle/wrapper/gradle-wrapper.properties)" >> $GITHUB_ENV
       - name: Set up JDK
-        uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
-          java-version: "17.0"
+          java-version: "21.0"
           distribution: "temurin"
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@833b05f3e67d2b356ca3c711ce1e889efdb8d28b
+        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4.2.1
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Run backend tests
@@ -72,15 +72,13 @@ jobs:
         working-directory: ./backend
         run: |
           echo "GRADLE_VERSION=$(sed -n 's/.*gradle-\([0-9]*\(\.[0-9]*\)*\)-.*/\1/p' ./gradle/wrapper/gradle-wrapper.properties)" >> $GITHUB_ENV
-      - name: Validate gradle wrapper
-        uses: gradle/actions/wrapper-validation@833b05f3e67d2b356ca3c711ce1e889efdb8d28b
       - name: Set up JDK
-        uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
-          java-version: "17.0"
+          java-version: "21.0"
           distribution: "temurin"
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@833b05f3e67d2b356ca3c711ce1e889efdb8d28b
+        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4.2.1
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Build backend image
@@ -89,11 +87,15 @@ jobs:
       - name: Run Trivy vulnerability image scanner
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: aquasecurity/trivy-action@d9cd5b1c23aaf8cb31bb09141028215828364bbb
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
         with:
           image-ref: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}:${{ env.CONTAINER_IMAGE_VERSION }}
           format: "sarif"
           output: "trivy-results.sarif"
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
       - name: Check trivy results
         run: |
           if grep -qE 'HIGH|CRITICAL' trivy-results.sarif; then
@@ -118,7 +120,10 @@ jobs:
       - name: Generate cosign vulnerability scan record
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: aquasecurity/trivy-action@d9cd5b1c23aaf8cb31bb09141028215828364bbb
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
         with:
           image-ref: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}:${{ env.CONTAINER_IMAGE_VERSION }}
           format: "cosign-vuln"
@@ -155,9 +160,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
-          java-version: "17.0"
+          java-version: "21.0"
           distribution: "temurin"
           cache: gradle
       - name: Grant execute permission for gradlew
@@ -222,7 +227,10 @@ jobs:
       - name: Run Trivy vulnerability image scanner
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: aquasecurity/trivy-action@d9cd5b1c23aaf8cb31bb09141028215828364bbb
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
         with:
           image-ref: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}/frontend:${{ env.CONTAINER_IMAGE_VERSION }}
           format: "sarif"
@@ -245,7 +253,10 @@ jobs:
       - name: Run Trivy vulnerability file scanner
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: aquasecurity/trivy-action@d9cd5b1c23aaf8cb31bb09141028215828364bbb
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
         with:
           scan-type: "fs"
           scan-ref: "./frontend"
@@ -270,7 +281,10 @@ jobs:
       - name: Generate cosign vulnerability scan record
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: aquasecurity/trivy-action@d9cd5b1c23aaf8cb31bb09141028215828364bbb
+        uses: aquasecurity/trivy-action@18f2510ee396bbf400402947b394f2dd8c87dbb0
+        env:
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
         with:
           image-ref: ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}/frontend:${{ env.CONTAINER_IMAGE_VERSION }}
           format: "cosign-vuln"
@@ -325,7 +339,7 @@ jobs:
       - name: Log into container registry
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        uses: docker/login-action@7ca345011ac4304463197fac0e56eab1bc7e6af0
         with:
           registry: ${{ env.CONTAINER_REGISTRY }}
           username: ${{ github.actor }}
@@ -335,15 +349,9 @@ jobs:
       - name: Install cosign
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: sigstore/cosign-installer@cc23fe1cf04164ea4c208611cf647a013c6f8cc5
+        uses: sigstore/cosign-installer@718228a5f85f61170ad5c3ea6c0e9871cc92f1c5
       - name: Sign the published Docker image
         run: cosign sign --yes ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}:${{ env.CONTAINER_IMAGE_VERSION }}
-      - name: Download cosign vulnerability scan record
-        uses: actions/download-artifact@v4
-        with:
-          name: "vuln-backend.json"
-      - name: Attest vulnerability scan
-        run: cosign attest --yes --replace --predicate vuln-backend.json --type vuln ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}:${{ env.CONTAINER_IMAGE_VERSION }}
       - id: set-version
         run: echo "version=$CONTAINER_IMAGE_VERSION" >> "$GITHUB_OUTPUT"
       - name: Send status to Slack
@@ -379,7 +387,7 @@ jobs:
       - name: Log into container registry
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567
+        uses: docker/login-action@7ca345011ac4304463197fac0e56eab1bc7e6af0
         with:
           registry: ${{ env.CONTAINER_REGISTRY }}
           username: ${{ github.actor }}
@@ -389,15 +397,9 @@ jobs:
       - name: Install cosign
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
-        uses: sigstore/cosign-installer@cc23fe1cf04164ea4c208611cf647a013c6f8cc5
+        uses: sigstore/cosign-installer@718228a5f85f61170ad5c3ea6c0e9871cc92f1c5
       - name: Sign the published Docker image
         run: cosign sign --yes ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}/frontend:${{ env.CONTAINER_IMAGE_VERSION }}
-      - name: Download cosign vulnerability scan record
-        uses: actions/download-artifact@v4
-        with:
-          name: "vuln-frontend.json"
-      - name: Attest vulnerability scan
-        run: cosign attest --yes --replace --predicate vuln-frontend.json --type vuln ${{ env.CONTAINER_REGISTRY }}/${{ env.CONTAINER_IMAGE_NAME }}/frontend:${{ env.CONTAINER_IMAGE_VERSION }}
       - id: set-version
         run: echo "version=$CONTAINER_IMAGE_VERSION" >> "$GITHUB_OUTPUT"
       - name: Send status to Slack
@@ -411,7 +413,9 @@ jobs:
   deploy-staging:
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' }}
-    concurrency: deploy-staging
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: true
     environment: staging
     needs:
       - push-frontend-image-to-registry
@@ -419,7 +423,7 @@ jobs:
     permissions:
       id-token: write # Enable OIDC for gitsign
     steps:
-      - uses: chainguard-dev/actions/setup-gitsign@9d943fc9889a0c0795e3c2bd4b949a9b610ac02e
+      - uses: chainguard-dev/actions/setup-gitsign@94389dc7faf4ef9040df90498419535e1bdcb60e
       - name: Deploy new images
         uses: digitalservicebund/argocd-deploy@4fac1bb67c92ed168f6d9b22f8779ce241a9e412 # v1.0.0
         with:
@@ -431,6 +435,7 @@ jobs:
           app: ris-staging
           argocd_pipeline_password: ${{ secrets.ARGOCD_PIPELINE_PASSWORD }}
           argocd_server: ${{ secrets.ARGOCD_SERVER }}
+          argocd_sync_timeout: 300
       - name: Track deploy
         uses: digitalservicebund/track-deployment@5a2815e150e1268983aac5ca04c8c046ed1b614a # v1.0.0
         with:
@@ -474,25 +479,19 @@ jobs:
 
   e2e-tests:
     if: ${{ github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: true
     needs: [ deploy-staging, prep-playwright-tests ]
-    strategy:
-      fail-fast: false
-      matrix:
-        subproject: [ caselaw, shared ]
-        browser: [ chromium, firefox ]
-        mode: [ e2e ]
-        include:
-          - mode: a11y
-            browser: a11y
-    uses: ./.github/workflows/_playwright-test.yml
-    with:
-      subproject: ${{ matrix.subproject}}
-      browser: ${{ matrix.browser }}
-      mode: ${{ matrix.mode }}
+    # We do not include the matrix directly, so that the concurrency group does not apply to each matrix job individually
+    uses: ./.github/workflows/e2e_matrix.yml
     secrets: inherit
 
   query-performance-tests:
     if: ${{ github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: true
     needs: [ e2e-tests, prep-playwright-tests ]
     uses: ./.github/workflows/_playwright-test.yml
     with:
@@ -602,7 +601,7 @@ jobs:
     permissions:
       id-token: write # Enable OIDC for gitsign
     steps:
-      - uses: chainguard-dev/actions/setup-gitsign@9d943fc9889a0c0795e3c2bd4b949a9b610ac02e
+      - uses: chainguard-dev/actions/setup-gitsign@94389dc7faf4ef9040df90498419535e1bdcb60e
       - name: Deploy new images
         uses: digitalservicebund/argocd-deploy@4fac1bb67c92ed168f6d9b22f8779ce241a9e412 # v1.0.0
         with:
@@ -614,6 +613,7 @@ jobs:
           app: ris-production
           argocd_pipeline_password: ${{ secrets.ARGOCD_PIPELINE_PASSWORD }}
           argocd_server: ${{ secrets.ARGOCD_SERVER }}
+          argocd_sync_timeout: 300
       - name: Track deploy
         uses: digitalservicebund/track-deployment@5a2815e150e1268983aac5ca04c8c046ed1b614a # v1.0.0
         with:
@@ -629,38 +629,21 @@ jobs:
         with:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-  deployment-time-check:
-    runs-on: ubuntu-latest
-    outputs:
-      between-8-and-20: ${{ steps.check-time.outputs.between-8-and-20 }}
-    steps:
-      - id: check-time
-        run: |
-          current_hour=$(TZ="Europe/Berlin" date +'%H')
-          if [ "$current_hour" -ge 8 ] && [ "$current_hour" -lt 20 ]; then
-            echo "between-8-and-20=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "between-8-and-20=false" >> "$GITHUB_OUTPUT"
-          fi
-
   deploy-uat:
     runs-on: ubuntu-latest
     if: |
       github.ref == 'refs/heads/main'
-    # &&
-    # needs.deployment-time-check.outputs.between-8-and-20 == 'false'
     concurrency: deploy-uat
     environment: uat
     needs:
       - push-frontend-image-to-registry
       - push-backend-image-to-registry
       - e2e-tests
-      - deployment-time-check
       - deploy-production
     permissions:
       id-token: write # Enable OIDC for gitsign
     steps:
-      - uses: chainguard-dev/actions/setup-gitsign@9d943fc9889a0c0795e3c2bd4b949a9b610ac02e
+      - uses: chainguard-dev/actions/setup-gitsign@94389dc7faf4ef9040df90498419535e1bdcb60e
       - name: Deploy new images
         uses: digitalservicebund/argocd-deploy@4fac1bb67c92ed168f6d9b22f8779ce241a9e412 # v1.0.0
         with:
@@ -672,6 +655,7 @@ jobs:
           app: ris-uat
           argocd_pipeline_password: ${{ secrets.ARGOCD_PIPELINE_PASSWORD }}
           argocd_server: ${{ secrets.ARGOCD_SERVER }}
+          argocd_sync_timeout: 300
       - name: Send status to Slack
         # Third-party action, pin to commit SHA!
         # See https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions
@@ -713,13 +697,13 @@ jobs:
         run: |
           echo "GRADLE_VERSION=$(sed -n 's/.*gradle-\([0-9]*\(\.[0-9]*\)*\)-.*/\1/p' ./gradle/wrapper/gradle-wrapper.properties)" >> $GITHUB_ENV
       - name: Set up JDK
-        uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
-          java-version: "17.0"
+          java-version: "21.0"
           distribution: "temurin"
           cache: gradle
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@833b05f3e67d2b356ca3c711ce1e889efdb8d28b
+        uses: gradle/actions/setup-gradle@cc4fc85e6b35bafd578d5ffbc76a5518407e1af0 # v4.2.1
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
       - name: Migrate database for Entity–relationship model
@@ -749,9 +733,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK
-        uses: actions/setup-java@6a0805fcefea3d4657a47ac4c165951e33482018
+        uses: actions/setup-java@8df1039502a15bceb9433410b1a100fbe190c53b
         with:
-          java-version: "17.0"
+          java-version: "21.0"
           distribution: "temurin"
           cache: gradle
       - name: Grant execute permission for gradlew

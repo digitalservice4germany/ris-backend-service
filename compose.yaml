@@ -1,6 +1,27 @@
 services:
+  initialization:
+    image: ghcr.io/digitalservicebund/ris-data-migration:f09e86f8f5839feab9b6e790b00abe823d85fb32
+    depends_on:
+      - postgres14
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - RIS_MIGRATION_RUNNER=development
+      - RIS_MIGRATION_CLI_MODE=false
+      - RIS_MIGRATION_DB_HOST=host.docker.internal
+      - RIS_MIGRATION_DB_PORT=5432
+      - RIS_MIGRATION_DB_NAME=neuris
+      - RIS_MIGRATION_DB_USER=test
+      - RIS_MIGRATION_DB_PASSWORD=test
+      - RIS_MIGRATION_DB_SCHEMA=incremental_migration
+      - RIS_MIGRATION_S3_ENDPOINT=https://obs.eu-de.otc.t-systems.com
+      - RIS_MIGRATION_S3_ACCESS_KEY=${AWS_ACCESS_KEY_ID} # Use the OTC S3 access key from 1Password. See migration_image.md for details.
+      - RIS_MIGRATION_S3_SECRET=${AWS_SECRET_ACCESS_KEY}  # Use the OTC S3 access key from 1Password. See migration_image.md for details.
+      - RIS_MIGRATION_S3_BUCKET=${AWS_BUCKET_NAME} # Use the OTC S3 access key from 1Password. See migration_image.md  for details.
+      - RIS_MIGRATION_S3_DATA_VERSION=2024-09
+      - RIS_MIGRATION_S3_FIRST_DAILY_VERSION=2024-08-31
+
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.2
     extra_hosts:
       - localhost:host-gateway
     container_name: traefik
@@ -50,9 +71,10 @@ services:
       - JAVA_OPTS=-XX:MaxDirectMemorySize=100M
     command: sh run.sh _start
     depends_on:
-      - traefik
-      - postgres14
-      - redis
+      traefik: { condition: service_healthy }
+      postgres14: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      initialization: { condition: service_completed_successfully }
     ports:
       - 8080:8080
     healthcheck:
@@ -124,14 +146,14 @@ services:
         psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;'
         wait
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U test -d neuris"]
+      test: [ "CMD-SHELL", "pg_isready -U test -d neuris" ]
       interval: 5s
       retries: 3
       start_period: 5s
       timeout: 3s
 
   redis:
-    image: cgr.dev/chainguard/redis@sha256:c38e074454281d5409d6941dfa8663908a6d8458df014a0948b21cd8c5492834
+    image: cgr.dev/chainguard/redis@sha256:d6037316ed0ac4c89a5c2aa931b138d14ac38da380f72433ec0c183875b71e54
     extra_hosts:
       - localhost:host-gateway
     container_name: redis

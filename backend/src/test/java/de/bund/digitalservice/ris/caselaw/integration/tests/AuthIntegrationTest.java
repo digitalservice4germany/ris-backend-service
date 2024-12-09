@@ -1,17 +1,24 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doReturn;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
 import de.bund.digitalservice.ris.caselaw.adapter.AuthController;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.KeycloakUserService;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.User;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroup;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -28,7 +35,7 @@ import org.testcontainers.junit.jupiter.Container;
       KeycloakUserService.class,
       SecurityConfig.class,
       TestConfig.class,
-      AuthService.class
+      OAuthService.class
     },
     controllers = {AuthController.class})
 class AuthIntegrationTest {
@@ -47,7 +54,25 @@ class AuthIntegrationTest {
 
   @Autowired private RisWebTestClient risWebTestClient;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
-  @MockBean DocumentUnitService documentUnitService;
+  @MockBean DocumentationUnitService documentationUnitService;
+  @MockBean UserGroupService userGroupService;
+  @MockBean private ProcedureService procedureService;
+
+  @BeforeEach
+  public void beforeEach() {
+    doReturn(
+            List.of(
+                UserGroup.builder()
+                    .docOffice(DocumentationOffice.builder().abbreviation("CC-RIS").build())
+                    .userGroupPathName("/CC-RIS")
+                    .build(),
+                UserGroup.builder()
+                    .docOffice(DocumentationOffice.builder().abbreviation("DS").build())
+                    .userGroupPathName("/DS")
+                    .build()))
+        .when(userGroupService)
+        .getAllUserGroups();
+  }
 
   @Test
   void testGetUser() {

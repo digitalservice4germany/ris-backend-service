@@ -1,12 +1,9 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Run backend" type="Application" factoryName="Application">
-    <option name="ALTERNATIVE_JRE_PATH" value="17" />
-    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
-    <envs>
-      <env name="SPRING_PROFILES_ACTIVE" value="local" />
-    </envs>
-    <option name="MAIN_CLASS_NAME" value="de.bund.digitalservice.ris.Application" />
+  <configuration default="false" name="Backend" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ACTIVE_PROFILES" value="local" />
+    <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
     <module name="de.bund.digitalservice.ris-backend-service.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="de.bund.digitalservice.ris.Application" />
     <extension name="net.ashald.envfile">
       <option name="IS_ENABLED" value="true" />
       <option name="IS_SUBST" value="false" />

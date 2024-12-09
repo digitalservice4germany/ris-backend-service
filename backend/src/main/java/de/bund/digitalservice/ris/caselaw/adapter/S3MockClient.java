@@ -57,13 +57,15 @@ public class S3MockClient implements S3Client {
 
     String fileName = putObjectRequest.key();
 
-    try (FileOutputStream fos =
-            new FileOutputStream(localStorageDirectory.resolve(fileName).toFile(), false);
+    File file = localStorageDirectory.resolve(fileName).toFile();
+    file.getParentFile().mkdirs();
+    try (FileOutputStream fos = new FileOutputStream(file, false);
         InputStream inputStream = requestBody.contentStreamProvider().newStream()) {
 
       byte[] content = new byte[1024];
-      while (inputStream.read(content) != -1) {
-        fos.write(content);
+      int len = -1;
+      while ((len = inputStream.read(content)) != -1) {
+        fos.write(content, 0, len);
       }
     } catch (IOException ex) {
       LOGGER.info("Couldn't write file: {}", fileName, ex);

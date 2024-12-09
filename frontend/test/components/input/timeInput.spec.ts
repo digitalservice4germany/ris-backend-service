@@ -17,6 +17,7 @@ function renderComponent(
     modelValue,
     "onUpdate:modelValue":
       props?.["onUpdate:modelValue"] ?? ((value) => (modelValue = value ?? "")),
+    disabled: props?.disabled ?? false,
   }
 
   return render(TimeInput, { props: effectiveProps, attrs })
@@ -76,6 +77,24 @@ describe("Time Input", () => {
     renderComponent(undefined, { readOnly: false })
     const input = screen.getByRole("textbox")
     expect(input).not.toHaveAttribute("readonly")
+  })
+
+  it("renders a disabled input", () => {
+    renderComponent({ disabled: true })
+    const input = screen.getByRole("textbox")
+    expect(input).toBeDisabled()
+  })
+
+  it("renders an enabled input", () => {
+    renderComponent({ disabled: false })
+    const input = screen.getByRole("textbox")
+    expect(input).toBeEnabled()
+  })
+
+  it("renders an enabled input by default", () => {
+    renderComponent()
+    const input = screen.getByRole("textbox")
+    expect(input).toBeEnabled()
   })
 
   it("renders the regular variant by default", () => {

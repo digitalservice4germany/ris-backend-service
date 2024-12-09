@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import dayjs from "dayjs"
 import customParseFormat from "dayjs/plugin/customParseFormat"
-import { vMaska, MaskaDetail } from "maska"
-import { computed, ref, watch } from "vue"
+import { Mask } from "maska"
+import { vMaska } from "maska/vue"
+import { computed, onMounted, ref, watch } from "vue"
 import TextInput from "@/components/input/TextInput.vue"
 import { ValidationError } from "@/components/input/types"
 
@@ -72,12 +73,12 @@ function onlyAllowNumbers(input: string | undefined): string | undefined {
 
 dayjs.extend(customParseFormat)
 
-// This will be true if maska emits that the mask is completed
-const inputCompleted = ref<boolean>(false)
-
-function checkInputCompleted(event: CustomEvent<MaskaDetail>) {
-  inputCompleted.value = event.detail.completed
-}
+const mask = "####"
+const inputCompleted = computed(
+  () =>
+    localModelValue.value &&
+    new Mask({ mask }).completed(localModelValue.value),
+)
 
 const isValid = computed(() => validateYear(localModelValue.value))
 
@@ -102,6 +103,10 @@ watch(shouldShowValidationState, (is) => {
   if (is) validateInput()
 })
 
+onMounted(() => {
+  if (localModelValue.value) validateInput()
+})
+
 // Valid years = 1000 - 9999
 function validateYear(input: string | undefined): boolean {
   if (!input || input.length < 4) return false
@@ -114,9 +119,8 @@ function validateYear(input: string | undefined): boolean {
 <template>
   <TextInput
     :id="id"
-    v-maska
+    v-maska="mask"
     :aria-label="($attrs.ariaLabel as string) ?? ''"
-    data-maska="####"
     :has-error="hasError || (shouldShowValidationState && !isValid)"
     maxlength="4"
     :model-value="localModelValue"
@@ -124,7 +128,6 @@ function validateYear(input: string | undefined): boolean {
     type="text"
     @blur="userHasFinished = true"
     @keydown.delete="backspaceDelete"
-    @maska="checkInputCompleted"
     @update:model-value="emitModelValue"
   />
 </template>

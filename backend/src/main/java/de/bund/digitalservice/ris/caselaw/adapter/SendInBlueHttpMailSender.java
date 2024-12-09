@@ -1,11 +1,12 @@
 package de.bund.digitalservice.ris.caselaw.adapter;
 
-import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitHandoverException;
+import de.bund.digitalservice.ris.caselaw.domain.HandoverException;
 import de.bund.digitalservice.ris.caselaw.domain.HttpMailSender;
 import de.bund.digitalservice.ris.caselaw.domain.MailAttachment;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 import sendinblue.ApiClient;
 import sendinblue.ApiException;
 import sendinblue.Configuration;
@@ -20,6 +21,7 @@ import sibModel.SendSmtpEmailTo;
  * Implementation of the {@link HttpMailSender} interface that sends emails using the SendInBlue
  * Service API.
  */
+@Slf4j
 public class SendInBlueHttpMailSender implements HttpMailSender {
   private final String apiKey;
 
@@ -74,13 +76,19 @@ public class SendInBlueHttpMailSender implements HttpMailSender {
     sendSmtpEmail.setTo(toList);
     sendSmtpEmail.setTextContent(content);
     sendSmtpEmail.setSubject(subject);
-    sendSmtpEmail.setAttachment(attachmentList);
     sendSmtpEmail.setTags(tags);
+
+    // Set attachments only if there are any as the api doesn't allow an empty list
+    if (!attachmentList.isEmpty()) {
+      sendSmtpEmail.setAttachment(attachmentList);
+    }
 
     try {
       api.sendTransacEmail(sendSmtpEmail);
     } catch (ApiException e) {
-      throw new DocumentationUnitHandoverException("Couldn't send email.", e);
+      log.error(
+          "SendInBlue/Brevo API error when sending mail, error body: {}", e.getResponseBody());
+      throw new HandoverException("Couldn't send email.", e);
     }
   }
 }

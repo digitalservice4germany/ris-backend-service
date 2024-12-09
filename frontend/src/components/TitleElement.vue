@@ -1,5 +1,5 @@
 <template>
-  <h1 class="ds-heading-02-reg mb-[1rem]" data-testid="title">
+  <h1 class="ds-subhead" data-testid="title">
     <slot></slot>
   </h1>
 </template>

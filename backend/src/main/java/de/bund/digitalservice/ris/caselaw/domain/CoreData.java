@@ -26,6 +26,7 @@ public record CoreData(
     String legalEffect,
     List<String> inputTypes,
     DocumentationOffice documentationOffice,
+    DocumentationOffice creatingDocOffice,
     String region,
     @UniqueElements List<String> leadingDecisionNormReferences,
     List<@PastOrPresent Year> yearsOfDispute) {}

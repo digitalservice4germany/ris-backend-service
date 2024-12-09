@@ -10,6 +10,8 @@ import de.bund.digitalservice.ris.caselaw.domain.XmlExporter;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerFactory;
+import org.docx4j.org.apache.xalan.processor.TransformerFactoryImpl;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,6 +44,17 @@ public class ConverterConfig {
     return factory;
   }
 
+  @Bean(name = "saxon")
+  public TransformerFactory transformerFactorySaxon() {
+    return new net.sf.saxon.TransformerFactoryImpl();
+  }
+
+  @Bean
+  @Primary
+  public TransformerFactory transformerFactory() {
+    return new TransformerFactoryImpl();
+  }
+
   @Bean
   @Primary
   public ObjectMapper objectMapper() {
@@ -54,7 +67,7 @@ public class ConverterConfig {
 
   @Bean
   public XmlExporter jurisXmlExporter() {
-    return new JurisXmlExporterWrapper(objectMapper());
+    return new JurisXmlExporterWrapper(objectMapper(), transformerFactory());
   }
 
   // @Bean

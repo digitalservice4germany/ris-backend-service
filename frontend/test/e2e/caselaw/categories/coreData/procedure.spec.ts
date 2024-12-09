@@ -3,6 +3,7 @@ import {
   deleteDocumentUnit,
   deleteProcedure,
   navigateToCategories,
+  navigateToProcedures,
   save,
   waitForInputValue,
 } from "~/e2e/caselaw/e2e-utils"
@@ -14,9 +15,9 @@ test.describe("procedure", () => {
   const testPrefix = "test_" + generateString({ length: 10 })
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage()
-    await page.goto(`/caselaw/procedures?q=${testPrefix}`)
-    const listItems = await page.getByLabel("Vorgang Listenelement").all()
-    expect(listItems).toHaveLength(0)
+    await navigateToProcedures(page, testPrefix)
+    const listItems = page.getByLabel("Vorgang Listenelement")
+    await expect(listItems).toHaveCount(0)
   })
   test("add new procedure in coreData", async ({
     page,
@@ -48,8 +49,9 @@ test.describe("procedure", () => {
       }).toPass()
 
       await save(page)
+      await page.reload()
 
-      await page.getByLabel("Vorgangshistorie anzeigen").click()
+      // If deviating data is available, it is automatically expanded
       await expect(page.getByText("Vorgangshistorie")).toBeVisible()
       await expect(
         page
@@ -99,8 +101,7 @@ test.describe("procedure", () => {
   })
   test.afterAll(async ({ browser }) => {
     const page = await browser.newPage()
-    await page.goto(`/caselaw/procedures?q=${testPrefix}`)
-    await expect(page.getByLabel("Nach Vorgängen suchen")).toBeVisible()
+    await navigateToProcedures(page, testPrefix)
     const listItems = await page.getByLabel("Vorgang Listenelement").all()
 
     for (const listItem of listItems) {
@@ -116,7 +117,7 @@ test.describe("procedure", () => {
     }
 
     await page.reload()
-    const listItemsAfterDeletion = await page.getByRole("listitem").all()
-    expect(listItemsAfterDeletion).toHaveLength(0)
+    const listItemsAfterDeletion = page.getByRole("listitem")
+    await expect(listItemsAfterDeletion).toHaveCount(0)
   })
 })

@@ -35,12 +35,12 @@ const navigation = computed<MenuItem[]>(() =>
 
 // Redirect to the first page in the kitchensink if the user navigates to the
 // kitchensink index.
-watchEffect(() => {
+watchEffect(async () => {
   if (
     router.currentRoute.value.name === "kitchensink" &&
     navigation.value.length > 0
   ) {
-    router.replace(navigation.value[0].route)
+    await router.replace(navigation.value[0].route)
   }
 })
 

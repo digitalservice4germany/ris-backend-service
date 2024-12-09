@@ -3,9 +3,9 @@ package de.bund.digitalservice.ris.caselaw.integration.tests;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.NormAbbreviationController;
 import de.bund.digitalservice.ris.caselaw.adapter.NormAbbreviationService;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentCategoryRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentTypeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseNormAbbreviationRepository;
@@ -18,8 +18,9 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.RegionDTO;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.NormAbbreviation;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.NormAbbreviation.NormAbbreviationBuilder;
@@ -35,6 +36,8 @@ import java.util.Objects;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
@@ -51,7 +54,7 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
       FlywayConfig.class,
       PostgresNormAbbreviationRepositoryImpl.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class
     },
     controllers = {NormAbbreviationController.class})
@@ -75,7 +78,7 @@ class NormAbbreviationIntegrationTest {
           .documentId(2345L)
           .documentNumber("document number 2")
           .officialLetterAbbreviation("official letter abbreviation 2")
-          .officialLongTitle("official long title 2")
+          .officialLongTitle("I can be searched for 2")
           .officialShortTitle("official short title 2")
           .source("T")
           .build();
@@ -86,7 +89,7 @@ class NormAbbreviationIntegrationTest {
           .documentId(3456L)
           .documentNumber("document number 3")
           .officialLetterAbbreviation("official letter abbreviation 3")
-          .officialLongTitle("official long title 3")
+          .officialLongTitle("I can be searched for 3")
           .officialShortTitle("official short title 3")
           .source("U")
           .build();
@@ -97,7 +100,7 @@ class NormAbbreviationIntegrationTest {
           .documentId(4567L)
           .documentNumber("document number 4")
           .officialLetterAbbreviation("official letter abbreviation 4")
-          .officialLongTitle("official long title 4")
+          .officialLongTitle("I can be searched for 4")
           .officialShortTitle("official short title 4")
           .source("V")
           .build();
@@ -192,10 +195,11 @@ class NormAbbreviationIntegrationTest {
   @Autowired private DatabaseRegionRepository regionRepository;
 
   @MockBean UserService userService;
-  @MockBean private DocumentUnitService documentUnitService;
+  @MockBean private DocumentationUnitService documentationUnitService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private S3AsyncClient s3AsyncClient;
   @MockBean private MailService mailService;
+  @MockBean private ProcedureService procedureService;
 
   @AfterEach
   void cleanUp() {
@@ -229,9 +233,7 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation.class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation);
-            });
+            response -> assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation));
   }
 
   @Test
@@ -256,9 +258,7 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation.class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation);
-            });
+            response -> assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation));
   }
 
   @Test
@@ -283,9 +283,7 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation.class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation);
-            });
+            response -> assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation));
   }
 
   @Test
@@ -305,9 +303,7 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation.class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation);
-            });
+            response -> assertThat(response.getResponseBody()).isEqualTo(expectedNormAbbreviation));
   }
 
   @Test
@@ -337,10 +333,9 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation.class)
         .consumeWith(
-            response -> {
-              assertThat(Objects.requireNonNull(response.getResponseBody()).documentTypes())
-                  .containsAll(expectedNormAbbreviation.documentTypes());
-            });
+            response ->
+                assertThat(Objects.requireNonNull(response.getResponseBody()).documentTypes())
+                    .containsAll(expectedNormAbbreviation.documentTypes()));
   }
 
   @Test
@@ -360,19 +355,18 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation[].class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody())
-                  .extracting("id")
-                  .containsExactly(abbreviation2.getId());
-            });
+            response ->
+                assertThat(response.getResponseBody())
+                    .extracting("id")
+                    .containsExactly(abbreviation2.getId()));
   }
 
-  @Test
-  void testGetNormAbbreviationByPartialSearchQuery() {
+  @ParameterizedTest
+  @ValueSource(strings = {"search query", "can be searched fo"})
+  void testGetByPartialSearchQuery(String query) {
     generateOtherLookupValues();
     generateAbbreviations();
     repository.refreshMaterializedViews();
-    String query = "search query";
 
     risWebTestClient
         .withDefaultLogin()
@@ -383,12 +377,11 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation[].class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody())
-                  .extracting("id")
-                  .containsExactly(
-                      abbreviation2.getId(), abbreviation4.getId(), abbreviation3.getId());
-            });
+            response ->
+                assertThat(response.getResponseBody())
+                    .extracting("id")
+                    .containsExactlyInAnyOrder(
+                        abbreviation2.getId(), abbreviation4.getId(), abbreviation3.getId()));
   }
 
   @Test
@@ -454,16 +447,15 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation[].class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody())
-                  .extracting("id")
-                  .containsExactly(
-                      abbreviation8.getId(),
-                      abbreviation9.getId(),
-                      abbreviation10.getId(),
-                      abbreviation11.getId(),
-                      abbreviation12.getId());
-            });
+            response ->
+                assertThat(response.getResponseBody())
+                    .extracting("id")
+                    .containsExactly(
+                        abbreviation8.getId(),
+                        abbreviation9.getId(),
+                        abbreviation10.getId(),
+                        abbreviation11.getId(),
+                        abbreviation12.getId()));
   }
 
   @Test
@@ -483,11 +475,10 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation[].class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody())
-                  .extracting("id")
-                  .containsExactly(abbreviationWithSpecialCharacters.getId());
-            });
+            response ->
+                assertThat(response.getResponseBody())
+                    .extracting("id")
+                    .containsExactly(abbreviationWithSpecialCharacters.getId()));
   }
 
   @Test
@@ -507,12 +498,11 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation[].class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody())
-                  .extracting("id")
-                  .containsExactly(
-                      abbreviation2.getId(), abbreviation4.getId(), abbreviation3.getId());
-            });
+            response ->
+                assertThat(response.getResponseBody())
+                    .extracting("id")
+                    .containsExactly(
+                        abbreviation2.getId(), abbreviation4.getId(), abbreviation3.getId()));
 
     query = "letter abbreviation query";
 
@@ -525,12 +515,11 @@ class NormAbbreviationIntegrationTest {
         .isOk()
         .expectBody(NormAbbreviation[].class)
         .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody())
-                  .extracting("id")
-                  .containsExactlyInAnyOrder(
-                      abbreviation3.getId(), abbreviation2.getId(), abbreviation4.getId());
-            });
+            response ->
+                assertThat(response.getResponseBody())
+                    .extracting("id")
+                    .containsExactlyInAnyOrder(
+                        abbreviation3.getId(), abbreviation2.getId(), abbreviation4.getId()));
   }
 
   private void generateOtherLookupValues() {

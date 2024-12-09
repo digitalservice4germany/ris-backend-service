@@ -1,6 +1,6 @@
 package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 
-import de.bund.digitalservice.ris.caselaw.domain.docx.NumberingList.DocumentUnitNumberingListNumberFormat;
+import de.bund.digitalservice.ris.caselaw.domain.docx.NumberingList.DocumentationUnitNumberingListNumberFormat;
 import de.bund.digitalservice.ris.caselaw.domain.docx.NumberingListEntryIndex;
 import lombok.extern.slf4j.Slf4j;
 import org.docx4j.model.listnumbering.ListLevel;
@@ -28,24 +28,24 @@ public class NumberingListEntryIndexGenerator {
         .build();
   }
 
-  private static DocumentUnitNumberingListNumberFormat numberFormat(ListLevel listLevel) {
+  private static DocumentationUnitNumberingListNumberFormat numberFormat(ListLevel listLevel) {
     if (listLevel == null || listLevel.getNumFmt() == null) {
-      return DocumentUnitNumberingListNumberFormat.BULLET;
+      return DocumentationUnitNumberingListNumberFormat.BULLET;
     }
 
-    DocumentUnitNumberingListNumberFormat numberFormat;
+    DocumentationUnitNumberingListNumberFormat numberFormat;
     switch (listLevel.getNumFmt()) {
-      case BULLET -> numberFormat = DocumentUnitNumberingListNumberFormat.BULLET;
-      case DECIMAL -> numberFormat = DocumentUnitNumberingListNumberFormat.DECIMAL;
-      case UPPER_LETTER -> numberFormat = DocumentUnitNumberingListNumberFormat.UPPER_LETTER;
-      case LOWER_LETTER -> numberFormat = DocumentUnitNumberingListNumberFormat.LOWER_LETTER;
-      case UPPER_ROMAN -> numberFormat = DocumentUnitNumberingListNumberFormat.UPPER_ROMAN;
-      case LOWER_ROMAN -> numberFormat = DocumentUnitNumberingListNumberFormat.LOWER_ROMAN;
+      case BULLET -> numberFormat = DocumentationUnitNumberingListNumberFormat.BULLET;
+      case DECIMAL -> numberFormat = DocumentationUnitNumberingListNumberFormat.DECIMAL;
+      case UPPER_LETTER -> numberFormat = DocumentationUnitNumberingListNumberFormat.UPPER_LETTER;
+      case LOWER_LETTER -> numberFormat = DocumentationUnitNumberingListNumberFormat.LOWER_LETTER;
+      case UPPER_ROMAN -> numberFormat = DocumentationUnitNumberingListNumberFormat.UPPER_ROMAN;
+      case LOWER_ROMAN -> numberFormat = DocumentationUnitNumberingListNumberFormat.LOWER_ROMAN;
       default -> {
         log.error(
             "not implemented number format ({}) in list. use default bullet list",
             listLevel.getNumFmt());
-        numberFormat = DocumentUnitNumberingListNumberFormat.BULLET;
+        numberFormat = DocumentationUnitNumberingListNumberFormat.BULLET;
       }
     }
 

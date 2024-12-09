@@ -10,6 +10,7 @@ lefthook-local.yml
 *.iws
 *.iml
 *.ipr
+/.idea/runConfigurations/
 
 ### VS Code ###
 **/.vscode/*.code-workspace
@@ -28,3 +29,4 @@ c4-language-server.log
 doc/structurizr
 test/e2e/shared/.auth/user.json
 test/e2e/shared/.auth/user_bgh.json
+test/e2e/shared/.auth/user_external.json

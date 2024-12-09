@@ -4,9 +4,15 @@ import java.util.List;
 import java.util.UUID;
 
 public interface MailService {
-  HandoverMail handOver(DocumentUnit documentUnit, String receiverAddress, String issuerAddress);
+  HandoverMail handOver(
+      DocumentationUnit documentationUnit, String receiverAddress, String issuerAddress);
 
-  List<HandoverMail> getHandoverResult(UUID documentUnitUuid);
+  HandoverMail handOver(
+      LegalPeriodicalEdition edition, String receiverAddress, String issuerAddress);
 
-  XmlTransformationResult getXmlPreview(DocumentUnit documentUnit);
+  List<HandoverMail> getHandoverResult(UUID entityId, HandoverEntityType entityType);
+
+  XmlTransformationResult getXmlPreview(DocumentationUnit documentationUnit);
+
+  List<XmlTransformationResult> getXmlPreview(LegalPeriodicalEdition edition);
 }

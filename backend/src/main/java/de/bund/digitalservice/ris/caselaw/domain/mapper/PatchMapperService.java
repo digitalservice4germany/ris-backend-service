@@ -1,7 +1,7 @@
 package de.bund.digitalservice.ris.caselaw.domain.mapper;
 
 import com.gravity9.jsonpatch.JsonPatch;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.RisJsonPatch;
 import java.util.UUID;
 
@@ -33,7 +33,10 @@ public interface PatchMapperService {
    * @return extended JsonPatch {@link RisJsonPatch} with version information and error paths
    */
   RisJsonPatch handlePatchForSamePath(
-      DocumentUnit existingDocumentationUnit, JsonPatch patch1, JsonPatch patch2, JsonPatch patch3);
+      DocumentationUnit existingDocumentationUnit,
+      JsonPatch patch1,
+      JsonPatch patch2,
+      JsonPatch patch3);
 
   /**
    * Save the patch for the new version. Diff of the updated documentation unit to the existing
@@ -53,7 +56,8 @@ public interface PatchMapperService {
    * @param existingDocumentationUnit existing documentation unit
    * @return result of the existing documentation and the applied patch
    */
-  DocumentUnit applyPatchToEntity(JsonPatch patch, DocumentUnit existingDocumentationUnit);
+  DocumentationUnit applyPatchToEntity(
+      JsonPatch patch, DocumentationUnit existingDocumentationUnit);
 
   /**
    * Generate a patch between the two documentation units.
@@ -62,7 +66,7 @@ public interface PatchMapperService {
    * @param updated new documentation unit
    * @return patch with the diff between both values
    */
-  JsonPatch getDiffPatch(DocumentUnit existed, DocumentUnit updated);
+  JsonPatch getDiffPatch(DocumentationUnit existed, DocumentationUnit updated);
 
   /**
    * Generate a patch without operation on the same path
@@ -72,8 +76,6 @@ public interface PatchMapperService {
    * @return new patch without operation on the same path
    */
   JsonPatch removePatchForSamePath(JsonPatch patch1, JsonPatch patch2);
-
-  RisJsonPatch removeExistPatches(RisJsonPatch toFrontend, JsonPatch patch);
 
   JsonPatch addUpdatePatch(JsonPatch toUpdate, JsonPatch toSaveJsonPatch);
 }

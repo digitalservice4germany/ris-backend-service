@@ -54,7 +54,7 @@ async function baseHttp<T>(
   try {
     const response = await axiosInstance.request({
       method: method,
-      url: `/api/v1/${url}`,
+      url: `${API_PREFIX}${url}`,
       validateStatus: () => true,
       data,
       ...options,
@@ -126,3 +126,4 @@ export type ServiceResponse<T> = {
 
 export const axiosInstance = axios.create()
 export default httpClient
+export const API_PREFIX = `/api/v1/`

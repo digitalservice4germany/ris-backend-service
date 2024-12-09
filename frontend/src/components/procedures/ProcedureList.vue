@@ -1,38 +1,73 @@
 <script lang="ts" setup>
+import { debouncedWatch } from "@vueuse/core"
+import { useRouteQuery } from "@vueuse/router"
 import dayjs from "dayjs"
-import { ref, onMounted, watch, computed } from "vue"
+import { computed, onBeforeMount, ref, watch } from "vue"
 import ProcedureDetail from "./ProcedureDetail.vue"
+import { InfoStatus } from "@/components/enumInfoStatus"
 import ExpandableContent from "@/components/ExpandableContent.vue"
+import InfoModal from "@/components/InfoModal.vue"
+import DropdownInput from "@/components/input/DropdownInput.vue"
 import InputField from "@/components/input/InputField.vue"
 import TextInput from "@/components/input/TextInput.vue"
-import Pagination, { Page } from "@/components/Pagination.vue"
-import useQuery, { Query } from "@/composables/useQueryFromRoute"
+import { DropdownItem } from "@/components/input/types"
+import LoadingSpinner from "@/components/LoadingSpinner.vue"
+import Pagination from "@/components/Pagination.vue"
+import { useInternalUser } from "@/composables/useInternalUser"
 import { Procedure } from "@/domain/documentUnit"
 import DocumentUnitListEntry from "@/domain/documentUnitListEntry"
+import { UserGroup } from "@/domain/userGroup"
 import documentationUnitService from "@/services/documentUnitService"
+import { ResponseError, ServiceResponse } from "@/services/httpClient"
 import service from "@/services/procedureService"
+import userGroupsService from "@/services/userGroupsService"
 import IconBaselineDescription from "~icons/ic/baseline-description"
 import IconExpandLess from "~icons/ic/baseline-expand-less"
 import IconExpandMore from "~icons/ic/baseline-expand-more"
 import IconFolderOpen from "~icons/material-symbols/folder-open"
 
 const itemsPerPage = 10
-const currentPage = ref<Page<Procedure>>()
-const procedures = computed(() => currentPage.value?.content)
+const currentPage = ref(0)
 const currentlyExpanded = ref<number[]>([])
-const { getQueryFromRoute, pushQueryToRoute, route } = useQuery<"q">()
-const query = ref(getQueryFromRoute())
-const responseError = ref()
+
+const filter = useRouteQuery<string>("q")
+const debouncedFilter = ref(filter.value)
+
+const userGroups = ref<UserGroup[]>([])
+const isInternalUser = useInternalUser()
+const assignError = ref<ResponseError>()
+const docUnitsForProcedure = ref<{
+  [procedureId: string]: DocumentUnitListEntry[]
+}>({})
+
+const {
+  data: procedurePage,
+  error: responseError,
+  isFetching: isFetchingProcedures,
+  abort: abortFetchingProcedures,
+  canAbort: canAbortFetchingProcedures,
+  execute: fetchProcedures,
+} = service.get(itemsPerPage, currentPage, debouncedFilter)
+const procedures = computed(() => procedurePage.value?.content)
+
+async function updateProcedures() {
+  if (canAbortFetchingProcedures.value) {
+    // If another request is still running, we cancel it.
+    abortFetchingProcedures()
+  }
+
+  await fetchProcedures()
+  // When fetching new procedures, we reset the currently expanded procedures
+  currentlyExpanded.value = []
+}
 
 /**
- * Loads all procedures
- * @param {number} page - page to be updated
- * @param {Query<string>} queries - parameters from route to filter search results
+ * Get all external user groups for the current user and documentation office.
  */
-async function updateProcedures(page: number, queries?: Query<string>) {
-  const response = await service.get(itemsPerPage, page, queries?.q)
+async function getUserGroups() {
+  const response = await userGroupsService.get()
   if (response.data) {
-    currentPage.value = response.data
+    userGroups.value = response.data
   }
 }
 
@@ -43,9 +78,9 @@ async function loadDocumentUnits(loadingProcedure: Procedure) {
   if (responseError.value) {
     responseError.value = undefined
   }
-  if (!currentPage.value?.content) return
-  if (loadingProcedure.documentUnitCount == 0) return
-  if (loadingProcedure.documentUnits) return
+  if (!procedurePage.value?.content) return
+  if (loadingProcedure.documentationUnitCount == 0) return
+  if (!loadingProcedure.id) return
 
   const response = await service.getDocumentUnits(loadingProcedure.id)
 
@@ -54,12 +89,7 @@ async function loadDocumentUnits(loadingProcedure: Procedure) {
     return
   }
 
-  const procedureIndex = currentPage.value.content.findIndex(
-    (procedure) => procedure.label == loadingProcedure.label,
-  )
-  if (procedureIndex > -1) {
-    currentPage.value.content[procedureIndex].documentUnits = response.data
-  }
+  docUnitsForProcedure.value[loadingProcedure.id] = response.data
 }
 
 /**
@@ -82,6 +112,28 @@ async function handleIsExpanded(
   }
 }
 
+/**
+ * Handles a change in the {@link DropdownInput}.
+ * When the user selected an option with a procedureId and a userGroupId
+ * the assign api is called.
+ * When the user selected an option which contains only the procedureId the unassign api is called.
+ **/
+async function handleAssignUserGroup(
+  procedureId: string | undefined,
+  userGroupId: string | undefined,
+) {
+  let response: ServiceResponse<unknown> | undefined
+  if (procedureId && userGroupId) {
+    response = await service.assignUserGroup(procedureId, userGroupId)
+  } else if (procedureId) {
+    response = await service.unassignUserGroup(procedureId)
+  }
+  if (response?.error) {
+    assignError.value = response.error
+    alert(response.error.title)
+  }
+}
+
 async function handleDeleteDocumentationUnit(
   deletedDocumentationUnit: DocumentUnitListEntry,
   updatedProcedure: Procedure,
@@ -91,95 +143,105 @@ async function handleDeleteDocumentationUnit(
   )
   if (!error) {
     const owningProcedure =
-      currentPage.value!.content[
-        currentPage.value!.content.indexOf(updatedProcedure)
-      ]
+      procedures.value?.[procedures.value?.indexOf(updatedProcedure)]
 
-    owningProcedure.documentUnitCount -= 1
+    if (owningProcedure) {
+      owningProcedure.documentationUnitCount -= 1
 
-    owningProcedure.documentUnits = updatedProcedure.documentUnits?.filter(
-      (documentationUnit) =>
-        documentationUnit.uuid != deletedDocumentationUnit.uuid,
-    )
+      docUnitsForProcedure.value[updatedProcedure.id!] =
+        docUnitsForProcedure.value[updatedProcedure.id!].filter(
+          (documentationUnit) =>
+            documentationUnit.uuid != deletedDocumentationUnit.uuid,
+        )
+    }
   }
 }
 
 /**
- * Sets a timeout before pushing the search query to the route,
- * in order to only change the url params when the user input pauses.
+ * Transforms a pathName of a user group (e.g. "/caselaw/BGH/Extern/Agentur1") into
+ * the name of the last subgroup (e.g. "Agentur1")
+ **/
+const getLastSubgroup = (userGroupPathName: string) => {
+  return userGroupPathName.substring(userGroupPathName.lastIndexOf("/") + 1)
+}
+
+/**
+ * Returns a list of {@link DropdownItem} containing the external user groups
+ * of the documentation office.
+ **/
+const getDropdownItems = (): DropdownItem[] => {
+  const dropdownItems = userGroups.value.map(({ userGroupPathName, id }) => ({
+    label: getLastSubgroup(userGroupPathName),
+    value: id,
+  }))
+  dropdownItems.push({ label: "Nicht zugewiesen", value: "" })
+  return dropdownItems
+}
+
+/**
+ * Get display text for the date the procedure had been created.
+ * If the date is missing a default text is displayed.
  */
-const debouncedPushQueryToRoute = (() => {
-  let timeoutId: number | null = null
-
-  return (currentQuery: Query<string>) => {
-    if (timeoutId != null) window.clearTimeout(timeoutId)
-
-    timeoutId = window.setTimeout(() => pushQueryToRoute(currentQuery), 500)
+const getCreatedAtDisplayText = (procedure: Procedure): string => {
+  if (procedure.createdAt) {
+    return "erstellt am " + dayjs(procedure.createdAt).format("DD.MM.YYYY")
   }
-})()
+  return "Erstellungsdatum unbekannt"
+}
 
-/**
- * Get query from url and set local query value
- */
-watch(route, () => {
-  const currentQuery = getQueryFromRoute()
-  if (JSON.stringify(query.value) != JSON.stringify(currentQuery))
-    query.value = currentQuery
-})
-
-/**
- * Update procedures with local query value und update url after timeout
- */
-watch(
-  query,
-  async () => {
-    await updateProcedures(0, query.value)
-    debouncedPushQueryToRoute(query.value)
+// Wait for the user input to be finished before requesting. (debounce after last keystroke)
+debouncedWatch(
+  filter,
+  () => {
+    debouncedFilter.value = filter.value
+    currentPage.value = 0
   },
-  { deep: true },
+  { debounce: 500 },
 )
 
-/**
- * Switching pages closes all expanded items
- */
-watch(currentPage, (newPage) => {
-  if (newPage?.number !== currentPage.value) {
-    currentlyExpanded.value = []
-  }
-})
+watch([currentPage, debouncedFilter], () => updateProcedures())
 
-onMounted(() => {
-  updateProcedures(0, query.value)
+onBeforeMount(async () => {
+  await getUserGroups()
 })
 </script>
 
 <template>
   <div class="flex h-full flex-col space-y-24 bg-gray-100 px-16 py-16">
     <h1 class="ds-heading-02-reg">Vorgänge</h1>
-    <div class="mt-24 w-480" role="search">
-      <InputField id="procedureFilter" label="Vorgang" visually-hide-label>
-        <TextInput
-          id="procedureFilter"
-          v-model="query.q"
-          aria-label="Nach Vorgängen suchen"
-          class="ds-input-medium"
-          placeholder="Nach Vorgängen suchen"
-        ></TextInput>
-      </InputField>
+    <div class="mt-24 flex flex-row items-center gap-4">
+      <div class="w-480" role="search">
+        <InputField id="procedureFilter" label="Vorgang" visually-hide-label>
+          <TextInput
+            id="procedureFilter"
+            v-model="filter"
+            aria-label="Nach Vorgängen suchen"
+            class="ds-input-medium"
+            placeholder="Nach Vorgängen suchen"
+          ></TextInput>
+        </InputField>
+      </div>
+      <LoadingSpinner v-if="isFetchingProcedures" size="small" />
     </div>
+    <InfoModal
+      v-if="assignError"
+      :description="assignError.description"
+      :status="InfoStatus.ERROR"
+      :title="assignError.title"
+    />
 
     <div v-if="procedures" class="flex-1">
       <Pagination
-        v-if="currentPage"
+        v-if="procedurePage"
         navigation-position="bottom"
-        :page="currentPage"
-        @update-page="(page) => updateProcedures(page, query)"
+        :page="procedurePage"
+        @update-page="(page) => (currentPage = page)"
       >
         <ExpandableContent
           v-for="(procedure, index) in procedures"
           :key="index"
           aria-label="Vorgang Listenelement"
-          class="border-b-1 border-blue-300 bg-white px-24 py-20"
+          class="border-b-1 border-blue-300 bg-white p-24"
           :class="{
             'my-24': currentlyExpanded.includes(index),
             'hover:bg-blue-100': !currentlyExpanded.includes(index),
@@ -198,7 +260,7 @@ onMounted(() => {
           </template>
 
           <template #header>
-            <div class="flex w-full justify-between">
+            <div class="flex w-full justify-between gap-24">
               <div class="flex flex-row items-center gap-16">
                 <IconFolderOpen />
                 <span class="ds-label-01-reg" :title="procedure.label">{{
@@ -209,18 +271,32 @@ onMounted(() => {
                 >
                   <IconBaselineDescription class="w-16 text-blue-800" />
                   <span>
-                    {{ procedure.documentUnitCount }}
+                    {{ procedure.documentationUnitCount }}
                   </span>
                 </div>
               </div>
-              <span class="mr-24"
-                >erstellt am
-                {{ dayjs(procedure.createdAt).format("DD.MM.YYYY") }}</span
-              >
+              <DropdownInput
+                v-if="isInternalUser"
+                v-model="procedure.userGroupId"
+                aria-label="dropdown input"
+                class="ml-auto w-auto"
+                is-small
+                :items="getDropdownItems()"
+                @click.stop
+                @update:model-value="
+                  (value: string | undefined) =>
+                    handleAssignUserGroup(procedure.id, value)
+                "
+              />
+              <span class="mr-24 w-224 content-center text-center">{{
+                getCreatedAtDisplayText(procedure)
+              }}</span>
             </div>
           </template>
 
           <ProcedureDetail
+            class="mt-24"
+            :doc-units="docUnitsForProcedure[procedure.id ?? ''] ?? []"
             :procedure="procedure"
             :response-error="responseError"
             @delete-document-unit="handleDeleteDocumentationUnit"

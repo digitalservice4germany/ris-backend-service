@@ -9,6 +9,7 @@ import Reference from "./reference"
 import SingleNorm from "./singleNorm"
 import Attachment from "@/domain/attachment"
 import LegalForce from "@/domain/legalForce"
+import ParticipatingJudge from "@/domain/participatingJudge"
 import { PublicationStatus } from "@/domain/publicationStatus"
 
 export type CoreData = {
@@ -33,10 +34,15 @@ export type CoreData = {
 }
 
 export type ContentRelatedIndexing = {
+  collectiveAgreements?: string[]
+  dismissalTypes?: string[]
+  dismissalGrounds?: string[]
   keywords?: string[]
   norms?: NormReference[]
   activeCitations?: ActiveCitation[]
   fieldsOfLaw?: FieldOfLaw[]
+  jobProfiles?: string[]
+  hasLegislativeMandate?: boolean
 }
 
 export type DocumentType = {
@@ -50,42 +56,91 @@ export type Court = {
   location?: string
   label: string
   revoked?: string
+  responsibleDocOffice?: DocumentationOffice
 }
 
 export type Procedure = {
   id?: string
   label: string
-  documentUnitCount: number
+  documentationUnitCount: number
   createdAt: string
   documentUnits?: DocumentUnitListEntry[]
+  userGroupId?: string
 }
 
-export type Texts = {
+export type ShortTexts = {
   decisionName?: string
   headline?: string
   guidingPrinciple?: string
   headnote?: string
+  otherHeadnote?: string
+}
+
+export const shortTextLabels: {
+  [shortTextKey in keyof Required<ShortTexts>]: string
+} = {
+  decisionName: "Entscheidungsname",
+  headline: "Titelzeile",
+  guidingPrinciple: "Leitsatz",
+  headnote: "Orientierungssatz",
+  otherHeadnote: "Sonstiger Orientierungssatz",
+}
+
+export type LongTexts = {
   tenor?: string
   reasons?: string
   caseFacts?: string
   decisionReasons?: string
+  dissentingOpinion?: string
+  participatingJudges?: ParticipatingJudge[]
+  otherLongText?: string
+  outline?: string
+}
+export const longTextLabels: {
+  [longTextKey in keyof Required<LongTexts>]: string
+} = {
+  tenor: "Tenor",
+  reasons: "Gründe",
+  caseFacts: "Tatbestand",
+  decisionReasons: "Entscheidungsgründe",
+  dissentingOpinion: "Abweichende Meinung",
+  participatingJudges: "Mitwirkende Richter",
+  otherLongText: "Sonstiger Langtext",
+  outline: "Gliederung",
+}
+
+export type ManagementData = {
+  scheduledPublicationDateTime?: string
+  scheduledByEmail?: string
+  borderNumbers: string[]
+}
+
+export type DocumentationUnitParameters = {
+  documentationOffice?: DocumentationOffice
+  documentType?: DocumentType
+  decisionDate?: string
+  fileNumber?: string
+  court?: Court
+  reference?: Reference
 }
 
 export default class DocumentUnit {
   readonly uuid: string
   readonly id?: string
-  readonly documentNumber?: string
+  readonly documentNumber: string = ""
   readonly status?: PublicationStatus
   public version: number = 0
   public attachments: Attachment[] = []
   public coreData: CoreData = {}
-  public texts: Texts = {}
+  public shortTexts: ShortTexts = {}
+  public longTexts: LongTexts = {}
   public previousDecisions?: PreviousDecision[]
   public ensuingDecisions?: EnsuingDecision[]
   public contentRelatedIndexing: ContentRelatedIndexing = {}
-  public borderNumbers: string[] = []
   public note: string = ""
   public references?: Reference[]
+  public isEditable: boolean = false
+  public managementData: ManagementData = { borderNumbers: [] }
 
   static readonly requiredFields = [
     "fileNumbers",
@@ -107,11 +162,32 @@ export default class DocumentUnit {
       if (data.coreData && data.coreData[coreDataField] === null)
         delete data.coreData[coreDataField]
     }
-    let textsField: keyof Texts
-    for (textsField in data.texts) {
-      if (data.texts && data.texts[textsField] === null)
-        delete data.texts[textsField]
+    let shortTextsField: keyof ShortTexts
+    for (shortTextsField in data.shortTexts) {
+      if (data.shortTexts && data.shortTexts[shortTextsField] === null)
+        delete data.shortTexts[shortTextsField]
     }
+
+    let longTextsField: keyof LongTexts
+    for (longTextsField in data.longTexts) {
+      if (data.longTexts && data.longTexts[longTextsField] === null)
+        delete data.longTexts[longTextsField]
+    }
+
+    let managementDataField: keyof ManagementData
+    for (managementDataField in data.managementData) {
+      if (
+        data.managementData &&
+        data.managementData[managementDataField] === null
+      )
+        delete data.managementData[managementDataField]
+    }
+
+    if (data.longTexts?.participatingJudges)
+      data.longTexts.participatingJudges =
+        data.longTexts.participatingJudges.map(
+          (judge) => new ParticipatingJudge({ ...judge }),
+        )
 
     if (data.previousDecisions)
       data.previousDecisions = data.previousDecisions.map(
@@ -147,16 +223,15 @@ export default class DocumentUnit {
         )
 
     if (data.attachments != undefined && data.attachments.length > 0) {
-      data.attachments.map(
+      data.attachments = data.attachments.map(
         (attachment: Attachment) => new Attachment({ ...attachment }),
       )
     }
 
-    if (data.references != undefined && data.references.length > 0) {
-      data.references.map(
-        (reference: Reference) => new Reference({ ...reference }),
+    if (data.references)
+      data.references = data.references.map(
+        (reference) => new Reference({ ...reference }),
       )
-    }
 
     Object.assign(this, data)
   }

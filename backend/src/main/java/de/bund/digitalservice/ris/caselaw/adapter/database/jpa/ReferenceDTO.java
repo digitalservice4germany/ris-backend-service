@@ -1,14 +1,16 @@
 package de.bund.digitalservice.ris.caselaw.adapter.database.jpa;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotNull;
+import java.util.List;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,11 +23,11 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@Builder(toBuilder = true)
 @Entity
 @Table(schema = "incremental_migration", name = "reference")
 public class ReferenceDTO {
-  @Id @GeneratedValue private UUID id;
+  @Id private UUID id;
 
   @ManyToOne
   @JoinColumn(name = "documentation_unit_id")
@@ -36,7 +38,7 @@ public class ReferenceDTO {
   // amtlich or nichtamtlich
   private String type;
 
-  @NotBlank private String citation;
+  private String citation;
 
   // Klammerzusatz
   @Column(name = "reference_supplement")
@@ -51,4 +53,14 @@ public class ReferenceDTO {
   @Column(name = "legal_periodical_raw_value")
   @NotNull
   private String legalPeriodicalRawValue;
+
+  @OneToMany(cascade = CascadeType.REMOVE)
+  @JoinColumn(
+      name = "reference_id",
+      referencedColumnName = "id",
+      insertable = false,
+      updatable = false)
+  private List<EditionReferenceDTO> editionReferences;
+
+  @Transient private Integer editionRank;
 }

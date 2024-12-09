@@ -1,6 +1,7 @@
-import { expect, test, Request, Page, TestInfo } from "@playwright/test"
+import { expect, test, Page, TestInfo } from "@playwright/test"
 import DocumentUnit from "../../src/domain/documentUnit"
 import { DocumentUnitSearchParameter } from "@/components/DocumentUnitSearchEntryForm.vue"
+import { getRequest } from "~/e2e/caselaw/e2e-utils"
 
 // This is a performance test for the backend search endpoint
 // We run it sequentially not to skew the results
@@ -99,11 +100,29 @@ test.describe("document unit search queries", () => {
       maxDuration: 450, // last max 556, average 304, min 241
       minResults: 5,
     },
+    {
+      title: "scheduled only",
+      parameter: {
+        myDocOfficeOnly: "true",
+        scheduledOnly: "true",
+      },
+      maxDuration: 500,
+      minResults: 3,
+    },
+    {
+      title: "publication date",
+      parameter: {
+        myDocOfficeOnly: "true",
+        publicationDate: "2100-11-21",
+      },
+      maxDuration: 500,
+      minResults: 3,
+    },
   ]
 
   testConfigurations.forEach((search) =>
     test(search.title, async ({ page }, testInfo) =>
-      runTestMultipleTimes(5, search, page, testInfo),
+      runTestMultipleTimes(10, search, page, testInfo),
     ),
   )
 })
@@ -164,10 +183,4 @@ function getUrlParams(parameter: {
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
         .join("&")
   )
-}
-
-async function getRequest(url: string, page: Page): Promise<Request> {
-  const requestFinishedPromise = page.waitForEvent("requestfinished")
-  await page.goto(url)
-  return await requestFinishedPromise
 }

@@ -6,7 +6,7 @@ Date: 2023-07-20
 
 Accepted
 
-Supersedes [3. Use Spring WebFlux reactive stack](0003-use-spring-webflux-reactive-stack.md)
+Supersedes [3. Use Spring WebFlux reactive stack](0003-\[Superseded\]use-spring-webflux-reactive-stack.md)
 
 ## Context
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-irregular-whitespace */
 export const noteContent = `Der III. Zivilsenat des Bundesgerichtshofs hat im schriftlichen Verfahren nach § 128 Abs. 2 ZPO, in dem Schriftsätze bis zum 7. Januar 2022 eingereicht werden konnten, durch den Vorsitzenden Richter Dr. Herrmann, den Richter Dr. Remmert, die Richterinnen Dr. Arend und Dr. Böttcher sowie den Richter Dr. Kessen
 
 für Recht erkannt:

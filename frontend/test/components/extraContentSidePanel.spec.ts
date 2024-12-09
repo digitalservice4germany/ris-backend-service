@@ -6,6 +6,8 @@ import { createRouter, createWebHistory, Router } from "vue-router"
 import ExtraContentSidePanel from "@/components/ExtraContentSidePanel.vue"
 import Attachment from "@/domain/attachment"
 import DocumentUnit from "@/domain/documentUnit"
+import Reference from "@/domain/reference"
+import { SelectablePanelContent } from "@/types/panelContentMode"
 
 let router: Router
 
@@ -13,12 +15,29 @@ function renderComponent(
   options: {
     note?: string
     attachments?: Attachment[]
+    references?: Reference[]
+    enabledPanels?: SelectablePanelContent[]
+    showEditButton?: boolean
+    isEditable?: boolean
   } = {},
 ) {
   const user = userEvent.setup()
+
+  const documentUnit = new DocumentUnit("foo", {
+    documentNumber: "1234567891234",
+    note: options.note ?? "",
+    attachments: options.attachments ?? [],
+    isEditable: options.isEditable || false,
+  })
+
   return {
     user,
     ...render(ExtraContentSidePanel, {
+      props: {
+        enabledPanels: options.enabledPanels || undefined,
+        showEditButton: options.showEditButton,
+        documentUnit: documentUnit,
+      },
       global: {
         plugins: [
           [router],
@@ -26,13 +45,10 @@ function renderComponent(
             createTestingPinia({
               initialState: {
                 docunitStore: {
-                  documentUnit: new DocumentUnit("foo", {
-                    documentNumber: "1234567891234",
-                    note: options.note ?? "",
-                    attachments: options.attachments ?? [],
-                  }),
+                  documentUnit: documentUnit,
                 },
               },
+              stubActions: false, // To use the store functions in extraContentSidePanelStore
             }),
           ],
         ],
@@ -71,9 +87,18 @@ describe("ExtraContentSidePanel", () => {
           component: {},
         },
         {
-          path: "/caselaw/documentUnit/:documentNumber/files",
-          name: "caselaw-documentUnit-documentNumber-files",
-          component: {},
+          path: "/caselaw/documentUnit/:documentNumber/attachments",
+          name: "caselaw-documentUnit-documentNumber-attachments",
+          component: {
+            template: "<div data-testid='attachments'>Attachments</div>",
+          },
+        },
+        {
+          path: "/caselaw/documentUnit/:documentNumber/references",
+          name: "caselaw-documentUnit-documentNumber-references",
+          component: {
+            template: "<div data-testid='references'>References</div>",
+          },
         },
         {
           path: "/caselaw/documentUnit/:documentNumber/handover",
@@ -165,13 +190,36 @@ describe("ExtraContentSidePanel", () => {
   })
 
   test("toggle panel open and closed", async () => {
-    renderComponent()
-
+    const { emitted } = renderComponent()
     expect(await screen.findByLabelText("Seitenpanel öffnen")).toBeVisible()
+    expect(
+      emitted()["sidePanelIsExpanded"][0],
+      "Shoud be mounted with isExpanded false",
+    ).toEqual([false])
+
+    // Opening side panel
     screen.getByLabelText("Seitenpanel öffnen").click()
     expect(await screen.findByLabelText("Seitenpanel schließen")).toBeVisible()
+    expect(
+      emitted()["sidePanelIsExpanded"],
+      "Did not emit when isExpanded changed to true",
+    ).toBeTruthy()
+    expect(
+      emitted()["sidePanelIsExpanded"][1],
+      "Should emit false when opened",
+    ).toEqual([true])
+
+    // Closing side panel
     screen.getByLabelText("Seitenpanel schließen").click()
     expect(await screen.findByLabelText("Seitenpanel öffnen")).toBeVisible()
+    expect(
+      emitted()["sidePanelIsExpanded"],
+      "Did not emit when isExpanded changed to false",
+    ).toBeTruthy()
+    expect(
+      emitted()["sidePanelIsExpanded"][2],
+      "Should emit false when closed",
+    ).toEqual([false])
   })
 
   describe("Select panel content", () => {
@@ -234,7 +282,7 @@ describe("ExtraContentSidePanel", () => {
       screen.getByLabelText("Dokumente anzeigen").click()
       expect(
         await screen.findByText(
-          "Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.",
+          "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
         ),
       ).toBeVisible()
 
@@ -247,5 +295,103 @@ describe("ExtraContentSidePanel", () => {
       screen.getByLabelText("Notiz anzeigen").click()
       expect(await screen.findByDisplayValue("some note")).toBeVisible()
     })
+
+    describe("Enable side panel content", async () => {
+      const testCases = [
+        {
+          enabledPanels: ["attachments"],
+          expectedHidden: ["note", "preview"],
+        },
+        {
+          enabledPanels: ["note"],
+          expectedHidden: ["attachments", "preview"],
+        },
+        {
+          enabledPanels: ["preview"],
+          expectedHidden: ["attachments", "note"],
+        },
+      ]
+      testCases.forEach(({ enabledPanels, expectedHidden }) =>
+        test(`panel enable ${enabledPanels} and hide ${expectedHidden}`, async () => {
+          renderComponent({
+            note: "",
+            attachments: [],
+            enabledPanels: enabledPanels as SelectablePanelContent[],
+          })
+
+          screen.getByLabelText("Seitenpanel öffnen").click()
+
+          for (const contentType of enabledPanels) {
+            expect(
+              await screen.findByTestId(contentType + "-button"),
+              `${contentType} should be displayed`,
+            ).toBeVisible()
+          }
+
+          for (const contentType of expectedHidden) {
+            expect(
+              screen.queryByTestId(contentType + "-button"),
+              `${contentType} should be hidden`,
+            ).not.toBeInTheDocument()
+          }
+        }),
+      )
+    })
+  })
+
+  describe("test edit button link behaviour", async () => {
+    const testCases = [
+      {
+        showEditButton: true,
+        isEditable: true,
+      },
+      {
+        showEditButton: false,
+        isEditable: false,
+      },
+      {
+        showEditButton: true,
+        isEditable: false,
+      },
+    ]
+
+    testCases.forEach(({ showEditButton, isEditable }) =>
+      test(`edition button link display: ${showEditButton} and document unit is editable: ${isEditable}`, async () => {
+        renderComponent({
+          note: "some note",
+          attachments: [],
+          showEditButton: showEditButton,
+          isEditable: isEditable,
+        })
+
+        if (showEditButton) {
+          expect(
+            await screen.findByLabelText(
+              "Dokumentationseinheit in einem neuen Tab bearbeiten",
+            ),
+          ).toBeVisible()
+
+          if (isEditable) {
+            expect(
+              await screen.findByLabelText(
+                "Extra content side panel edit link button",
+              ),
+            ).toBeEnabled()
+          } else {
+            expect(
+              await screen.findByLabelText(
+                "Extra content side panel edit link button",
+              ),
+            ).toBeDisabled()
+          }
+        } else {
+          expect(
+            screen.queryByLabelText(
+              "Dokumentationseinheit in einem neuen Tab bearbeiten",
+            ),
+          ).not.toBeInTheDocument()
+        }
+      }),
+    )
   })
 })

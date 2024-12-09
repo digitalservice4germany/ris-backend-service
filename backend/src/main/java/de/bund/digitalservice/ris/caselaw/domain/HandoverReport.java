@@ -2,6 +2,7 @@ package de.bund.digitalservice.ris.caselaw.domain;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.Builder;
 
 /**
@@ -10,7 +11,7 @@ import lombok.Builder;
  */
 @Builder(toBuilder = true)
 public record HandoverReport(
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) String documentNumber,
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) UUID entityId,
     String content,
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY, value = "date") Instant receivedDate)
     implements EventRecord {

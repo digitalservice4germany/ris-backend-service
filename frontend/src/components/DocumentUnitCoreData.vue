@@ -9,6 +9,7 @@ import DropdownInput from "@/components/input/DropdownInput.vue"
 import InputField from "@/components/input/InputField.vue"
 import TextInput from "@/components/input/TextInput.vue"
 import NestedComponent from "@/components/NestedComponents.vue"
+import TitleElement from "@/components/TitleElement.vue"
 import { useValidationStore } from "@/composables/useValidationStore"
 import legalEffectTypes from "@/data/legalEffectTypes.json"
 import { CoreData } from "@/domain/documentUnit"
@@ -29,10 +30,12 @@ const validationStore =
   >()
 
 /**
- * Our UI turns the chronological order of the list, so the latest previous precedure is first.
+ * Our UI turns the chronological order of the list, so the latest previous procedure is first.
  */
 const descendingPreviousProcedures = computed(() =>
-  modelValue.value.previousProcedures?.toReversed(),
+  modelValue.value.previousProcedures
+    ? modelValue.value.previousProcedures.toReversed()
+    : undefined,
 )
 
 watch(
@@ -47,10 +50,14 @@ watch(
 <template>
   <div
     aria-label="Stammdaten"
-    class="core-data flex flex-col gap-24 bg-white p-32"
+    class="core-data flex flex-col gap-24 bg-white p-24"
   >
-    <h2 class="ds-heading-03-bold">Stammdaten</h2>
-    <NestedComponent aria-label="Fehlerhaftes Gericht" class="w-full">
+    <TitleElement>Stammdaten</TitleElement>
+    <NestedComponent
+      aria-label="Fehlerhaftes Gericht"
+      class="w-full"
+      :is-open="!!modelValue.deviatingCourts?.length"
+    >
       <InputField id="court" v-slot="slotProps" label="Gericht *">
         <ComboboxInput
           id="court"
@@ -77,6 +84,7 @@ watch(
       <NestedComponent
         aria-label="Abweichendes Aktenzeichen"
         class="w-full min-w-0"
+        :is-open="!!modelValue.deviatingFileNumbers?.length"
       >
         <InputField id="fileNumber" label="Aktenzeichen *">
           <ChipsInput
@@ -102,6 +110,7 @@ watch(
       <NestedComponent
         aria-label="Abweichendes Entscheidungsdatum"
         class="w-full"
+        :is-open="!!modelValue.deviatingDecisionDates?.length"
       >
         <InputField
           id="decisionDate"
@@ -169,7 +178,11 @@ watch(
     </div>
 
     <div class="flex flex-row gap-24">
-      <NestedComponent aria-label="Abweichender ECLI" class="w-full">
+      <NestedComponent
+        aria-label="Abweichender ECLI"
+        class="w-full"
+        :is-open="!!modelValue.deviatingEclis?.length"
+      >
         <InputField id="ecli" class="flex-col" label="ECLI">
           <TextInput
             id="ecli"
@@ -191,7 +204,11 @@ watch(
         </template>
       </NestedComponent>
 
-      <NestedComponent aria-label="Vorgangshistorie" class="w-full">
+      <NestedComponent
+        aria-label="Vorgangshistorie"
+        class="w-full"
+        :is-open="!!descendingPreviousProcedures?.length"
+      >
         <InputField id="procedure" class="flex-col" label="Vorgang">
           <ComboboxInput
             id="procedure"

@@ -1,32 +1,25 @@
 import { createTestingPinia } from "@pinia/testing"
 import { userEvent } from "@testing-library/user-event"
 import { render, screen } from "@testing-library/vue"
+import { UseFetchReturn } from "@vueuse/core"
+import { afterEach, expect, vi } from "vitest"
+import { ref } from "vue"
 import { createRouter, createWebHistory } from "vue-router"
+import { Page } from "@/components/Pagination.vue"
 import ProcedureList from "@/components/procedures/ProcedureList.vue"
-import useQuery from "@/composables/useQueryFromRoute"
 import { Procedure } from "@/domain/documentUnit"
+import featureToggleService from "@/services/featureToggleService"
 import service from "@/services/procedureService"
+import userGroupsService from "@/services/userGroupsService"
 
 vi.mock("@/services/procedureService")
 vi.mock("@/services/authService")
+vi.mock("@/services/userGroupsService")
 
-const mocks = vi.hoisted(() => ({
-  mockedPushQuery: vi.fn(),
-}))
-
-vi.mock("@/composables/useQueryFromRoute", async () => {
-  const actual = (
-    await vi.importActual<{ default: typeof useQuery }>(
-      "@/composables/useQueryFromRoute",
-    )
-  ).default
+let isInternalUser = false
+vi.mock("@/composables/useInternalUser", () => {
   return {
-    default: () => {
-      return {
-        ...actual(),
-        pushQueryToRoute: mocks.mockedPushQuery,
-      }
-    },
+    useInternalUser: () => isInternalUser,
   }
 })
 
@@ -42,33 +35,33 @@ const router = createRouter({
 })
 
 async function renderComponent(options?: { procedures: Procedure[][] }) {
-  const mockedGetProcedures = vi
-    .mocked(service.get)
-    .mockResolvedValueOnce({
-      status: 200,
-      data: {
-        content: options?.procedures[0] ?? [
-          {
-            label: "testProcedure",
-            documentUnitCount: 2,
-            createdAt: "foo",
-          },
-        ],
-        size: 1,
-        number: 1,
-        numberOfElements: 200,
-        first: true,
-        last: false,
-        empty: false,
+  const proceduresError = ref()
+  const abortProcedures = vi.fn()
+  const canAbort = ref(false)
+  const isFetchingProcedures = ref(false)
+  const proceduresPagesResponse = ref<Page<Procedure>>({
+    content: options?.procedures[0] ?? [
+      {
+        id: "abc",
+        label: "testProcedure",
+        documentationUnitCount: 2,
+        createdAt: "foo",
       },
-    })
-    .mockResolvedValueOnce({
-      status: 200,
-      data: {
+    ],
+    size: 1,
+    number: 0,
+    numberOfElements: 200,
+    first: true,
+    last: false,
+    empty: false,
+  })
+  const executeGetProcedures = vi.fn().mockImplementation(
+    () =>
+      (proceduresPagesResponse.value = {
         content: options?.procedures[1] ?? [
           {
             label: "testProcedure",
-            documentUnitCount: 2,
+            documentationUnitCount: 2,
             createdAt: "foo",
           },
         ],
@@ -78,14 +71,45 @@ async function renderComponent(options?: { procedures: Procedure[][] }) {
         first: true,
         last: false,
         empty: false,
-      },
-    })
+      }),
+  )
+  const mockedGetProcedures = vi.mocked(service.get).mockReturnValueOnce({
+    error: proceduresError,
+    isFetching: isFetchingProcedures,
+    execute: executeGetProcedures,
+    canAbort,
+    abort: abortProcedures,
+    data: proceduresPagesResponse,
+  } as unknown as UseFetchReturn<Page<Procedure>>)
 
   const mockedGetDocumentUnits = vi
     .mocked(service.getDocumentUnits)
     .mockResolvedValue({
       status: 200,
       data: [{ documentNumber: "testABC" }],
+    })
+
+  const mockedGetUserGroups = vi
+    .mocked(userGroupsService.get)
+    .mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: "userGroupId1",
+          userGroupPathName: "DS/Extern/Agentur1",
+        },
+        {
+          id: "userGroupId2",
+          userGroupPathName: "DS/Extern/Agentur2",
+        },
+      ],
+    })
+
+  const mockedAssignProcedure = vi
+    .mocked(service.assignUserGroup)
+    .mockResolvedValue({
+      status: 200,
+      data: ["Success Response"],
     })
 
   return {
@@ -95,14 +119,25 @@ async function renderComponent(options?: { procedures: Procedure[][] }) {
         plugins: [router, createTestingPinia()],
       },
     }),
-    // eslint-disable-next-line testing-library/await-async-events
+
     user: userEvent.setup(),
     mockedGetProcedures,
     mockedGetDocumentUnits,
+    mockedGetUserGroups,
+    mockedAssignProcedure,
+    proceduresPagesResponse,
+    executeGetProcedures,
   }
 }
 
 describe("ProcedureList", () => {
+  beforeEach(() => {
+    vi.spyOn(featureToggleService, "isEnabled").mockResolvedValue({
+      status: 200,
+      data: true,
+    })
+  })
+
   afterEach(() => {
     vi.resetAllMocks()
   })
@@ -126,8 +161,9 @@ describe("ProcedureList", () => {
       procedures: [
         [
           {
+            id: "1",
             label: "foo",
-            documentUnitCount: 0,
+            documentationUnitCount: 0,
             createdAt: "2023-09-18T19:57:01.826083Z",
           },
         ],
@@ -142,17 +178,20 @@ describe("ProcedureList", () => {
   })
 
   it("searches on entry", async () => {
-    const { user, mockedGetProcedures } = await renderComponent({
+    const queryReplaceSpy = vi.spyOn(router, "replace")
+    const { user, executeGetProcedures } = await renderComponent({
       procedures: [
         [
           {
+            id: "1",
             label: "foo",
-            documentUnitCount: 0,
+            documentationUnitCount: 0,
             createdAt: "2023-09-18T19:57:01.826083Z",
           },
           {
+            id: "2",
             label: "bar",
-            documentUnitCount: 0,
+            documentationUnitCount: 0,
             createdAt: "2023-09-18T19:57:01.826083Z",
           },
         ],
@@ -160,22 +199,18 @@ describe("ProcedureList", () => {
     })
 
     await user.type(await screen.findByLabelText("Nach Vorgängen suchen"), "b")
-    expect(mockedGetProcedures).toHaveBeenCalledWith(10, 0, "b")
 
-    expect(mocks.mockedPushQuery).not.toHaveBeenCalled()
-  })
+    // Query is updated immediately
+    expect(queryReplaceSpy).toHaveBeenCalledOnce()
+    expect(queryReplaceSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ query: { q: "b" } }),
+    )
+    expect(executeGetProcedures).not.toHaveBeenCalledOnce()
 
-  it("debounces route updates on search", async () => {
-    const { user } = await renderComponent()
-    await user.type(await screen.findByLabelText("Nach Vorgängen suchen"), "b")
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-    expect(mocks.mockedPushQuery).not.toHaveBeenCalled()
-
-    await new Promise((resolve) => {
-      setTimeout(resolve, 500)
-    })
-
-    expect(mocks.mockedPushQuery).toHaveBeenCalledWith({ q: "b" })
+    // Request to server is debounced
+    expect(executeGetProcedures).toHaveBeenCalledOnce()
   })
 
   it("resets currently expanded procedures on search", async () => {
@@ -190,13 +225,63 @@ describe("ProcedureList", () => {
   })
 
   it("resets currently expanded procedures on page change", async () => {
-    const { mockedGetDocumentUnits, user } = await renderComponent()
+    const { user } = await renderComponent()
 
-    expect(mockedGetDocumentUnits).not.toHaveBeenCalled()
+    expect(screen.queryByText("testABC")).not.toBeInTheDocument()
 
+    // Expand procedure to load doc units
     await user.click(await screen.findByTestId("icons-open-close"))
-    expect(mockedGetDocumentUnits).toHaveBeenCalledOnce()
+
+    expect(screen.getByText("testABC")).toBeInTheDocument()
+    expect(screen.getByText("Dokumentnummer")).toBeInTheDocument()
+
+    // Go to next page
     await user.click(await screen.findByLabelText("nächste Ergebnisse"))
-    expect(mockedGetDocumentUnits).toHaveBeenCalledOnce()
+
+    expect(screen.queryByText("testABC")).not.toBeInTheDocument()
+    expect(screen.queryByText("Dokumentnummer")).not.toBeInTheDocument()
+  })
+
+  it("show increment page count when going to next page", async () => {
+    const { user } = await renderComponent()
+
+    expect(screen.getByText("Seite 1:")).toBeInTheDocument()
+
+    // Go to next page
+    await user.click(await screen.findByLabelText("nächste Ergebnisse"))
+
+    expect(screen.getByText("Seite 2:")).toBeInTheDocument()
+  })
+
+  it("should fetch userGroups onBeforeMounted", async () => {
+    const { mockedGetUserGroups } = await renderComponent()
+    expect(mockedGetUserGroups).toHaveBeenCalledOnce()
+  })
+
+  it("should list all user groups and default option in dropdown", async () => {
+    isInternalUser = true
+    const { mockedGetProcedures } = await renderComponent()
+    expect(mockedGetProcedures).toHaveBeenCalledOnce()
+
+    const dropdown = await screen.findByLabelText("dropdown input")
+    expect(dropdown).toBeEnabled()
+
+    const options = screen.getAllByRole("option")
+    expect(options.length).toBe(3)
+    expect(options[0]).toHaveTextContent("Agentur1")
+    expect(options[1]).toHaveTextContent("Agentur2")
+    expect(options[2]).toHaveTextContent("Nicht zugewiesen")
+  })
+
+  it("should hide dropdown when user is external", async () => {
+    isInternalUser = false
+    const { mockedGetProcedures } = await renderComponent()
+    expect(mockedGetProcedures).toHaveBeenCalledOnce()
+
+    expect(
+      screen.queryByText("Es wurden noch keine Vorgänge angelegt."),
+    ).not.toBeInTheDocument()
+
+    expect(screen.queryByLabelText("dropdown input")).not.toBeInTheDocument()
   })
 })

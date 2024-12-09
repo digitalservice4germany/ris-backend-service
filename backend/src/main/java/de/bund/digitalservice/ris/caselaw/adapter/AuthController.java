@@ -23,11 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final UserService userService;
-  private final AuthService authService;
+  private final OAuthService oAuthService;
 
-  public AuthController(UserService userService, AuthService authService) {
+  public AuthController(UserService userService, OAuthService oAuthService) {
     this.userService = userService;
-    this.authService = authService;
+    this.oAuthService = oAuthService;
   }
 
   @GetMapping(value = "me", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -45,7 +45,7 @@ public class AuthController {
   @GetMapping(value = "api-key/import", produces = MediaType.APPLICATION_JSON_VALUE)
   @PreAuthorize("isAuthenticated()")
   public ResponseEntity<ApiKey> getImportApiKey(@AuthenticationPrincipal OidcUser oidcUser) {
-    ApiKey apiKey = authService.getImportApiKey(oidcUser);
+    ApiKey apiKey = oAuthService.getImportApiKey(oidcUser);
     return ResponseEntity.ok(apiKey);
   }
 
@@ -61,7 +61,7 @@ public class AuthController {
   @PreAuthorize("isAuthenticated()")
   public ResponseEntity<ApiKey> generateImportApiKey(@AuthenticationPrincipal OidcUser oidcUser) {
 
-    ApiKey apiKey = authService.generateImportApiKey(oidcUser);
+    ApiKey apiKey = oAuthService.generateImportApiKey(oidcUser);
 
     return ResponseEntity.ok(apiKey);
   }
@@ -85,7 +85,7 @@ public class AuthController {
       throw new ImportApiKeyException("No api key set.");
     }
 
-    ApiKey lastApiKey = authService.invalidateImportApiKey(oidcUser, apiKey);
+    ApiKey lastApiKey = oAuthService.invalidateImportApiKey(oidcUser, apiKey);
 
     return ResponseEntity.ok(lastApiKey);
   }

@@ -37,4 +37,11 @@ public interface DatabaseFieldOfLawRepository extends JpaRepository<FieldOfLawDT
           + "UPPER(f.text) LIKE UPPER(CONCAT('%', :searchTerm, '%')))")
   List<FieldOfLawDTO> findAllByNotationAndIdentifierContainingIgnoreCaseOrTextContainingIgnoreCase(
       String searchTerm);
+
+  @Query(
+      "SELECT fol FROM FieldOfLawDTO fol "
+          + "WHERE  fol.notation = 'NEW' AND fol.identifier "
+          + "LIKE upper(concat(:searchStr, '%')) "
+          + "ORDER BY fol.identifier")
+  List<FieldOfLawDTO> findAllByIdentifierStartsWithIgnoreCaseOrderByIdentifier(String searchStr);
 }

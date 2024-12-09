@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import TextButton from "./input/TextButton.vue"
 import FlexContainer from "@/components/FlexContainer.vue"
-import { ServiceResponse } from "@/services/httpClient"
 import IconArrowBack from "~icons/ic/baseline-arrow-back"
 import IconArrowForward from "~icons/ic/baseline-arrow-forward"
 
@@ -17,12 +16,16 @@ const props = withDefaults(
 
 const emits = defineEmits<(e: "updatePage", page: number) => void>()
 
-async function nextPage() {
-  props.page && !props.page.last && emits("updatePage", props.page.number + 1)
+async function nextPage(): Promise<void> {
+  if (props.page && !props.page.last) {
+    emits("updatePage", props.page.number + 1)
+  }
 }
 
-async function previousPage() {
-  props.page && !props.page?.first && emits("updatePage", props.page.number - 1)
+async function previousPage(): Promise<void> {
+  if (props.page && !props.page?.first) {
+    emits("updatePage", props.page.number - 1)
+  }
 }
 </script>
 
@@ -37,12 +40,6 @@ export type Page<T> = {
   last: boolean
   empty: boolean
 }
-
-export type PageableService<TResult, TQuery = TResult> = (
-  page: number,
-  size: number,
-  query?: TQuery,
-) => Promise<ServiceResponse<Page<TResult>>>
 </script>
 
 <template>

@@ -4,8 +4,8 @@ import {
   fillActiveCitationInputs,
   fillEnsuingDecisionInputs,
   fillPreviousDecisionInputs,
-  navigateToCategories,
   handoverDocumentationUnit,
+  navigateToCategories,
   save,
 } from "~/e2e/caselaw/e2e-utils"
 import { caselawTest as test } from "~/e2e/caselaw/fixtures"
@@ -117,6 +117,17 @@ test("search with changed parameters resets the page to 0", async ({
     await test.step(
       "for category " + (await container.first().getAttribute("aria-label")),
       async () => {
+        const firstInput = { decisionDate: "31.12.2019" }
+        if (container === activeCitationContainer) {
+          await fillActiveCitationInputs(page, firstInput)
+        }
+        if (container === previousDecisionContainer) {
+          await fillPreviousDecisionInputs(page, firstInput)
+        }
+        if (container === ensuingDecisionContainer) {
+          await fillEnsuingDecisionInputs(page, firstInput)
+        }
+
         await container.getByLabel("Nach Entscheidung suchen").click()
         await expect(container.getByText("Seite 1")).toBeVisible()
 

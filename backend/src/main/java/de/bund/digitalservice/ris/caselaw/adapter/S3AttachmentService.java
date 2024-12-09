@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -29,29 +30,28 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 @Slf4j
 @Service
 public class S3AttachmentService implements AttachmentService {
   private final AttachmentRepository repository;
   private final S3Client s3Client;
-  private final DatabaseDocumentationUnitRepository documentUnitRepository;
+  private final DatabaseDocumentationUnitRepository documentationUnitRepository;
 
   @Value("${otc.obs.bucket-name}")
   private String bucketName;
 
   public S3AttachmentService(
       AttachmentRepository repository,
-      S3Client s3Client,
-      DatabaseDocumentationUnitRepository documentUnitRepository) {
+      @Qualifier("docxS3Client") S3Client s3Client,
+      DatabaseDocumentationUnitRepository documentationUnitRepository) {
     this.repository = repository;
     this.s3Client = s3Client;
-    this.documentUnitRepository = documentUnitRepository;
+    this.documentationUnitRepository = documentationUnitRepository;
   }
 
   public Attachment attachFileToDocumentationUnit(
-      UUID documentationUnitUuid, ByteBuffer byteBuffer, HttpHeaders httpHeaders) {
+      UUID documentationUnitId, ByteBuffer byteBuffer, HttpHeaders httpHeaders) {
     var fileUuid = UUID.randomUUID();
     String fileName =
         httpHeaders.containsKey("X-Filename")
@@ -66,7 +66,8 @@ public class S3AttachmentService implements AttachmentService {
         AttachmentDTO.builder()
             .id(fileUuid)
             .s3ObjectPath(fileUuid.toString())
-            .documentationUnit(documentUnitRepository.findById(documentationUnitUuid).orElseThrow())
+            .documentationUnit(
+                documentationUnitRepository.findById(documentationUnitId).orElseThrow())
             .filename(fileName)
             .format("docx")
             .uploadTimestamp(Instant.now())
@@ -110,7 +111,7 @@ public class S3AttachmentService implements AttachmentService {
     return byteBufferArray;
   }
 
-  private PutObjectResponse putObjectIntoBucket(
+  private void putObjectIntoBucket(
       String fileUuid, ByteBuffer byteBuffer, HttpHeaders httpHeaders) {
 
     var contentLength = httpHeaders.getContentLength();
@@ -137,7 +138,7 @@ public class S3AttachmentService implements AttachmentService {
 
     var putObjectRequest = putObjectRequestBuilder.build();
 
-    return s3Client.putObject(putObjectRequest, requestBody);
+    s3Client.putObject(putObjectRequest, requestBody);
   }
 
   private void deleteObjectFromBucket(String s3Path) {

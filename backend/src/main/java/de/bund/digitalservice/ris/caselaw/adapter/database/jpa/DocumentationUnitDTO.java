@@ -13,11 +13,13 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +58,15 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
   @Column(name = "decision_date")
   private LocalDate decisionDate;
 
+  @Column(name = "last_publication_date_time")
+  private LocalDateTime lastPublicationDateTime;
+
+  @Column(name = "scheduled_publication_date_time")
+  private LocalDateTime scheduledPublicationDateTime;
+
+  @Column(name = "scheduled_by_email")
+  private String scheduledByEmail;
+
   @Column(name = "decision_grounds")
   private String decisionGrounds;
 
@@ -75,11 +86,8 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
 
   @Column private String ecli;
 
-  @OneToMany(
-      mappedBy = "documentationUnit",
-      cascade = CascadeType.ALL,
-      fetch = FetchType.LAZY,
-      orphanRemoval = true)
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
   @Builder.Default
   @OrderBy("rank")
   private List<FileNumberDTO> fileNumbers = new ArrayList<>();
@@ -120,8 +128,14 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
   @Column(name = "other_long_text")
   String otherLongText;
 
+  @Column(name = "outline")
+  String outline;
+
   @Column(name = "other_headnote")
   String otherHeadnote;
+
+  @Column(name = "dissenting_opinion")
+  private String dissentingOpinion;
 
   @OneToMany(
       mappedBy = "documentationUnit",
@@ -167,10 +181,23 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
   @JoinColumn(name = "documentation_office_id", referencedColumnName = "id")
   private DocumentationOfficeDTO documentationOffice;
 
-  @OneToMany(mappedBy = "documentationUnitDTO", cascade = CascadeType.ALL)
+  @ManyToOne()
+  @JoinColumn(name = "creating_documentation_office_id", referencedColumnName = "id")
+  private DocumentationOfficeDTO creatingDocumentationOffice;
+
+  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+  @JoinColumn(
+      name = "documentation_unit_id",
+      nullable = false,
+      insertable = false,
+      updatable = false)
   @Builder.Default
   @OrderBy("createdAt desc")
-  private List<StatusDTO> status = new ArrayList<>();
+  private List<StatusDTO> statusHistory = new ArrayList<>();
+
+  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "current_status_id")
+  private StatusDTO status;
 
   // Gericht
   @ManyToOne
@@ -263,12 +290,46 @@ public class DocumentationUnitDTO implements DocumentationUnitListItemDTO {
   private Set<YearOfDisputeDTO> yearsOfDispute = new HashSet<>();
 
   // Fundstellen
-  @OneToMany(
-      mappedBy = "documentationUnit",
-      cascade = CascadeType.ALL,
-      fetch = FetchType.LAZY,
-      orphanRemoval = true)
+  @OneToMany(mappedBy = "documentationUnit", cascade = CascadeType.ALL, orphanRemoval = true)
   @Builder.Default
   @OrderBy("rank")
   private List<ReferenceDTO> references = new ArrayList<>();
+
+  @OneToMany(mappedBy = "documentationUnit", cascade = CascadeType.ALL, orphanRemoval = true)
+  @Builder.Default
+  @OrderBy("rank")
+  private List<DependentLiteratureCitationDTO> dependentLiteratureCitations = new ArrayList<>();
+
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
+  @OrderBy("rank")
+  @Builder.Default
+  private List<JobProfileDTO> jobProfiles = new ArrayList<>();
+
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
+  @OrderBy("rank")
+  @Builder.Default
+  private List<DismissalGroundsDTO> dismissalGrounds = new ArrayList<>();
+
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
+  @OrderBy("rank")
+  @Builder.Default
+  private List<DismissalTypesDTO> dismissalTypes = new ArrayList<>();
+
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
+  @OrderBy("rank")
+  @Builder.Default
+  private List<CollectiveAgreementDTO> collectiveAgreements = new ArrayList<>();
+
+  @Column(name = "legislative_mandate")
+  private boolean hasLegislativeMandate;
+
+  @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+  @JoinColumn(name = "documentation_unit_id", nullable = false)
+  @OrderBy("rank")
+  @Builder.Default
+  private List<ParticipatingJudgeDTO> participatingJudges = new ArrayList<>();
 }

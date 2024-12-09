@@ -45,6 +45,10 @@ export function useStatusBadge(status: DocumentUnit["status"]) {
         badge.label = Label.DELETING
         badge.backgroundColor = "bg-red-300"
         break
+      case PublicationState.EXTERNAL_HANDOVER_PENDING:
+        badge.label = Label.EXTERNAL_HANDOVER_PENDING
+        badge.backgroundColor = "bg-orange-300"
+        break
     }
     return badge
   })

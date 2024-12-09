@@ -1,6 +1,7 @@
 <script lang="ts" setup>
+import * as Sentry from "@sentry/vue"
 import { produce } from "immer"
-import { vMaska } from "maska"
+import { vMaska } from "maska/vue"
 import { nextTick, ref, watch, watchEffect, computed } from "vue"
 import ChipsList from "@/components/input/ChipsList.vue"
 import { ValidationError } from "@/components/input/types"
@@ -42,9 +43,19 @@ const addChip = () => {
       instance: props.id,
     })
   } else {
-    const next = produce(current, (draft) => {
+    let next = produce(current, (draft) => {
       draft.push(chip)
     })
+
+    next = next.filter((value) => {
+      if (!value) {
+        Sentry.captureMessage("Chip list contains empty string.", "error")
+        return false
+      } else {
+        return true
+      }
+    })
+
     emit("update:modelValue", next)
     emit("update:validationError", undefined)
   }
@@ -83,7 +94,7 @@ const focusInput = () => {
   chipsInput.value?.focus()
 }
 
-async function focusInputIfEmpty() {
+function focusInputIfEmpty() {
   if (props.modelValue?.length === 1) focusInput()
 }
 

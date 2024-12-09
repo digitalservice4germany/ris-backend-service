@@ -8,5 +8,5 @@ public interface HandoverReportRepository {
 
   List<HandoverReport> saveAll(List<HandoverReport> reports);
 
-  List<HandoverReport> getAllByDocumentUnitUuid(UUID documentUnitUuid);
+  List<HandoverReport> getAllByEntityId(UUID entityId);
 }

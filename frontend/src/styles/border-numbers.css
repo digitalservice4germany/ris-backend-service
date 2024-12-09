@@ -1,0 +1,48 @@
+border-number {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* stylelint-disable-next-line selector-type-no-unknown */
+border-number number {
+  display: flex;
+  min-width: 44px;
+  margin-top: 6px;
+  justify-content: center;
+  background: #dce8ef;
+  line-height: 1;
+}
+
+/* stylelint-disable-next-line selector-type-no-unknown */
+#attachment-view border-number number {
+  background: transparent;
+  margin-right: 4px;
+}
+
+/* stylelint-disable-next-line selector-type-no-unknown */
+#attachment-view border-number content {
+  padding-left: unset;
+}
+
+/* stylelint-disable-next-line selector-type-no-unknown */
+#attachment-view border-number content::before {
+  background-color: unset;
+}
+
+/* stylelint-disable-next-line selector-type-no-unknown */
+border-number content {
+  position: relative;
+  padding-left: 8px; /* Space between the border and the text */
+  width: 100%; /* For centered border number content, e.g., centered headlines like "I." */
+}
+
+/* stylelint-disable-next-line selector-type-no-unknown */
+border-number content::before {
+  content: "";
+  position: absolute;
+  top: 12px; /* Start of the line, leaving space at the top */
+  bottom: 12px; /* End of the line, leaving space at the bottom */
+  left: -4px; /* Line should overlap with border-number */
+  width: 4px;
+  background-color: #dce8ef;
+}

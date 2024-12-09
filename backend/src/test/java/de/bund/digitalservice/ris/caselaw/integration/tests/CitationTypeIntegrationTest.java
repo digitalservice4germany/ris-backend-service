@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.CitationTypeController;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseCitationTypeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresCitationTypeRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentTypeRepositoryImpl;
@@ -13,7 +13,8 @@ import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.CitationTypeService;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.citation.CitationType;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
@@ -36,7 +37,7 @@ import org.testcontainers.junit.jupiter.Container;
       PostgresCitationTypeRepositoryImpl.class,
       PostgresDocumentTypeRepositoryImpl.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class,
     },
     controllers = {CitationTypeController.class})
@@ -62,8 +63,9 @@ class CitationTypeIntegrationTest {
   @Autowired private DatabaseCitationTypeRepository citationTypeRepository;
 
   @MockBean UserService userService;
-  @MockBean private DocumentUnitService documentUnitService;
+  @MockBean private DocumentationUnitService documentationUnitService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
+  @MockBean private ProcedureService procedureService;
 
   @AfterEach
   void cleanUp() {

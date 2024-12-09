@@ -1,6 +1,5 @@
 package de.bund.digitalservice.ris.caselaw.config;
 
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import org.springframework.security.core.AuthenticationException;
@@ -13,7 +12,8 @@ public class RedirectingAuthenticationFailureHandler implements AuthenticationFa
       HttpServletRequest request,
       jakarta.servlet.http.HttpServletResponse response,
       AuthenticationException exception)
-      throws IOException, ServletException {
+      throws IOException {
+
     response.sendRedirect("/error");
   }
 }

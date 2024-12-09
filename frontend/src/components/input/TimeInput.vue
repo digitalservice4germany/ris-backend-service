@@ -3,7 +3,8 @@ import TextInput from "@/components/input/TextInput.vue"
 
 defineProps<{
   id: string
-  modelValue: string
+  modelValue?: string
+  disabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -16,6 +17,7 @@ const emit = defineEmits<{
     :id="id"
     :aria-label="($attrs.ariaLabel as string) ?? ''"
     class="ds-input"
+    :disabled="disabled"
     :model-value="modelValue"
     placeholder="HH:MM"
     role="textbox"

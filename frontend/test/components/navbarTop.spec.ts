@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from "vue-router"
 import NavbarTop from "@/components/NavbarTop.vue"
 import { Env } from "@/domain/env"
 import { User } from "@/domain/user"
+import featureToggleService from "@/services/featureToggleService"
 import useSessionStore from "@/stores/sessionStore"
 
 function renderComponent(options?: { env?: Env; activeUser?: User }) {
@@ -37,6 +38,11 @@ function renderComponent(options?: { env?: Env; activeUser?: User }) {
             },
             {
               path: "",
+              name: "caselaw-periodical-evaluation",
+              component: {},
+            },
+            {
+              path: "",
               name: "search",
               component: {},
             },
@@ -52,6 +58,12 @@ function renderComponent(options?: { env?: Env; activeUser?: User }) {
   })
 }
 describe("navbar top", () => {
+  beforeEach(() => {
+    vi.spyOn(featureToggleService, "isEnabled").mockResolvedValue({
+      status: 200,
+      data: true,
+    })
+  })
   test("navbar top should be rendered without error", async () => {
     renderComponent()
 
@@ -76,8 +88,9 @@ describe("navbar top", () => {
     expect(screen.getByText("Rechtsinformationen")).toBeInTheDocument()
     expect(screen.getByText("Vorgänge")).toBeInTheDocument()
     expect(screen.getByText("des Bundes")).toBeInTheDocument()
-    expect(screen.getByText("fooUser")).toBeInTheDocument
-    expect(screen.getByText("fooDocumentationOffice | Staging"))
-      .toBeInTheDocument
+    expect(screen.getByText("fooUser")).toBeInTheDocument()
+    expect(
+      screen.getByText("fooDocumentationOffice | Staging"),
+    ).toBeInTheDocument()
   })
 })

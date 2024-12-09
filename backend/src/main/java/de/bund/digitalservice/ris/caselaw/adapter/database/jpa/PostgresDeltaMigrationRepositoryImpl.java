@@ -15,10 +15,10 @@ public class PostgresDeltaMigrationRepositoryImpl implements DeltaMigrationRepos
   }
 
   @Override
-  public DeltaMigration getLatestMigration(UUID documentUnitUuid) {
+  public DeltaMigration getLatestMigration(UUID documentationUnitUuid) {
 
     return dbRepository
-        .findByDocumentationUnitId(documentUnitUuid)
+        .findByDocumentationUnitId(documentationUnitUuid)
         .map(
             originalXmlDTO ->
                 DeltaMigration.builder()

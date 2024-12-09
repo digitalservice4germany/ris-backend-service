@@ -1,7 +1,11 @@
 import { expect } from "@playwright/test"
-import { navigateToCategories, save } from "../../e2e-utils"
+import {
+  clickCategoryButton,
+  navigateToCategories,
+  save,
+  navigateToHandover,
+} from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
-import { navigateToHandover } from "~/e2e/caselaw/e2e-utils"
 
 test.describe(
   "Blockquote (Zitierung)",
@@ -24,18 +28,22 @@ test.describe(
         await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
       })
 
+      await clickCategoryButton("Gründe", page)
+
       await test.step("add text to 'Gründe'", async () => {
         await inputField.click()
         await page.keyboard.type("Abschnitt")
       })
 
       await test.step("mark text as blockquote via button", async () => {
-        await page.locator(`[aria-label='blockquote']:not([disabled])`).click()
+        await page
+          .locator(`[aria-label='Zitat einfügen']:not([disabled])`)
+          .click()
       })
 
       await test.step("check blockquote has been added to text", async () => {
         await page
-          .locator(`[aria-label='invisible-characters']:not([disabled])`)
+          .locator(`[aria-label='Nicht-druckbare Zeichen']:not([disabled])`)
           .click()
         const inputFieldInnerHTML = await inputField.innerHTML()
         expect(inputFieldInnerHTML).toContain(blockquote)
@@ -71,22 +79,28 @@ test.describe(
         await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
       })
 
+      await clickCategoryButton("Gründe", page)
+
       await test.step("add text to 'Gründe'", async () => {
         await inputField.click()
         await page.keyboard.type("Abschnitt")
       })
 
       await test.step("mark text as blockquote via button", async () => {
-        await page.locator(`[aria-label='blockquote']:not([disabled])`).click()
+        await page
+          .locator(`[aria-label='Zitat einfügen']:not([disabled])`)
+          .click()
       })
 
       await test.step("remove blockquote from text via button", async () => {
-        await page.locator(`[aria-label='blockquote']:not([disabled])`).click()
+        await page
+          .locator(`[aria-label='Zitat einfügen']:not([disabled])`)
+          .click()
       })
 
       await test.step("check blockquote has been removed from text", async () => {
         await page
-          .locator(`[aria-label='invisible-characters']:not([disabled])`)
+          .locator(`[aria-label='Nicht-druckbare Zeichen']:not([disabled])`)
           .click()
         const inputFieldInnerHTML = await inputField.innerHTML()
         expect(inputFieldInnerHTML).not.toContain(blockquote)
@@ -125,6 +139,8 @@ test.describe(
         await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
       })
 
+      await clickCategoryButton("Gründe", page)
+
       await test.step("add text to 'Gründe'", async () => {
         await inputField.click()
         await page.keyboard.type("Abschnitt")
@@ -142,7 +158,7 @@ test.describe(
 
       await test.step("check blockquote has been added to text", async () => {
         await page
-          .locator(`[aria-label='invisible-characters']:not([disabled])`)
+          .locator(`[aria-label='Nicht-druckbare Zeichen']:not([disabled])`)
           .click()
         const inputFieldInnerHTML = await inputField.innerHTML()
         expect(inputFieldInnerHTML).toContain(blockquote)
@@ -178,6 +194,8 @@ test.describe(
         await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
       })
 
+      await clickCategoryButton("Gründe", page)
+
       await test.step("add text to 'Gründe'", async () => {
         await inputField.click()
         await page.keyboard.type("Abschnitt")
@@ -205,7 +223,7 @@ test.describe(
 
       await test.step("check blockquote has been removed from text", async () => {
         await page
-          .locator(`[aria-label='invisible-characters']:not([disabled])`)
+          .locator(`[aria-label='Nicht-druckbare Zeichen']:not([disabled])`)
           .click()
         const inputFieldInnerHTML = await inputField.innerHTML()
         expect(inputFieldInnerHTML).not.toContain(blockquote)

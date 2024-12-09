@@ -2,20 +2,12 @@
 <configuration>
     <springProfile name="!(staging | production | uat)">
         <include resource="org/springframework/boot/logging/logback/base.xml"/>
-        <logger name="de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService" level="DEBUG" />
-        <logger name="de.bund.digitalservice.ris.caselaw.adapter.DatabasePatchMapperService" level="DEBUG" />
     </springProfile>
     <springProfile name="staging,production,uat">
         <include resource="org/springframework/boot/logging/logback/base.xml"/>
-        <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
-            <options>
-                <dsn>${SENTRY_DSN}</dsn>
-                <environment>logger</environment>
-            </options>
-        </appender>
-
+        <appender name="SENTRY" class="io.sentry.logback.SentryAppender" />
         <root level="INFO">
-            <!-- <appender-ref ref="LOKI" /> -->
+            <!-- <appender-ref ref="LOKI" /> -->.
             <appender-ref ref="SENTRY"/>
         </root>
     </springProfile>

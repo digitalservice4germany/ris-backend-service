@@ -1,4 +1,8 @@
-import DocumentUnit, { CoreData, Texts } from "../../src/domain/documentUnit"
+import DocumentUnit, {
+  CoreData,
+  LongTexts,
+  ShortTexts,
+} from "../../src/domain/documentUnit"
 
 describe("DocumentUnit", () => {
   it("instantiates with uuid", () => {
@@ -21,14 +25,20 @@ describe("DocumentUnit", () => {
     expect(coreData.court?.location).toBe("baz")
   })
 
-  it("returns texts as object", () => {
+  it("returns short texts as object", () => {
     const documentUnit = new DocumentUnit("foo")
-    documentUnit.texts.reasons = "bar"
-    documentUnit.texts.headnote = "baz"
+    documentUnit.shortTexts.headnote = "baz"
 
-    const documentUnitTexts: Texts = documentUnit.texts
-    expect(documentUnitTexts.reasons).toBe("bar")
+    const documentUnitTexts: ShortTexts = documentUnit.shortTexts
     expect(documentUnitTexts.headnote).toBe("baz")
+  })
+
+  it("returns long texts as object", () => {
+    const documentUnit = new DocumentUnit("foo")
+    documentUnit.longTexts.reasons = "bar"
+
+    const documentUnitTexts: LongTexts = documentUnit.longTexts
+    expect(documentUnitTexts.reasons).toBe("bar")
   })
 
   it("returns false if no file is attached", () => {

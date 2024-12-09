@@ -1,7 +1,11 @@
 import { expect } from "@playwright/test"
-import { navigateToCategories, save } from "../../e2e-utils"
+import {
+  clickCategoryButton,
+  navigateToCategories,
+  save,
+  navigateToHandover,
+} from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
-import { navigateToHandover } from "~/e2e/caselaw/e2e-utils"
 
 test.describe(
   "Indent text",
@@ -24,22 +28,29 @@ test.describe(
 
       await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
 
+      await clickCategoryButton("Gründe", page)
       const inputField = page.locator("[data-testid='Gründe']")
       await inputField.click()
       await page.keyboard.type("Abschnitt mit Einzug 0")
       await page.keyboard.press("Enter")
       await page.keyboard.type("Abschnitt mit Einzug 1")
-      await page.locator(`[aria-label='indent']:not([disabled])`).click()
+      await page
+        .locator(`[aria-label='Einzug vergrößern']:not([disabled])`)
+        .click()
       await page.keyboard.press("Enter")
       await page.keyboard.type("Abschnitt mit Einzug 2")
-      await page.locator(`[aria-label='indent']:not([disabled])`).click()
+      await page
+        .locator(`[aria-label='Einzug vergrößern']:not([disabled])`)
+        .click()
       await page.keyboard.press("Enter")
       await page.keyboard.type("Abschnitt mit Einzug 3")
-      await page.locator(`[aria-label='indent']:not([disabled])`).click()
+      await page
+        .locator(`[aria-label='Einzug vergrößern']:not([disabled])`)
+        .click()
 
       // hide invisible characters
       await page
-        .locator(`[aria-label='invisible-characters']:not([disabled])`)
+        .locator(`[aria-label='Nicht-druckbare Zeichen']:not([disabled])`)
         .click()
 
       const inputFieldInnerHTML = await inputField.innerHTML()
@@ -71,10 +82,11 @@ test.describe(
 
       await navigateToCategories(page, documentNumber)
 
+      await clickCategoryButton("Gründe", page)
       const inputField = page.locator("[data-testid='Gründe']")
       await inputField.click()
       await page
-        .locator(`[aria-label='invisible-characters']:not([disabled])`)
+        .locator(`[aria-label='Nicht-druckbare Zeichen']:not([disabled])`)
         .click()
       await page.keyboard.type("Abschnitt mit Einzug")
 
@@ -82,22 +94,34 @@ test.describe(
       expect(inputFieldInnerHTML).toContain(noIndentation)
 
       await inputField.click()
-      await page.locator(`[aria-label='indent']:not([disabled])`).click()
+      await page
+        .locator(`[aria-label='Einzug vergrößern']:not([disabled])`)
+        .click()
 
       inputFieldInnerHTML = await inputField.innerHTML()
       expect(inputFieldInnerHTML).toContain(singleIndentation)
 
       await inputField.click()
-      await page.locator(`[aria-label='indent']:not([disabled])`).click()
-      await page.locator(`[aria-label='indent']:not([disabled])`).click()
+      await page
+        .locator(`[aria-label='Einzug vergrößern']:not([disabled])`)
+        .click()
+      await page
+        .locator(`[aria-label='Einzug vergrößern']:not([disabled])`)
+        .click()
 
       inputFieldInnerHTML = await inputField.innerHTML()
       expect(inputFieldInnerHTML).toContain(tripleIndentation)
 
       await inputField.click()
-      await page.locator(`[aria-label='outdent']:not([disabled])`).click()
-      await page.locator(`[aria-label='outdent']:not([disabled])`).click()
-      await page.locator(`[aria-label='outdent']:not([disabled])`).click()
+      await page
+        .locator(`[aria-label='Einzug verringern']:not([disabled])`)
+        .click()
+      await page
+        .locator(`[aria-label='Einzug verringern']:not([disabled])`)
+        .click()
+      await page
+        .locator(`[aria-label='Einzug verringern']:not([disabled])`)
+        .click()
 
       inputFieldInnerHTML = await inputField.innerHTML()
       expect(inputFieldInnerHTML).toContain(noIndentation)

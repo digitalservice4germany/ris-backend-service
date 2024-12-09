@@ -3,9 +3,9 @@ package de.bund.digitalservice.ris.caselaw.domain.docx;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BorderNumber implements DocumentUnitDocx {
+public class BorderNumber implements DocumentationUnitDocx {
   private final StringBuilder number = new StringBuilder();
-  private List<DocumentUnitDocx> children = new ArrayList<>();
+  private List<DocumentationUnitDocx> children = new ArrayList<>();
   private Integer numId = null;
 
   public String getNumber() {
@@ -26,7 +26,7 @@ public class BorderNumber implements DocumentUnitDocx {
     sb.append("</number>");
     if (!children.isEmpty()) {
       sb.append("<content>");
-      for (DocumentUnitDocx child : children) {
+      for (DocumentationUnitDocx child : children) {
         sb.append(child.toHtmlString());
       }
       sb.append("</content>");
@@ -36,7 +36,7 @@ public class BorderNumber implements DocumentUnitDocx {
     return sb.toString();
   }
 
-  public void addChild(DocumentUnitDocx element) {
+  public void addChild(DocumentationUnitDocx element) {
     children.add(element);
   }
 
@@ -44,7 +44,7 @@ public class BorderNumber implements DocumentUnitDocx {
     return children.size();
   }
 
-  public List<DocumentUnitDocx> getChildren() {
+  public List<DocumentationUnitDocx> getChildren() {
     return children;
   }
 

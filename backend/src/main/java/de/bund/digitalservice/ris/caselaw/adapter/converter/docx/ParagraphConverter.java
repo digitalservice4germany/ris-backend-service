@@ -3,12 +3,17 @@ package de.bund.digitalservice.ris.caselaw.adapter.converter.docx;
 import de.bund.digitalservice.ris.caselaw.domain.docx.AnchorImageElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.ParagraphElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.RunElement;
+import de.bund.digitalservice.ris.caselaw.domain.docx.UnhandledElement;
+import de.bund.digitalservice.ris.caselaw.domain.docx.UnhandledElementType;
+import jakarta.xml.bind.JAXBElement;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 import org.docx4j.wml.Jc;
 import org.docx4j.wml.JcEnumeration;
 import org.docx4j.wml.P;
+import org.docx4j.wml.P.Hyperlink;
 import org.docx4j.wml.PPr;
 import org.docx4j.wml.R;
 import org.docx4j.wml.Style;
@@ -17,6 +22,7 @@ import org.docx4j.wml.Style;
  * Converter to convert docx4j {@link org.docx4j.wml.P} element to internal used {@link
  * ParagraphElement}
  */
+@Slf4j
 public class ParagraphConverter {
 
   public static final int HTML_INDENT_SIZE_IN_PX = 40;
@@ -26,12 +32,15 @@ public class ParagraphConverter {
   /**
    * Convert the {@link org.docx4j.wml.P} to a {@link ParagraphElement}
    *
-   * @see DocxConverter
-   * @param paragraph original docx4j {@link org.docx4j.wml.P} element
+   * @param paragraph original docx4j {@link P} element
    * @param converter reference to the converter
+   * @param unhandledElements
    * @return the internal representation as {@link ParagraphElement}
+   * @see DocxConverter
    */
-  public static ParagraphElement convert(P paragraph, DocxConverter converter) {
+  public static ParagraphElement convert(
+      P paragraph, DocxConverter converter, List<UnhandledElement> unhandledElements) {
+
     if (paragraph == null) {
       return null;
     }
@@ -66,10 +75,29 @@ public class ParagraphConverter {
       }
     }
 
-    paragraph.getContent().stream()
-        .filter(R.class::isInstance)
-        .map(R.class::cast)
-        .forEach(run -> RunElementConverter.convert(run, paragraphElement, converter));
+    paragraph
+        .getContent()
+        .forEach(
+            content -> {
+              if (content instanceof R run) {
+                RunElementConverter.convert(run, paragraphElement, converter, unhandledElements);
+              } else if (content instanceof JAXBElement<?> jaxbElement) {
+                if (jaxbElement.getValue() instanceof Hyperlink hyperlink) {
+                  HyperlinkConverter.convert(
+                      hyperlink, paragraphElement, converter, unhandledElements);
+                } else {
+                  unhandledElements.add(
+                      new UnhandledElement(
+                          "paragraph",
+                          jaxbElement.getDeclaredType().toString(),
+                          UnhandledElementType.JAXB));
+                }
+              } else {
+                unhandledElements.add(
+                    new UnhandledElement(
+                        "paragraph", content.getClass().toString(), UnhandledElementType.OBJECT));
+              }
+            });
 
     sortParagraphElements(paragraphElement);
 

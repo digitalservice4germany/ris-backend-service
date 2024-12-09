@@ -4,6 +4,8 @@ import {
   navigateToAttachments,
   save,
   uploadTestfile,
+  copyPasteTextFromAttachmentIntoEditor,
+  clickCategoryButton,
 } from "../../e2e-utils"
 import { caselawTest as test } from "../../fixtures"
 
@@ -25,16 +27,15 @@ test.beforeEach(async ({ page, documentNumber }) => {
     5. Delete original border numbers in reasons
     6. Check validation state after save
 */
-// eslint-disable-next-line playwright/no-skipped-test
 test("create and validate border number links", async ({
   page,
   documentNumber,
 }) => {
   // Copy border numbers from side panel into reasons to have reference data
-  const documentOrigin = "Gründe:"
-  const firstReason = "First reason"
-  const secondReason = "Second reason"
-  const thirdReason = "Third reason"
+  const documentOrigin = "Headline:"
+  const firstReason = "First paragraph"
+  const secondReason = "Second paragraph"
+  const thirdReason = "Third paragraph"
 
   // upload file
   await uploadTestfile(page, "some-border-numbers.docx")
@@ -53,37 +54,19 @@ test("create and validate border number links", async ({
   const originalFileParagraph = page.getByText(documentOrigin)
   await expect(originalFileParagraph).toBeVisible()
 
-  // Selected all text from sidepanel
-  await originalFileParagraph.evaluate((element) => {
-    const originalFile = element.parentElement?.parentElement?.parentElement
-
-    if (!originalFile) {
-      throw new Error("No original file available.")
-    }
-
-    const selection = window.getSelection()
-    const elementChildsLength = originalFile.childNodes.length
-    const startOffset = 0
-    const range = document.createRange()
-    range.setStart(originalFile.childNodes[0], startOffset)
-    range.setEnd(originalFile.childNodes[elementChildsLength - 1], startOffset)
-    selection?.removeAllRanges()
-    selection?.addRange(range)
-  })
-
-  // copy from sidepanel to clipboard
-  // eslint-disable-next-line playwright/no-conditional-in-test
-  const modifier = (await page.evaluate(() => navigator.platform))
-    .toLowerCase()
-    .includes("mac")
-    ? "Meta"
-    : "Control"
-  await page.keyboard.press(`${modifier}+KeyC`)
-
-  // paste from clipboard into input field "Entscheidungsgründe"
+  const attachmentLocator = page
+    .getByText("Headline:")
+    .locator("..")
+    .locator("..")
+    .locator("..")
   const inputField = page.locator("[data-testid='Gründe']")
-  await inputField.click()
-  await page.keyboard.press(`${modifier}+KeyV`)
+  await clickCategoryButton("Gründe", page)
+  await copyPasteTextFromAttachmentIntoEditor(
+    page,
+    attachmentLocator,
+    inputField,
+  )
+
   const inputFieldInnerHTML = await inputField.innerText()
 
   // Check all text copied
@@ -96,6 +79,7 @@ test("create and validate border number links", async ({
   expect(inputFieldInnerHTML).toContain(thirdReason)
 
   // Create valid and invalid border number links in Leitsatz
+  await clickCategoryButton("Leitsatz", page)
   const guidingPrincipleInput = page.locator("[data-testid='Leitsatz']")
   await guidingPrincipleInput.click()
   await page.keyboard.type(`#1# #4# #99999# #1000000# #not a border number#`)
@@ -104,21 +88,22 @@ test("create and validate border number links", async ({
   await save(page)
 
   // check valid border number link
-  const locators = await page
+  const locators = page
     .locator("[data-testid='Leitsatz']")
     .locator("border-number-link")
-    .all()
+
+  const borderNumberLinks = await locators.all()
 
   // only three of the input values should be rendered as borderNumberLinks
-  expect(locators).toHaveLength(3)
+  await expect(locators).toHaveCount(3)
 
-  const validLink = locators[0]
-  const invalidLink = locators[1]
-  const invalidHighestNumberLink = locators[2]
+  const validLink = borderNumberLinks[0]
+  const invalidLink = borderNumberLinks[1]
+  const invalidHighestNumberLink = borderNumberLinks[2]
 
   await expect(validLink).toHaveAttribute("valid", "true")
   await expect(validLink).toHaveClass(
-    'font-bold text-white bg-blue-700 before:content-["Rd_"]',
+    'font-bold text-white bg-blue-700 before:content-["Rd_"] ml-1 pr-1',
   )
 
   // check invalid border number links
@@ -134,8 +119,8 @@ test("create and validate border number links", async ({
   // Delete border numbers in reasons
   const reasons = page.locator("[data-testid='Gründe']")
   await reasons.click()
-  await page.keyboard.press(`${modifier}+KeyA`)
-  await page.keyboard.press(`${modifier}+Backspace`)
+  await page.keyboard.press(`ControlOrMeta+A`)
+  await page.keyboard.press(`ControlOrMeta+Backspace`)
 
   // save
   await save(page)

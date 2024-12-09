@@ -34,7 +34,9 @@ INSERT INTO
     guiding_principle,
     judicial_body,
     procedure,
-    tenor
+    tenor,
+    last_publication_date_time,
+    scheduled_publication_date_time
   )
 VALUES
   (
@@ -64,12 +66,14 @@ VALUES
       FROM
         incremental_migration.documentation_office
       WHERE
-        abbreviation = 'DS'
+        abbreviation = 'BAG'
     ),
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenor1'
+    'tenor1',
+    '2000-11-21 09:42:49.385920',
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -88,7 +92,9 @@ VALUES
     NULL,
     NULL,
     NULL,
-    NULL
+    NULL,
+    NULL,
+    '2100-11-21 09:42:49.385920'
   ),
   (
     gen_random_uuid (),
@@ -122,7 +128,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    '2100-11-30 19:46:49.385920'
   ),
   (
     gen_random_uuid (),
@@ -157,7 +165,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -191,7 +201,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    '2001-11-21 09:42:49.385920',
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -210,7 +222,9 @@ VALUES
     NULL,
     NULL,
     NULL,
-    'tenorx'
+    'tenorx',
+    '2002-11-21 09:42:49.385920',
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -229,7 +243,9 @@ VALUES
     NULL,
     NULL,
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -255,7 +271,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -281,7 +299,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -315,7 +335,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -349,7 +371,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -383,7 +407,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    NULL
   ),
   (
     gen_random_uuid (),
@@ -417,7 +443,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    '2100-11-21 19:42:49.385920'
   ),
   (
     gen_random_uuid (),
@@ -452,7 +480,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    NULL,
+    '2100-11-21 10:42:49.385920'
   ),
   (
     gen_random_uuid (),
@@ -478,7 +508,9 @@ VALUES
     'guiding principle',
     '1.Senat, 2. Kammer',
     NULL,
-    'tenorx'
+    'tenorx',
+    '2005-11-21 09:42:49.385920',
+    NULL
   );
 
 INSERT INTO
@@ -688,8 +720,8 @@ VALUES
   ),
   (
     gen_random_uuid (),
-    '2024-03-14 18:38:43.043877 +00:00',
-    'UNPUBLISHED',
+    '2024-03-13 18:38:43.043877 +00:00',
+    'PUBLISHED',
     false,
     (
       SELECT
@@ -699,7 +731,98 @@ VALUES
       WHERE
         document_number = 'YYTestDoc0015'
     )
-  );
+  ),
+  (
+    gen_random_uuid (),
+    '2024-03-14 18:38:43.043877 +00:00',
+    'UNPUBLISHED',
+    false,
+    (
+      SELECT
+          id
+      FROM
+          incremental_migration.documentation_unit
+      WHERE
+          document_number = 'YYTestDoc0015'
+    )
+  ),
+  (
+    gen_random_uuid (),
+    '2024-03-12 18:38:43.043877 +00:00',
+    'PUBLISHED',
+    false,
+    (
+      SELECT
+          id
+      FROM
+          incremental_migration.documentation_unit
+      WHERE
+          document_number = 'YYTestDoc0015'
+    )
+  )
+    ;
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+(SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0001'))
+WHERE document_number = 'YYTestDoc0001';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0002'))
+WHERE document_number = 'YYTestDoc0002';
+
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0003'))
+WHERE document_number = 'YYTestDoc0003';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0004'))
+WHERE document_number = 'YYTestDoc0004';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0005'))
+WHERE document_number = 'YYTestDoc0005';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0006'))
+WHERE document_number = 'YYTestDoc0006';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0007'))
+WHERE document_number = 'YYTestDoc0007';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0008'))
+WHERE document_number = 'YYTestDoc0008';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0009'))
+WHERE document_number = 'YYTestDoc0009';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0010'))
+WHERE document_number = 'YYTestDoc0010';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0011'))
+WHERE document_number = 'YYTestDoc0011';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0012'))
+WHERE document_number = 'YYTestDoc0012';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0013'))
+WHERE document_number = 'YYTestDoc0013';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0014'))
+WHERE document_number = 'YYTestDoc0014';
+
+UPDATE incremental_migration.documentation_unit SET current_status_id =
+    (SELECT id FROM incremental_migration.status WHERE documentation_unit_id = (SELECT id FROM incremental_migration.documentation_unit WHERE document_number = 'YYTestDoc0015') ORDER BY created_at DESC LIMIT 1)
+WHERE document_number = 'YYTestDoc0015';
+
 
 UPDATE
   incremental_migration.documentation_unit

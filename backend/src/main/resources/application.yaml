@@ -33,6 +33,7 @@ otc:
 
 sentry:
   exception-resolver-order: -2147483647
+  ignored-exceptions-for-type: org.springframework.security.authorization.AuthorizationDeniedException, de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException
 
 server:
   shutdown: graceful
@@ -82,4 +83,6 @@ neuris:
     DS: XXRE0******YY
     CC-RIS: XXRE1******YY
     BFH: STREYYYY2****
+    BPatG: MPRE6******YY
+    BAG: KARE7****YYYY
     # TODO: other docoffices

@@ -31,7 +31,9 @@ class FieldOfLawControllerTest {
   @Test
   void testGetFieldsOfLaw_withoutQuery_shouldCallServiceWithoutValue() {
     Pageable pageable = PageRequest.of(0, 10);
-    when(service.getFieldsOfLawBySearchQuery(Optional.empty(), pageable)).thenReturn(null);
+    when(service.getFieldsOfLawBySearchQuery(
+            Optional.empty(), Optional.empty(), Optional.empty(), pageable))
+        .thenReturn(null);
 
     risWebTestClient
         .withDefaultLogin()
@@ -41,23 +43,44 @@ class FieldOfLawControllerTest {
         .expectStatus()
         .isOk();
 
-    verify(service, times(1)).getFieldsOfLawBySearchQuery(Optional.empty(), pageable);
+    verify(service, times(1))
+        .getFieldsOfLawBySearchQuery(
+            Optional.empty(), Optional.empty(), Optional.empty(), pageable);
   }
 
   @Test
   void testGetFieldsOfLaw_withQuery_shouldCallServiceWithValue() {
     Pageable pageable = PageRequest.of(0, 10);
-    when(service.getFieldsOfLawBySearchQuery(Optional.of("root"), pageable)).thenReturn(null);
+    when(service.getFieldsOfLawBySearchQuery(
+            Optional.of("root"), Optional.of("stext"), Optional.of("bgb"), pageable))
+        .thenReturn(null);
 
     risWebTestClient
         .withDefaultLogin()
         .get()
-        .uri("/api/v1/caselaw/fieldsoflaw?q=root&pg=0&sz=10")
+        .uri("/api/v1/caselaw/fieldsoflaw?identifier=root&q=stext&norm=bgb&pg=0&sz=10")
         .exchange()
         .expectStatus()
         .isOk();
 
-    verify(service, times(1)).getFieldsOfLawBySearchQuery(Optional.of("root"), pageable);
+    verify(service, times(1))
+        .getFieldsOfLawBySearchQuery(
+            Optional.of("root"), Optional.of("stext"), Optional.of("bgb"), pageable);
+  }
+
+  @Test
+  void testFieldsOfLawByIdentifier() {
+    when(service.getFieldsOfLawByIdentifierSearch(Optional.of("AR"))).thenReturn(null);
+
+    risWebTestClient
+        .withDefaultLogin()
+        .get()
+        .uri("/api/v1/caselaw/fieldsoflaw/search-by-identifier?q=AR")
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    verify(service, times(1)).getFieldsOfLawByIdentifierSearch(Optional.of("AR"));
   }
 
   @Test

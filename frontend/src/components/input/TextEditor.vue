@@ -27,6 +27,7 @@ import {
 } from "@/editor/borderNumber"
 import { BorderNumberLink } from "@/editor/borderNumberLink"
 import { CustomBulletList } from "@/editor/bulletList"
+import { EventHandler } from "@/editor/EventHandler"
 import { FontSize } from "@/editor/fontSize"
 import { CustomImage } from "@/editor/image"
 import { Indent } from "@/editor/indent"
@@ -42,6 +43,8 @@ interface Props {
   editable?: boolean
   preview?: boolean
   ariaLabel?: string
+  /* If true, the color formatting of border numbers is disabled */
+  plainBorderNumbers?: boolean
   fieldSize?: TextAreaInputAttributes["fieldSize"]
 }
 
@@ -49,6 +52,7 @@ const props = withDefaults(defineProps<Props>(), {
   value: undefined,
   editable: false,
   preview: false,
+  plainBorderNumbers: false,
   ariaLabel: "Editor Feld",
   fieldSize: "medium",
 })
@@ -81,6 +85,7 @@ const editor = new Editor({
     BorderNumberLink,
     Bold,
     Color,
+    EventHandler,
     FontSize,
     Italic,
     CustomListItem,
@@ -90,7 +95,10 @@ const editor = new Editor({
     Strike,
     CustomSubscript,
     CustomSuperscript,
-    Table,
+    Table.configure({
+      resizable: true,
+      allowTableNodeSelection: true,
+    }),
     TableCell,
     TableHeader,
     TableRow,
@@ -100,6 +108,9 @@ const editor = new Editor({
     InvisibleCharacters,
     TextAlign.configure({
       types: ["paragraph", "span"],
+      alignments: props.editable
+        ? ["left", "right", "center"]
+        : ["left", "right", "center", "justify"],
     }),
     CustomImage.configure({
       allowBase64: true,
@@ -124,25 +135,31 @@ const editor = new Editor({
   parseOptions: {
     preserveWhitespace: "full",
   },
+  onSelectionUpdate: () => editor.commands.handleSelection(),
 })
 
 const containerWidth = ref<number>()
 
 const editorExpanded = ref(false)
-const editorSize = computed(() => {
-  if (editorExpanded.value) return "h-640"
+const editorStyleClasses = computed(() => {
+  const plainBorderNumberStyle = props.plainBorderNumbers
+    ? "plain-border-number"
+    : ""
 
-  switch (props.fieldSize) {
-    case "max":
-      return "h-full"
-    case "big":
-      return "h-320"
-    case "medium":
-      return "h-160"
-    case "small":
-      return "h-96"
+  if (editorExpanded.value) {
+    return `h-640 ${plainBorderNumberStyle} p-4`
   }
-  return undefined
+
+  const fieldSizeClasses = {
+    max: "h-full",
+    big: "h-320",
+    medium: "h-160",
+    small: "h-96",
+  } as const
+
+  return fieldSizeClasses[props.fieldSize]
+    ? `${fieldSizeClasses[props.fieldSize]} ${plainBorderNumberStyle} p-4`
+    : undefined
 })
 
 watch(
@@ -177,7 +194,7 @@ watch(
 
 const ariaLabel = props.ariaLabel ? props.ariaLabel : null
 
-onMounted(() => {
+onMounted(async () => {
   const editorContainer = document.querySelector(".editor")
   if (editorContainer != null) resizeObserver.observe(editorContainer)
 })
@@ -216,7 +233,7 @@ const resizeObserver = new ResizeObserver((entries) => {
     <hr v-if="editable" class="ml-8 mr-8 border-blue-300" />
     <div>
       <EditorContent
-        :class="editorSize"
+        :class="editorStyleClasses"
         :data-testid="ariaLabel"
         :editor="editor"
       />

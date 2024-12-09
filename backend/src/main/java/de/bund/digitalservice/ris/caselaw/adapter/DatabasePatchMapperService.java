@@ -12,7 +12,7 @@ import com.gravity9.jsonpatch.RemoveOperation;
 import com.gravity9.jsonpatch.diff.JsonDiff;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitPatchRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitPatchDTO;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.RisJsonPatch;
 import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitPatchException;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
@@ -38,13 +38,13 @@ public class DatabasePatchMapperService implements PatchMapperService {
   }
 
   @Override
-  public DocumentUnit applyPatchToEntity(JsonPatch patch, DocumentUnit targetEntity) {
-    DocumentUnit documentationUnit;
+  public DocumentationUnit applyPatchToEntity(JsonPatch patch, DocumentationUnit targetEntity) {
+    DocumentationUnit documentationUnit;
 
     try {
       JsonNode jsonNode = objectMapper.convertValue(targetEntity, JsonNode.class);
       JsonNode updatedNode = patch.apply(jsonNode);
-      documentationUnit = objectMapper.treeToValue(updatedNode, DocumentUnit.class);
+      documentationUnit = objectMapper.treeToValue(updatedNode, DocumentationUnit.class);
     } catch (JsonProcessingException | JsonPatchException e) {
       throw new DocumentationUnitPatchException("Couldn't apply patch", e);
     }
@@ -53,7 +53,7 @@ public class DatabasePatchMapperService implements PatchMapperService {
   }
 
   @Override
-  public JsonPatch getDiffPatch(DocumentUnit existed, DocumentUnit updated) {
+  public JsonPatch getDiffPatch(DocumentationUnit existed, DocumentationUnit updated) {
     return JsonDiff.asJsonPatch(
         objectMapper.convertValue(existed, JsonNode.class),
         objectMapper.convertValue(updated, JsonNode.class));
@@ -78,25 +78,6 @@ public class DatabasePatchMapperService implements PatchMapperService {
   }
 
   @Override
-  public RisJsonPatch removeExistPatches(RisJsonPatch toFrontend, JsonPatch patch) {
-    List<String> operationAsStringList =
-        patch.getOperations().stream().map(JsonPatchOperation::toString).toList();
-    List<JsonPatchOperation> operations =
-        toFrontend.patch().getOperations().stream()
-            .peek(
-                operation -> {
-                  if (operationAsStringList.contains(operation.toString())) {
-                    log.info("remove '{}' patch", operation.getPath());
-                  }
-                })
-            .filter(operation -> !operationAsStringList.contains(operation.toString()))
-            .toList();
-
-    return new RisJsonPatch(
-        toFrontend.documentationUnitVersion(), new JsonPatch(operations), toFrontend.errorPaths());
-  }
-
-  @Override
   public JsonPatch addUpdatePatch(JsonPatch toUpdate, JsonPatch toSaveJsonPatch) {
     List<JsonPatchOperation> operations = new ArrayList<>(toUpdate.getOperations());
     operations.addAll(toSaveJsonPatch.getOperations());
@@ -108,13 +89,17 @@ public class DatabasePatchMapperService implements PatchMapperService {
     List<JsonPatchOperation> patchWithoutVersion =
         patch.getOperations().stream().filter(op -> !op.getPath().equals("/version")).toList();
 
+    if (patchWithoutVersion.isEmpty()) {
+      return;
+    }
+
     try {
       String patchJson = objectMapper.writeValueAsString(new JsonPatch(patchWithoutVersion));
       DocumentationUnitPatchDTO dto =
           DocumentationUnitPatchDTO.builder()
               .documentationUnitId(documentationUnitId)
               .documentationUnitVersion(
-                  documentationUnitVersion == null ? 1 : documentationUnitVersion)
+                  documentationUnitVersion == null ? 0 : documentationUnitVersion)
               .patch(patchJson)
               .build();
       repository.save(dto);
@@ -146,7 +131,7 @@ public class DatabasePatchMapperService implements PatchMapperService {
 
   @Override
   public RisJsonPatch handlePatchForSamePath(
-      DocumentUnit existingDocumentationUnit,
+      DocumentationUnit existingDocumentationUnit,
       JsonPatch patch1,
       JsonPatch patch2,
       JsonPatch patch3) {

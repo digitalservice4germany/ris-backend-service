@@ -1,48 +1,58 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.mockUserGroups;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.groups.Tuple.tuple;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doReturn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import de.bund.digitalservice.ris.caselaw.EntityBuilderTestUtil;
 import de.bund.digitalservice.ris.caselaw.SliceTestImpl;
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberGeneratorService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberRecyclingService;
-import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentUnitStatusService;
+import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentationUnitStatusService;
+import de.bund.digitalservice.ris.caselaw.adapter.DatabaseProcedureService;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentNumberPatternConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.DocumentUnitController;
+import de.bund.digitalservice.ris.caselaw.adapter.DocumentationUnitController;
 import de.bund.digitalservice.ris.caselaw.adapter.DocxConverterService;
+import de.bund.digitalservice.ris.caselaw.adapter.KeycloakUserService;
+import de.bund.digitalservice.ris.caselaw.adapter.LdmlExporterService;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
+import de.bund.digitalservice.ris.caselaw.adapter.ProcedureController;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationOfficeRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitProcedureRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitRepository;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseStatusRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseProcedureRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseUserGroupRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DeviatingFileNumberDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationOfficeDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitProcedureDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.FileNumberDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDeltaMigrationRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentationUnitRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresHandoverReportRepositoryImpl;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.StatusDTO;
-import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentationOfficeTransformer;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.ProcedureDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.UserGroupDTO;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.AttachmentService;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitListItem;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
 import de.bund.digitalservice.ris.caselaw.domain.PublicationStatus;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
-import de.bund.digitalservice.ris.caselaw.domain.UserService;
+import de.bund.digitalservice.ris.caselaw.domain.UserGroupService;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,9 +61,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.Slice;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.shaded.org.apache.commons.lang3.RandomStringUtils;
@@ -61,21 +71,23 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @RISIntegrationTest(
     imports = {
-      DocumentUnitService.class,
+      DocumentationUnitService.class,
       PostgresDeltaMigrationRepositoryImpl.class,
-      DatabaseDocumentUnitStatusService.class,
+      DatabaseDocumentationUnitStatusService.class,
       DatabaseDocumentNumberRecyclingService.class,
       DatabaseDocumentNumberGeneratorService.class,
+      DatabaseProcedureService.class,
       PostgresDocumentationUnitRepositoryImpl.class,
       PostgresHandoverReportRepositoryImpl.class,
       PostgresJPAConfig.class,
       FlywayConfig.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class,
-      DocumentNumberPatternConfig.class
+      DocumentNumberPatternConfig.class,
+      KeycloakUserService.class
     },
-    controllers = {DocumentUnitController.class})
+    controllers = {DocumentationUnitController.class, ProcedureController.class})
 class DocumentationUnitSearchIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgreSQLContainer =
@@ -93,26 +105,32 @@ class DocumentationUnitSearchIntegrationTest {
   @Autowired private RisWebTestClient risWebTestClient;
   @Autowired private DatabaseDocumentationUnitRepository repository;
   @Autowired private DatabaseDocumentationOfficeRepository documentationOfficeRepository;
-  @Autowired private DatabaseStatusRepository statusRepository;
+  @Autowired private DatabaseProcedureRepository procedureRepository;
+  @Autowired private DatabaseUserGroupRepository userGroupRepository;
+
+  @Autowired
+  private DatabaseDocumentationUnitProcedureRepository documentationUnitProcedureRepository;
 
   @MockBean S3AsyncClient s3AsyncClient;
   @MockBean MailService mailService;
   @MockBean DocxConverterService docxConverterService;
-  @MockBean UserService userService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
   @MockBean AttachmentService attachmentService;
+  @MockBean private UserGroupService userGroupService;
   @MockBean private PatchMapperService patchMapperService;
   @MockBean private HandoverService handoverService;
+  @MockBean private LdmlExporterService ldmlExporterService;
+
+  @MockBean
+  private DocumentationUnitDocxMetadataInitializationService
+      documentationUnitDocxMetadataInitializationService;
 
   private DocumentationOfficeDTO docOfficeDTO;
 
   @BeforeEach
   void setUp() {
     docOfficeDTO = documentationOfficeRepository.findByAbbreviation("DS");
-
-    doReturn(DocumentationOfficeTransformer.transformToDomain(docOfficeDTO))
-        .when(userService)
-        .getDocumentationOffice(any(OidcUser.class));
+    mockUserGroups(userGroupService);
   }
 
   @AfterEach
@@ -122,53 +140,21 @@ class DocumentationUnitSearchIntegrationTest {
 
   @Test
   void testForCorrectResponseWhenRequestingAll() {
-    DocumentationUnitDTO migrationDto =
-        repository.save(
-            DocumentationUnitDTO.builder()
-                .id(UUID.randomUUID())
-                .documentNumber("MIGR202200012")
-                .documentationOffice(docOfficeDTO)
-                .build());
-    // TODO can't the file number be set in the first save()?
-    migrationDto =
-        repository.save(
-            migrationDto.toBuilder()
-                .fileNumbers(
-                    List.of(
-                        FileNumberDTO.builder()
-                            .value("AkteM")
-                            .documentationUnit(migrationDto)
-                            .rank(0L)
-                            .build()))
-                .build());
-    DocumentationUnitDTO newNeurisDto =
-        repository.save(
-            DocumentationUnitDTO.builder()
-                .documentNumber("NEUR202300008")
-                .documentationOffice(docOfficeDTO)
-                .build());
-    newNeurisDto =
-        repository.save(
-            newNeurisDto.toBuilder()
-                .fileNumbers(
-                    List.of(
-                        FileNumberDTO.builder()
-                            .value("AkteY")
-                            .documentationUnit(newNeurisDto)
-                            .rank(0L)
-                            .build()))
-                .build());
 
-    statusRepository.save(
-        StatusDTO.builder()
-            .documentationUnitDTO(migrationDto)
-            .publicationStatus(PublicationStatus.PUBLISHED)
-            .build());
-    statusRepository.save(
-        StatusDTO.builder()
-            .documentationUnitDTO(newNeurisDto)
-            .publicationStatus(PublicationStatus.PUBLISHED)
-            .build());
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository,
+        DocumentationUnitDTO.builder()
+            .id(UUID.randomUUID())
+            .documentNumber("MIGR202200012")
+            .documentationOffice(docOfficeDTO)
+            .fileNumbers(List.of(FileNumberDTO.builder().value("AkteM").rank(0L).build())));
+
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository,
+        DocumentationUnitDTO.builder()
+            .documentNumber("NEUR202300008")
+            .documentationOffice(docOfficeDTO)
+            .fileNumbers(List.of(FileNumberDTO.builder().value("AkteY").rank(0L).build())));
 
     Slice<DocumentationUnitListItem> responseBody =
         risWebTestClient
@@ -206,12 +192,12 @@ class DocumentationUnitSearchIntegrationTest {
             LocalDate.of(2023, 6, 7));
 
     for (LocalDate date : dates) {
-      repository.save(
+      EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+          repository,
           DocumentationUnitDTO.builder()
               .documentNumber(RandomStringUtils.randomAlphabetic(13))
               .decisionDate(date)
-              .documentationOffice(docOfficeDTO)
-              .build());
+              .documentationOffice(docOfficeDTO));
     }
 
     Slice<DocumentationUnitListItem> responseBody =
@@ -229,25 +215,187 @@ class DocumentationUnitSearchIntegrationTest {
     assertThat(responseBody)
         .extracting("decisionDate")
         .containsExactly(
-            LocalDate.of(2023, 06, 07),
-            LocalDate.of(2023, 03, 15),
-            LocalDate.of(2022, 01, 23),
-            LocalDate.of(2022, 01, 23),
+            LocalDate.of(2023, 6, 7),
+            LocalDate.of(2023, 3, 15),
+            LocalDate.of(2022, 1, 23),
+            LocalDate.of(2022, 1, 23),
             null);
   }
 
   @Test
+  void test_searchByScheduledOnly_shouldReturnDescendingOrder() {
+    List<LocalDateTime> scheduledPublicationDates =
+        Arrays.asList(
+            LocalDateTime.of(2022, 1, 23, 10, 5),
+            LocalDateTime.of(2024, 1, 24, 10, 5),
+            LocalDateTime.of(2022, 7, 24, 10, 5),
+            LocalDateTime.of(2022, 1, 24, 10, 5),
+            null,
+            LocalDateTime.of(2022, 1, 23, 8, 5),
+            LocalDateTime.of(2022, 1, 23, 10, 4));
+
+    for (LocalDateTime date : scheduledPublicationDates) {
+      EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+          repository,
+          DocumentationUnitDTO.builder()
+              .documentNumber(RandomStringUtils.randomAlphabetic(13))
+              .scheduledPublicationDateTime(date)
+              .documentationOffice(docOfficeDTO));
+    }
+
+    Slice<DocumentationUnitListItem> responseBody =
+        risWebTestClient
+            .withDefaultLogin()
+            .get()
+            .uri(
+                "/api/v1/caselaw/documentunits/search?pg=0&sz=10&myDocOfficeOnly=true&scheduledOnly=true")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
+
+    assertThat(responseBody)
+        .extracting("scheduledPublicationDateTime")
+        .containsExactly(
+            LocalDateTime.of(2024, 1, 24, 10, 5),
+            LocalDateTime.of(2022, 7, 24, 10, 5),
+            LocalDateTime.of(2022, 1, 24, 10, 5),
+            LocalDateTime.of(2022, 1, 23, 10, 5),
+            LocalDateTime.of(2022, 1, 23, 10, 4),
+            LocalDateTime.of(2022, 1, 23, 8, 5));
+  }
+
+  @Test
+  void
+      test_searchByScheduledOnlyWithPublicationDate_shouldReturnFilteredResultsInDescendingOrder() {
+    List<LocalDateTime> scheduledPublicationDates =
+        Arrays.asList(
+            LocalDateTime.of(2022, 1, 23, 10, 5),
+            LocalDateTime.of(2024, 1, 24, 10, 5),
+            LocalDateTime.of(2022, 7, 24, 10, 5),
+            LocalDateTime.of(2022, 1, 24, 10, 5),
+            null,
+            LocalDateTime.of(2022, 1, 23, 8, 5),
+            LocalDateTime.of(2022, 1, 23, 10, 4));
+
+    for (LocalDateTime date : scheduledPublicationDates) {
+      EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+          repository,
+          DocumentationUnitDTO.builder()
+              .documentNumber(RandomStringUtils.randomAlphabetic(13))
+              .scheduledPublicationDateTime(date)
+              .documentationOffice(docOfficeDTO));
+    }
+
+    Slice<DocumentationUnitListItem> responseBody =
+        risWebTestClient
+            .withDefaultLogin()
+            .get()
+            .uri(
+                "/api/v1/caselaw/documentunits/search?pg=0&sz=10&myDocOfficeOnly=true&publicationDate=2022-01-23&scheduledOnly=true")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
+
+    assertThat(responseBody)
+        .extracting("scheduledPublicationDateTime")
+        .containsExactly(
+            LocalDateTime.of(2022, 1, 23, 10, 5),
+            LocalDateTime.of(2022, 1, 23, 10, 4),
+            LocalDateTime.of(2022, 1, 23, 8, 5));
+  }
+
+  @Test
+  void test_searchByPublicationDate_shouldFilterAndReturnDescendingOrder() {
+    List<LocalDateTime> lastPublicationDates =
+        Arrays.asList(
+            LocalDateTime.of(2022, 1, 23, 10, 5),
+            null,
+            LocalDateTime.of(2022, 1, 23, 9, 5),
+            LocalDateTime.of(2022, 1, 23, 19, 5),
+            LocalDateTime.of(2022, 1, 23, 8, 5),
+            LocalDateTime.of(2022, 1, 24, 10, 5),
+            null);
+
+    List<LocalDateTime> scheduledPublicationDates =
+        Arrays.asList(
+            null,
+            LocalDateTime.of(2022, 1, 23, 5, 3),
+            null,
+            null,
+            LocalDateTime.of(2022, 1, 23, 10, 10),
+            null,
+            LocalDateTime.of(2022, 1, 23, 12, 10));
+
+    var index = 0;
+
+    for (LocalDateTime date : lastPublicationDates) {
+      EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+          repository,
+          DocumentationUnitDTO.builder()
+              .documentNumber(RandomStringUtils.randomAlphabetic(13))
+              .lastPublicationDateTime(date)
+              .scheduledPublicationDateTime(scheduledPublicationDates.get(index))
+              .documentationOffice(docOfficeDTO));
+      index++;
+    }
+
+    Slice<DocumentationUnitListItem> responseBody =
+        risWebTestClient
+            .withDefaultLogin()
+            .get()
+            .uri(
+                "/api/v1/caselaw/documentunits/search?pg=0&sz=10&myDocOfficeOnly=true&publicationDate=2022-01-23")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+            .returnResult()
+            .getResponseBody();
+
+    /*
+     * These are unlikely test conditions, because scheduled dates are in the future only and lastPublication dates in the past only.
+     *
+     * Ordered results visible for user (lastPublicationDate only if scheduledPublicationDate is null):
+     * 2022-01-23 12:10
+     * 2022-01-23 10:10
+     * 2022-01-23 05:03
+     * 2022-01-23 19:05
+     * 2022-01-23 10:05
+     * 2022-01-23 09:05
+     */
+    assertThat(responseBody)
+        .extracting("scheduledPublicationDateTime")
+        .containsExactly(
+            LocalDateTime.of(2022, 1, 23, 12, 10),
+            LocalDateTime.of(2022, 1, 23, 10, 10),
+            LocalDateTime.of(2022, 1, 23, 5, 3),
+            null,
+            null,
+            null);
+    assertThat(responseBody)
+        .extracting("lastPublicationDateTime")
+        .containsExactly(
+            null,
+            LocalDateTime.of(2022, 1, 23, 8, 5),
+            null,
+            LocalDateTime.of(2022, 1, 23, 19, 5),
+            LocalDateTime.of(2022, 1, 23, 10, 5),
+            LocalDateTime.of(2022, 1, 23, 9, 5));
+  }
+
+  @Test
   void testForCorrectPagination() {
-    repository.save(
-        DocumentationUnitDTO.builder()
-            .documentNumber("1234567801")
-            .documentationOffice(docOfficeDTO)
-            .build());
-    repository.save(
-        DocumentationUnitDTO.builder()
-            .documentNumber("1234567802")
-            .documentationOffice(docOfficeDTO)
-            .build());
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository, docOfficeDTO, "1234567801");
+
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository, docOfficeDTO, "1234567802");
 
     risWebTestClient
         .withDefaultLogin()
@@ -257,46 +405,29 @@ class DocumentationUnitSearchIntegrationTest {
         .expectStatus()
         .isOk()
         .expectBody(new TypeReference<SliceTestImpl<?>>() {})
-        .consumeWith(
-            response -> {
-              assertThat(response.getResponseBody().isLast()).isFalse();
-            });
+        .consumeWith(response -> assertThat(response.getResponseBody().isLast()).isFalse());
   }
 
   @Test
   void testForCompleteResultListWhenSearchingForFileNumberOrDocumentNumber() {
     for (int i = 0; i < 10; i++) {
-      DocumentationUnitDTO doc =
-          repository.save(
-              DocumentationUnitDTO.builder()
-                  // index 0-4 get a "AB" docNumber
-                  .documentNumber((i <= 4 ? "AB" : "GE") + "123456780" + i)
-                  .documentationOffice(docOfficeDTO)
-                  .build());
-
-      repository.save(
-          doc.toBuilder()
+      EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+          repository,
+          DocumentationUnitDTO.builder()
+              // index 0-4 get a "AB" docNumber
+              .documentNumber((i <= 4 ? "AB" : "GE") + "123456780" + i)
+              .documentationOffice(docOfficeDTO)
               .fileNumbers(
                   // even indices get a fileNumber
                   i % 2 == 1
                       ? List.of()
-                      : List.of(
-                          FileNumberDTO.builder()
-                              .value("AB 34/" + i)
-                              .documentationUnit(doc)
-                              .rank(0L)
-                              .build()))
+                      : List.of(FileNumberDTO.builder().value("AB 34/" + i).rank(0L).build()))
               // index 4+ get a deviating fileNumber
               .deviatingFileNumbers(
                   i < 4
                       ? List.of()
                       : List.of(
-                          DeviatingFileNumberDTO.builder()
-                              .value("ABC 34/" + i)
-                              .documentationUnit(doc)
-                              .rank(0L)
-                              .build()))
-              .build());
+                          DeviatingFileNumberDTO.builder().value("ABC 34/" + i).rank(0L).build())));
     }
 
     risWebTestClient
@@ -369,11 +500,8 @@ class DocumentationUnitSearchIntegrationTest {
 
   @Test
   void testTrim() {
-    repository.save(
-        DocumentationUnitDTO.builder()
-            .documentNumber("AB1234567802")
-            .documentationOffice(docOfficeDTO)
-            .build());
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository, docOfficeDTO, "AB1234567802");
 
     risWebTestClient
         .withDefaultLogin()
@@ -384,10 +512,114 @@ class DocumentationUnitSearchIntegrationTest {
         .isOk()
         .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
         .consumeWith(
+            response ->
+                assertThat(response.getResponseBody().getContent())
+                    .extracting("documentNumber")
+                    .containsExactly("AB1234567802"));
+  }
+
+  @Test
+  void testSearch_withInternalUser_shouldReturnEditableAndDeletableDocumentationUnit() {
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository, docOfficeDTO, "AB1234567802");
+
+    risWebTestClient
+        .withDefaultLogin()
+        .get()
+        .uri(
+            "/api/v1/caselaw/documentunits/search?pg=0&sz=10&documentNumberOrFileNumber=AB1234567802")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+        .consumeWith(
             response -> {
               assertThat(response.getResponseBody().getContent())
                   .extracting("documentNumber")
                   .containsExactly("AB1234567802");
+              assertThat(response.getResponseBody().getContent()).hasSize(1);
+              assertThat(response.getResponseBody().getContent().get(0).isEditable()).isTrue();
+              assertThat(response.getResponseBody().getContent().get(0).isDeletable()).isTrue();
+            });
+  }
+
+  @Test
+  void
+      testSearch_withExternalUnassignedUser_shouldReturnNotEditableAndNotDeletableDocumentationUnit() {
+    EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+        repository, docOfficeDTO, "AB1234567802");
+
+    risWebTestClient
+        .withExternalLogin()
+        .get()
+        .uri(
+            "/api/v1/caselaw/documentunits/search?pg=0&sz=10&documentNumberOrFileNumber=AB1234567802")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody().getContent())
+                  .extracting("documentNumber")
+                  .containsExactly("AB1234567802");
+              assertThat(response.getResponseBody().getContent()).hasSize(1);
+              assertThat(response.getResponseBody().getContent().get(0).isEditable()).isFalse();
+              assertThat(response.getResponseBody().getContent().get(0).isDeletable()).isFalse();
+            });
+  }
+
+  @Test
+  @Sql(
+      scripts = {
+        "classpath:doc_office_init.sql",
+        "classpath:user_group_init.sql",
+        "classpath:procedures_init.sql",
+      })
+  void testSearch_withExternalAssignedUser_shouldReturnEditableAndNotDeletableDocumentationUnit() {
+    Optional<DocumentationUnitDTO> documentationUnitDTO =
+        repository.findByDocumentNumber("docNumber00002");
+    Optional<ProcedureDTO> procedureDTO =
+        procedureRepository.findAllByLabelAndDocumentationOffice("procedure1", docOfficeDTO);
+    Optional<UserGroupDTO> userGroupDTO =
+        userGroupRepository.findById(UUID.fromString("2b733549-d2cc-40f0-b7f3-9bfa9f3c1b89"));
+    DocumentationUnitProcedureDTO documentationUnitProcedureDTO =
+        DocumentationUnitProcedureDTO.builder()
+            .procedure(procedureDTO.get())
+            .documentationUnit(documentationUnitDTO.get())
+            .build();
+    documentationUnitProcedureRepository.save(documentationUnitProcedureDTO);
+
+    risWebTestClient
+        .withDefaultLogin()
+        .put()
+        .uri(
+            "/api/v1/caselaw/procedure/"
+                + procedureDTO.get().getId()
+                + "/assign/"
+                + userGroupDTO.get().getId())
+        .exchange()
+        .expectStatus()
+        .is2xxSuccessful();
+
+    risWebTestClient
+        .withExternalLogin()
+        .get()
+        .uri(
+            "/api/v1/caselaw/documentunits/search?pg=0&sz=10&documentNumber="
+                + documentationUnitDTO.get().getDocumentNumber())
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(new TypeReference<SliceTestImpl<DocumentationUnitListItem>>() {})
+        .consumeWith(
+            response -> {
+              assertThat(response.getResponseBody().getContent())
+                  .extracting("documentNumber")
+                  .containsExactly(documentationUnitDTO.get().getDocumentNumber());
+              assertThat(response.getResponseBody().getContent()).hasSize(1);
+              assertThat(response.getResponseBody().getContent().get(0).isEditable()).isTrue();
+              assertThat(response.getResponseBody().getContent().get(0).isDeletable()).isFalse();
             });
   }
 }

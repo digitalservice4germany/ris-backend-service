@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed } from "vue"
+import Tooltip from "./Tooltip.vue"
 import IconChevronLeft from "~icons/ic/baseline-chevron-left"
 import IconChevronRight from "~icons/ic/baseline-chevron-right"
 
@@ -7,12 +8,14 @@ interface Props {
   isExpanded?: boolean
   openingDirection?: OpeningDirection
   label?: string
+  shortcut?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isExpanded: false,
   openingDirection: OpeningDirection.RIGHT,
   label: "side toggle",
+  shortcut: undefined,
 })
 
 const emit = defineEmits<{
@@ -46,21 +49,27 @@ export enum OpeningDirection {
 
 <template>
   <div class="relative bg-white" :class="classes">
-    <button
-      :aria-label="props.label + ' ' + postFix"
-      class="w-icon absolute top-16 z-20 flex min-h-32 min-w-32 items-center justify-center rounded-full border-1 border-solid border-gray-400 bg-white text-gray-900"
+    <Tooltip
+      class="!absolute top-16 z-20"
       :class="buttonClasses"
-      @click="toggle"
+      :shortcut="shortcut"
+      :text="props.label + ' ' + postFix"
     >
-      <IconChevronLeft
-        v-if="
-          props.openingDirection === OpeningDirection.LEFT
-            ? !isExpanded
-            : isExpanded
-        "
-      />
-      <IconChevronRight v-else />
-    </button>
+      <button
+        :aria-label="props.label + ' ' + postFix"
+        class="w-icon relative flex min-h-32 min-w-32 items-center justify-center rounded-full border-1 border-solid border-gray-400 bg-white text-gray-900"
+        @click="toggle"
+      >
+        <IconChevronLeft
+          v-if="
+            props.openingDirection === OpeningDirection.LEFT
+              ? !isExpanded
+              : isExpanded
+          "
+        />
+        <IconChevronRight v-else />
+      </button>
+    </Tooltip>
     <div v-show="isExpanded">
       <slot />
     </div>

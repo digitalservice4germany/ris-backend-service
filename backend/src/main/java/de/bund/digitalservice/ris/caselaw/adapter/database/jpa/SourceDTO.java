@@ -1,8 +1,11 @@
 package de.bund.digitalservice.ris.caselaw.adapter.database.jpa;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,4 +32,8 @@ public class SourceDTO {
   @Size(max = 1000)
   @NotBlank
   private String value;
+
+  @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+  @JoinColumn(name = "reference_id")
+  private ReferenceDTO reference;
 }

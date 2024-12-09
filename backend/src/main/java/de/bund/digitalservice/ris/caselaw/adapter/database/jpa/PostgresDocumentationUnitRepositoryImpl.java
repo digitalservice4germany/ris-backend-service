@@ -1,20 +1,25 @@
 package de.bund.digitalservice.ris.caselaw.adapter.database.jpa;
 
 import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentTypeTransformer;
+import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentationOfficeTransformer;
 import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentationUnitListItemTransformer;
 import de.bund.digitalservice.ris.caselaw.adapter.transformer.DocumentationUnitTransformer;
+import de.bund.digitalservice.ris.caselaw.adapter.transformer.ReferenceTransformer;
+import de.bund.digitalservice.ris.caselaw.adapter.transformer.StatusTransformer;
 import de.bund.digitalservice.ris.caselaw.domain.ContentRelatedIndexing;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitRepository;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitListItem;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitRepository;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitSearchInput;
 import de.bund.digitalservice.ris.caselaw.domain.Procedure;
 import de.bund.digitalservice.ris.caselaw.domain.PublicationStatus;
+import de.bund.digitalservice.ris.caselaw.domain.Reference;
 import de.bund.digitalservice.ris.caselaw.domain.RelatedDocumentationType;
 import de.bund.digitalservice.ris.caselaw.domain.RelatedDocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
 import de.bund.digitalservice.ris.caselaw.domain.StringUtils;
+import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.court.Court;
 import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitException;
 import de.bund.digitalservice.ris.caselaw.domain.exception.DocumentationUnitNotExistsException;
@@ -22,6 +27,7 @@ import de.bund.digitalservice.ris.caselaw.domain.lookuptable.documenttype.Docume
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.fieldoflaw.FieldOfLaw;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,14 +44,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Implementation of the DocumentUnitRepository for the Postgres database */
+/** Implementation of the DocumentationUnitRepository for the Postgres database */
 @Repository
 @Slf4j
 @Primary
-public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepository {
+public class PostgresDocumentationUnitRepositoryImpl implements DocumentationUnitRepository {
   private final DatabaseDocumentationUnitRepository repository;
   private final DatabaseCourtRepository databaseCourtRepository;
   private final DatabaseDocumentationOfficeRepository documentationOfficeRepository;
@@ -53,6 +60,7 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
   private final DatabaseFieldOfLawRepository fieldOfLawRepository;
   private final DatabaseProcedureRepository procedureRepository;
   private final DatabaseRelatedDocumentationRepository relatedDocumentationRepository;
+  private final UserService userService;
 
   public PostgresDocumentationUnitRepositoryImpl(
       DatabaseDocumentationUnitRepository repository,
@@ -61,7 +69,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
       DatabaseRelatedDocumentationRepository relatedDocumentationRepository,
       DatabaseKeywordRepository keywordRepository,
       DatabaseProcedureRepository procedureRepository,
-      DatabaseFieldOfLawRepository fieldOfLawRepository) {
+      DatabaseFieldOfLawRepository fieldOfLawRepository,
+      UserService userService) {
 
     this.repository = repository;
     this.databaseCourtRepository = databaseCourtRepository;
@@ -70,114 +79,143 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
     this.relatedDocumentationRepository = relatedDocumentationRepository;
     this.fieldOfLawRepository = fieldOfLawRepository;
     this.procedureRepository = procedureRepository;
+    this.userService = userService;
   }
 
   @Override
   @Transactional(transactionManager = "jpaTransactionManager")
-  public Optional<DocumentUnit> findByDocumentNumber(String documentNumber) {
-    try {
-      var documentUnit =
-          repository
-              .findByDocumentNumber(documentNumber)
-              .orElseThrow(() -> new DocumentationUnitNotExistsException(documentNumber));
-      return Optional.of(DocumentationUnitTransformer.transformToDomain(documentUnit));
-    } catch (Exception ex) {
-      log.error("Error to get a documentation unit by document number.", ex);
-      return Optional.empty();
-    }
+  public DocumentationUnit findByDocumentNumber(String documentNumber)
+      throws DocumentationUnitNotExistsException {
+    var documentationUnit =
+        repository
+            .findByDocumentNumber(documentNumber)
+            .orElseThrow(() -> new DocumentationUnitNotExistsException(documentNumber));
+    return DocumentationUnitTransformer.transformToDomain(documentationUnit);
   }
 
   @Override
   @Transactional(transactionManager = "jpaTransactionManager")
-  public Optional<DocumentUnit> findByUuid(UUID uuid) {
-    try {
-      var documentUnit =
-          repository
-              .findById(uuid)
-              .orElseThrow(() -> new DocumentationUnitNotExistsException(uuid));
-      return Optional.of(DocumentationUnitTransformer.transformToDomain(documentUnit));
-    } catch (Exception ex) {
-      log.error("Error to get a documentation unit by uuid.", ex);
-      return Optional.empty();
-    }
+  public DocumentationUnitListItem findDocumentationUnitListItemByDocumentNumber(
+      String documentNumber) throws DocumentationUnitNotExistsException {
+    DocumentationUnitListItemDTO documentationUnitListItemDTO =
+        repository
+            .findDocumentationUnitListItemByDocumentNumber(documentNumber)
+            .orElseThrow(() -> new DocumentationUnitNotExistsException(documentNumber));
+    return DocumentationUnitListItemTransformer.transformToDomain(documentationUnitListItemDTO);
   }
 
   @Override
-  public DocumentUnit createNewDocumentUnit(
-      String documentNumber, DocumentationOffice documentationOffice) {
+  @Transactional(transactionManager = "jpaTransactionManager")
+  public DocumentationUnit findByUuid(UUID uuid) throws DocumentationUnitNotExistsException {
+    var documentationUnit =
+        repository.findById(uuid).orElseThrow(() -> new DocumentationUnitNotExistsException(uuid));
+    return DocumentationUnitTransformer.transformToDomain(documentationUnit);
+  }
 
-    var documentationOfficeDTO =
-        documentationOfficeRepository.findByAbbreviation(documentationOffice.abbreviation());
+  @Override
+  @Transactional(transactionManager = "jpaTransactionManager")
+  public DocumentationUnit createNewDocumentationUnit(
+      DocumentationUnit docUnit, Status status, Reference createdFromReference, String source) {
+
     var documentationUnitDTO =
-        DocumentationUnitDTO.builder()
-            .documentNumber(documentNumber)
-            .documentationOffice(documentationOfficeDTO)
-            .legalEffect(LegalEffectDTO.KEINE_ANGABE)
-            .version(0L)
-            .build();
+        repository.save(
+            DocumentationUnitTransformer.transformToDTO(
+                DocumentationUnitDTO.builder()
+                    .documentationOffice(
+                        DocumentationOfficeTransformer.transformToDTO(
+                            docUnit.coreData().documentationOffice()))
+                    .creatingDocumentationOffice(
+                        DocumentationOfficeTransformer.transformToDTO(
+                            docUnit.coreData().creatingDocOffice()))
+                    .build(),
+                docUnit));
 
-    documentationUnitDTO
-        .getStatus()
-        .add(
-            StatusDTO.builder()
-                .createdAt(Instant.now())
-                .documentationUnitDTO(documentationUnitDTO)
-                .publicationStatus(PublicationStatus.UNPUBLISHED)
-                .withError(false)
+    // saving a second time is necessary because status and reference need a reference to a
+    // persisted documentation unit
+    DocumentationUnitDTO savedDocUnit =
+        repository.save(
+            documentationUnitDTO.toBuilder()
+                .status(
+                    StatusTransformer.transformToDTO(status).toBuilder()
+                        .documentationUnit(documentationUnitDTO)
+                        .createdAt(Instant.now())
+                        .build())
+                .source(
+                    source == null
+                        ? new ArrayList<>()
+                        : new ArrayList<>(
+                            List.of(
+                                SourceDTO.builder()
+                                    .rank(1)
+                                    .value(source)
+                                    .reference(
+                                        ReferenceTransformer.transformToDTO(createdFromReference)
+                                            .toBuilder()
+                                            .rank(1)
+                                            .documentationUnit(documentationUnitDTO)
+                                            .build())
+                                    .build())))
                 .build());
 
-    documentationUnitDTO = repository.save(documentationUnitDTO);
-
-    return DocumentationUnitTransformer.transformToDomain(documentationUnitDTO);
+    return DocumentationUnitTransformer.transformToDomain(savedDocUnit);
   }
 
   @Transactional(transactionManager = "jpaTransactionManager")
   @Override
-  public void save(DocumentUnit documentUnit) {
+  public void save(DocumentationUnit documentationUnit) {
 
     DocumentationUnitDTO documentationUnitDTO =
-        repository.findById(documentUnit.uuid()).orElse(null);
+        repository.findById(documentationUnit.uuid()).orElse(null);
     if (documentationUnitDTO == null) {
-      log.info("Can't save non-existing docUnit with id = " + documentUnit.uuid());
+      log.info("Can't save non-existing docUnit with id = " + documentationUnit.uuid());
       return;
     }
 
     // ---
     // Doing database-related (pre) transformation
 
-    if (documentUnit.coreData() != null) {
+    if (documentationUnit.coreData() != null) {
       documentationUnitDTO.getRegions().clear();
-      if (documentUnit.coreData().court() != null && documentUnit.coreData().court().id() != null) {
+      if (documentationUnit.coreData().court() != null
+          && documentationUnit.coreData().court().id() != null) {
         Optional<CourtDTO> court =
-            databaseCourtRepository.findById(documentUnit.coreData().court().id());
+            databaseCourtRepository.findById(documentationUnit.coreData().court().id());
         if (court.isPresent() && court.get().getRegion() != null) {
           documentationUnitDTO.getRegions().add(court.get().getRegion());
         }
         // delete leading decision norm references if court is not BGH
         if (court.isPresent() && !court.get().getType().equals("BGH")) {
-          documentUnit.coreData().leadingDecisionNormReferences().clear();
+          documentationUnit =
+              documentationUnit.toBuilder()
+                  .coreData(
+                      documentationUnit.coreData().toBuilder()
+                          .leadingDecisionNormReferences(List.of())
+                          .build())
+                  .build();
         }
       }
     }
+
     // ---
 
     // Transform non-database-related properties
     documentationUnitDTO =
-        DocumentationUnitTransformer.transformToDTO(documentationUnitDTO, documentUnit);
+        DocumentationUnitTransformer.transformToDTO(documentationUnitDTO, documentationUnit);
     repository.save(documentationUnitDTO);
   }
 
   @Override
-  public void saveKeywords(DocumentUnit documentUnit) {
-    if (documentUnit == null || documentUnit.contentRelatedIndexing() == null) {
+  public void saveKeywords(DocumentationUnit documentationUnit) {
+    if (documentationUnit == null || documentationUnit.contentRelatedIndexing() == null) {
       return;
     }
 
     repository
-        .findById(documentUnit.uuid())
+        .findById(documentationUnit.uuid())
         .ifPresent(
             documentationUnitDTO -> {
-              ContentRelatedIndexing contentRelatedIndexing = documentUnit.contentRelatedIndexing();
+              ContentRelatedIndexing contentRelatedIndexing =
+                  documentationUnit.contentRelatedIndexing();
 
               if (contentRelatedIndexing.keywords() != null) {
                 List<DocumentationUnitKeywordDTO> documentationUnitKeywordDTOs = new ArrayList<>();
@@ -215,16 +253,17 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
   }
 
   @Override
-  public void saveFieldsOfLaw(DocumentUnit documentUnit) {
-    if (documentUnit == null || documentUnit.contentRelatedIndexing() == null) {
+  public void saveFieldsOfLaw(DocumentationUnit documentationUnit) {
+    if (documentationUnit == null || documentationUnit.contentRelatedIndexing() == null) {
       return;
     }
 
     repository
-        .findById(documentUnit.uuid())
+        .findById(documentationUnit.uuid())
         .ifPresent(
             documentationUnitDTO -> {
-              ContentRelatedIndexing contentRelatedIndexing = documentUnit.contentRelatedIndexing();
+              ContentRelatedIndexing contentRelatedIndexing =
+                  documentationUnit.contentRelatedIndexing();
 
               if (contentRelatedIndexing.fieldsOfLaw() != null) {
                 List<DocumentationUnitFieldOfLawDTO> documentationUnitFieldOfLawDTOs =
@@ -266,19 +305,19 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
 
   @Override
   @Transactional(transactionManager = "jpaTransactionManager")
-  public void saveProcedures(DocumentUnit documentUnit) {
-    if (documentUnit == null
-        || documentUnit.coreData() == null
-        || documentUnit.coreData().procedure() == null) {
+  public void saveProcedures(DocumentationUnit documentationUnit) {
+    if (documentationUnit == null
+        || documentationUnit.coreData() == null
+        || documentationUnit.coreData().procedure() == null) {
       return;
     }
 
-    var documentationUnitDTOOptional = repository.findById(documentUnit.uuid());
+    var documentationUnitDTOOptional = repository.findById(documentationUnit.uuid());
     if (documentationUnitDTOOptional.isEmpty()) {
       return;
     }
     var documentationUnitDTO = documentationUnitDTOOptional.get();
-    Procedure procedure = documentUnit.coreData().procedure();
+    Procedure procedure = documentationUnit.coreData().procedure();
 
     List<DocumentationUnitProcedureDTO> documentationUnitProcedureDTOs = new ArrayList<>();
 
@@ -329,6 +368,22 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
     repository.save(documentationUnitDTO);
   }
 
+  @Override
+  @Transactional(transactionManager = "jpaTransactionManager")
+  public void saveLastPublicationDateTime(UUID uuid) {
+    if (uuid == null) {
+      return;
+    }
+
+    var documentationUnitDTOOptional = repository.findById(uuid);
+    if (documentationUnitDTOOptional.isEmpty()) {
+      return;
+    }
+    var documentationUnitDTO = documentationUnitDTOOptional.get();
+    documentationUnitDTO.setLastPublicationDateTime(LocalDateTime.now());
+    repository.save(documentationUnitDTO);
+  }
+
   private ProcedureDTO getOrCreateProcedure(
       DocumentationOfficeDTO documentationOfficeDTO, Procedure procedure) {
     if (procedure.id() == null) {
@@ -358,8 +413,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
   }
 
   @Override
-  public void delete(DocumentUnit documentUnit) {
-    repository.deleteById(documentUnit.uuid());
+  public void delete(DocumentationUnit documentationUnit) {
+    repository.deleteById(documentationUnit.uuid());
   }
 
   @Override
@@ -389,6 +444,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
             null,
             null,
             false,
+            null,
+            false,
             false,
             relatedDocumentationUnit.getDocumentType(),
             documentationOfficeDTO);
@@ -407,13 +464,15 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
       String fileNumber,
       LocalDate decisionDate,
       LocalDate decisionDateEnd,
+      LocalDate publicationDate,
+      Boolean scheduledOnly,
       PublicationStatus status,
       Boolean withError,
       Boolean myDocOfficeOnly,
       DocumentType documentType,
       DocumentationOfficeDTO documentationOfficeDTO) {
     if ((fileNumber == null || fileNumber.trim().isEmpty())) {
-      return repository.searchByDocumentUnitSearchInput(
+      return repository.searchByDocumentationUnitSearchInput(
           documentationOfficeDTO.getId(),
           documentNumber,
           documentNumberToExclude,
@@ -421,6 +480,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
           courtLocation,
           decisionDate,
           decisionDateEnd,
+          publicationDate,
+          scheduledOnly,
           status,
           withError,
           myDocOfficeOnly,
@@ -442,7 +503,7 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
 
     if (!fileNumber.trim().isEmpty()) {
       fileNumberResults =
-          repository.searchByDocumentUnitSearchInputFileNumber(
+          repository.searchByDocumentationUnitSearchInputFileNumber(
               documentationOfficeDTO.getId(),
               documentNumber,
               documentNumberToExclude,
@@ -451,6 +512,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
               courtLocation,
               decisionDate,
               decisionDateEnd,
+              publicationDate,
+              scheduledOnly,
               status,
               withError,
               myDocOfficeOnly,
@@ -458,7 +521,7 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
               fixedPageRequest);
 
       deviatingFileNumberResults =
-          repository.searchByDocumentUnitSearchInputDeviatingFileNumber(
+          repository.searchByDocumentationUnitSearchInputDeviatingFileNumber(
               documentationOfficeDTO.getId(),
               documentNumber,
               documentNumberToExclude,
@@ -467,6 +530,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
               courtLocation,
               decisionDate,
               decisionDateEnd,
+              publicationDate,
+              scheduledOnly,
               status,
               withError,
               myDocOfficeOnly,
@@ -507,8 +572,10 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
   @Transactional(transactionManager = "jpaTransactionManager")
   public Slice<DocumentationUnitListItem> searchByDocumentationUnitSearchInput(
       Pageable pageable,
-      DocumentationOffice documentationOffice,
+      OidcUser oidcUser,
       @Param("searchInput") DocumentationUnitSearchInput searchInput) {
+
+    DocumentationOffice documentationOffice = userService.getDocumentationOffice(oidcUser);
     log.debug("Find by overview search: {}, {}", documentationOffice.abbreviation(), searchInput);
 
     DocumentationOfficeDTO documentationOfficeDTO =
@@ -527,6 +594,8 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
             searchInput.fileNumber(),
             searchInput.decisionDate(),
             searchInput.decisionDateEnd(),
+            searchInput.publicationDate(),
+            searchInput.scheduledOnly(),
             searchInput.status() != null ? searchInput.status().publicationStatus() : null,
             withError,
             searchInput.myDocOfficeOnly(),
@@ -546,15 +615,16 @@ public class PostgresDocumentationUnitRepositoryImpl implements DocumentUnitRepo
   }
 
   @Override
+  public List<UUID> getRandomDocumentationUnitIds() {
+    return repository.getRandomDocumentationUnitIds();
+  }
+
+  @Override
   @Transactional(transactionManager = "jpaTransactionManager")
-  public void updateECLI(UUID uuid, String ecli) {
-    Optional<DocumentationUnitDTO> documentationUnitDTOOptional = repository.findById(uuid);
-    if (documentationUnitDTOOptional.isPresent()) {
-      DocumentationUnitDTO dto = documentationUnitDTOOptional.get();
-      if (dto.getEcli() == null) {
-        dto.setEcli(ecli);
-        repository.save(dto);
-      }
-    }
+  public List<DocumentationUnit> getScheduledDocumentationUnitsDueNow() {
+    return repository.getScheduledDocumentationUnitsDueNow().stream()
+        .limit(50)
+        .map(DocumentationUnitTransformer::transformToDomain)
+        .toList();
   }
 }

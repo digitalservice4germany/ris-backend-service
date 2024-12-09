@@ -2,9 +2,9 @@ package de.bund.digitalservice.ris.caselaw.config;
 
 import io.sentry.SamplingContext;
 import io.sentry.SentryOptions.TracesSamplerCallback;
+import jakarta.servlet.http.HttpServletRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,16 +15,16 @@ public class CustomTracesSamplerCallback implements TracesSamplerCallback {
       return null;
     }
 
-    ServerHttpRequest request =
-        (ServerHttpRequest) context.getCustomSamplingContext().get("request");
+    HttpServletRequest request =
+        (HttpServletRequest) context.getCustomSamplingContext().get("request");
 
     if (request == null) {
       return null;
     }
 
-    String url = request.getPath().value();
+    String url = request.getRequestURI();
 
-    if (url.startsWith("/actuator")) {
+    if (url.startsWith("/actuator") || request.getMethod().equals("PATCH")) {
       return 0d;
     } else {
       return null;

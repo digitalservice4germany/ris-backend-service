@@ -2,7 +2,7 @@
 
 ## Background
 
-The [migration appplication](https://github.com/digitalservicebund/ris-data-migration) transforms XML data from the jDV into a relational DB structure. This includes lookup tables (courts, norm abbreviations, keywords and many more) and documentation units. The caselaw application uses the database that is filled by the migration application. 
+The [migration appplication](https://github.com/digitalservicebund/ris-data-migration) transforms XML data from the jDV into a relational DB structure. This includes lookup tables (courts, norm abbreviations, keywords and many more) and documentation units. The caselaw application uses the database that is filled by the migration application.
 
 This instruction will allow engineers to setup their local environment with the lookup tables, that are necessary to run the caselaw application, and some test documentation units if desired.
 
@@ -74,7 +74,7 @@ To repeat files downloading, remove the import folder in the migration folder, a
 4. Download the lookup tables in `ris-data-migration`
 
    ```bash
-   aws s3 cp --profile otc --endpoint-url https://obs.eu-de.otc.t-systems.com --recursive s3://neuris-migration-juris-data/monthly/2024/05/Tabellen ./juris-xml-data/Tabellen
+   aws s3 cp --profile otc --endpoint-url https://obs.eu-de.otc.t-systems.com --recursive s3://neuris-migration-juris-data/monthly/2024/10/Tabellen ./juris-xml-data/Tabellen
    ```
 
 5. Download example BGH DocumentationUnits in `ris-data-migration`
@@ -90,7 +90,7 @@ To repeat files downloading, remove the import folder in the migration folder, a
     RIS_MIGRATION_TABLES_LOCATION=juris-xml-data
     RIS_MIGRATION_INCLUDE_NORM_ABBREVIATIONS=true
     RIS_MIGRATION_CLI_MODE=true
-    
+
     # database config
     RIS_MIGRATION_DB_HOST=localhost
     RIS_MIGRATION_DB_PORT=5432
@@ -130,7 +130,7 @@ To repeat files downloading, remove the import folder in the migration folder, a
      java -jar cli/build/libs/ris-data-migration-cli.jar juris-r migrate -p juris-xml-data/
      ```
 
-### Update the Lookup Tables / Reimport for Backfilling 
+### Update the Lookup Tables / Reimport for Backfilling
 
 1. Checkout `ris-data-migration` at the currently used tag (see "Checkout Migration at Current Tag" above)
 

@@ -3,6 +3,7 @@ package de.bund.digitalservice.ris.caselaw.integration.tests;
 import de.bund.digitalservice.ris.caselaw.TestConfig;
 import de.bund.digitalservice.ris.caselaw.adapter.AdminController;
 import de.bund.digitalservice.ris.caselaw.adapter.EnvironmentService;
+import de.bund.digitalservice.ris.caselaw.adapter.LdmlExporterService;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
@@ -44,6 +45,7 @@ class SecurityIntegrationTest {
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
   @MockBean MailTrackingService mailTrackingService;
   @MockBean EnvironmentService environmentService;
+  @MockBean LdmlExporterService ldmlExporterService;
 
   @Test
   void shouldHaveEnabledCSPHeader() {

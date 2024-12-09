@@ -3,22 +3,25 @@ package de.bund.digitalservice.ris.caselaw.integration.tests;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.CourtController;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.CourtDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseCourtRepository;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.JurisdictionTypeDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresCourtRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentTypeRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.config.FlywayConfig;
 import de.bund.digitalservice.ris.caselaw.config.PostgresJPAConfig;
 import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.CourtService;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.court.Court;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +29,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
@@ -37,10 +41,13 @@ import org.testcontainers.junit.jupiter.Container;
       PostgresCourtRepositoryImpl.class,
       PostgresDocumentTypeRepositoryImpl.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class,
     },
     controllers = {CourtController.class})
+@Sql(
+    scripts = {"classpath:doc_office_init.sql"},
+    executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
 class CourtIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgreSQLContainer =
@@ -59,8 +66,9 @@ class CourtIntegrationTest {
   @Autowired private DatabaseCourtRepository databaseCourtRepository;
 
   @MockBean UserService userService;
-  @MockBean private DocumentUnitService documentUnitService;
+  @MockBean private DocumentationUnitService documentationUnitService;
   @MockBean ClientRegistrationRepository clientRegistrationRepository;
+  @MockBean private ProcedureService procedureService;
 
   @AfterEach
   void cleanUp() {
@@ -77,6 +85,12 @@ class CourtIntegrationTest {
             .isSuperiorCourt(false)
             .isForeignCourt(false)
             .additionalInformation("- aufgehoben: 1975-02-01 -")
+            .jurisdictionType(
+                JurisdictionTypeDTO.builder()
+                    .id(
+                        UUID.fromString(
+                            "27e099f9-5b47-4ce9-ac58-b84ca4643bc2")) // see doc_office_init.sql
+                    .build())
             .build();
     databaseCourtRepository.save(courtDTO1);
     CourtDTO courtDTO2 =
@@ -123,6 +137,7 @@ class CourtIntegrationTest {
               var court1 = response.getResponseBody()[0];
               assertThat(court1.label()).isEqualTo("AB Berlin");
               assertThat(court1.revoked()).isEqualTo("aufgehoben seit: 1975");
+              assertThat(court1.responsibleDocOffice().abbreviation()).isEqualTo("BGH");
 
               var court2 = response.getResponseBody()[1];
               assertThat(court2.label()).isEqualTo("BGH");

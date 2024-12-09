@@ -233,18 +233,56 @@ test.describe("search", () => {
       .toBeGreaterThanOrEqual(1)
   })
 
+  test("search for file number", async ({ page }) => {
+    await navigateToSearch(page)
+
+    await test.step("search for file number case insensitive works", async () => {
+      await page.getByLabel("Aktenzeichen Suche").fill("FILEnumber1")
+      await page.getByLabel("Nach Dokumentationseinheiten suchen").click()
+      await expect
+        .poll(async () => page.getByText("YYTestDoc0001").count())
+        .toBe(1)
+    })
+
+    await test.step("search for file number starting with", async () => {
+      await page.getByLabel("Aktenzeichen Suche").fill("fileNumber")
+      await page.getByLabel("Nach Dokumentationseinheiten suchen").click()
+      await expect
+        .poll(async () => page.getByText("YYTestDoc0001").count())
+        .toBe(1)
+      await expect
+        .poll(async () => page.locator(".table-row").count())
+        .toBeGreaterThanOrEqual(4)
+    })
+
+    await test.step("search for file number ending does not work by default", async () => {
+      await page.getByLabel("Aktenzeichen Suche").fill("Number1")
+      await page.getByLabel("Nach Dokumentationseinheiten suchen").click()
+      await expect(
+        page.getByText("Keine Suchergebnisse gefunden"),
+      ).toBeVisible()
+    })
+
+    await test.step("search for file ending with does work when adding '%'", async () => {
+      await page.getByLabel("Aktenzeichen Suche").fill("%number1")
+      await page.getByLabel("Nach Dokumentationseinheiten suchen").click()
+      await expect
+        .poll(async () => page.getByText("YYTestDoc0001").count())
+        .toBe(1)
+    })
+  })
+
   test("search for status", async ({ page }) => {
     await navigateToSearch(page)
 
     await page.getByLabel("Dokumentnummer Suche").fill("YYTestDoc")
 
     await page.getByLabel("Nur meine Dokstelle Filter").click()
-
     await page.getByLabel("Nach Dokumentationseinheiten suchen").click()
 
     await expect
       .poll(async () => page.getByText("Unveröffentlicht").count())
-      .toBeGreaterThanOrEqual(1)
+      .toBe(7)
 
     const select = page.locator(`select[id="status"]`)
     await select.selectOption("Veröffentlicht")
@@ -255,7 +293,7 @@ test.describe("search", () => {
       .poll(async () =>
         page.getByText("Veröffentlicht", { exact: true }).count(),
       )
-      .toBe(8)
+      .toBe(7)
 
     // only the unpublished in select should be counted.
     await expect
@@ -336,8 +374,8 @@ test.describe("search", () => {
 
         await page.getByRole("button", { name: "Seitenpanel öffnen" }).click()
 
-        await fillInput(page, "Notiz Eingabefeld", noteContent),
-          await save(page)
+        await fillInput(page, "Notiz Eingabefeld", noteContent)
+        await save(page)
       })
 
       await test.step("search indicates by icon that doc unit has notiz", async () => {
@@ -347,13 +385,15 @@ test.describe("search", () => {
           documentNumber: prefilledDocumentUnit.documentNumber,
         })
         await page.getByLabel("Nach Dokumentationseinheiten suchen").click()
-        await expect(page.getByLabel("Notiz vorhanden")).toBeVisible()
+        const trimmedNote = noteContent.slice(0, 50) + "..."
+        await expect(page.getByLabel(trimmedNote)).toBeVisible()
       })
 
       await test.step("delete notiz", async () => {
         await navigateToCategories(page, prefilledDocumentUnit.documentNumber!)
 
-        await fillInput(page, "Notiz Eingabefeld", ""), await save(page)
+        await fillInput(page, "Notiz Eingabefeld", "")
+        await save(page)
       })
 
       await test.step("search indicates by icon that doc unit has no notiz", async () => {
@@ -401,14 +441,14 @@ test.describe("search", () => {
 
     await expect(page.getByText("Startdatum fehlt")).toBeHidden()
     await expect(
-      page.getByText("Enddatum darf nich vor Startdatum liegen"),
+      page.getByText("Enddatum darf nicht vor Startdatum liegen"),
     ).toBeVisible()
 
     await page.getByLabel("Entscheidungsdatum Suche", { exact: true }).clear()
     await page.getByLabel("Entscheidungsdatum Suche", { exact: true }).blur()
     await expect(page.getByText("Startdatum fehlt")).toBeVisible()
     await expect(
-      page.getByText("Enddatum darf nich vor Startdatum liegen"),
+      page.getByText("Enddatum darf nicht vor Startdatum liegen"),
     ).toBeHidden()
 
     // removes startdate missing error if 2nd date is removed
@@ -447,7 +487,7 @@ test.describe("search", () => {
     await expect(page.getByText("Startdatum fehlt")).toBeVisible()
     await firstDate.fill("28.02.2023")
     await expect(
-      secondDateInput.getByText("Enddatum darf nich vor Startdatum liegen"),
+      secondDateInput.getByText("Enddatum darf nicht vor Startdatum liegen"),
     ).toBeVisible()
 
     // no valid error "wins" against range error

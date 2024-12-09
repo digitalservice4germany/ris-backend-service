@@ -4,7 +4,6 @@ import de.bund.digitalservice.ris.caselaw.domain.HandoverReport;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverReportRepository;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Repository;
 
@@ -16,14 +15,10 @@ import org.springframework.stereotype.Repository;
 public class PostgresHandoverReportRepositoryImpl implements HandoverReportRepository {
 
   private final DatabaseHandoverReportRepository repository;
-  private final DatabaseDocumentationUnitRepository documentUnitRepository;
 
-  public PostgresHandoverReportRepositoryImpl(
-      DatabaseHandoverReportRepository repository,
-      DatabaseDocumentationUnitRepository documentUnitRepository) {
+  public PostgresHandoverReportRepositoryImpl(DatabaseHandoverReportRepository repository) {
 
     this.repository = repository;
-    this.documentUnitRepository = documentUnitRepository;
   }
 
   /**
@@ -37,20 +32,12 @@ public class PostgresHandoverReportRepositoryImpl implements HandoverReportRepos
     List<HandoverReportDTO> handoverReportDTOS =
         reports.stream()
             .map(
-                report -> {
-                  Optional<DocumentationUnitDTO> documentUnitDTO =
-                      documentUnitRepository.findByDocumentNumber(report.documentNumber());
-
-                  return documentUnitDTO
-                      .map(
-                          documentationUnitDTO ->
-                              HandoverReportDTO.builder()
-                                  .documentUnitId(documentationUnitDTO.getId())
-                                  .receivedDate(report.receivedDate())
-                                  .content(report.content())
-                                  .build())
-                      .orElse(null);
-                })
+                report ->
+                    HandoverReportDTO.builder()
+                        .entityId(report.entityId())
+                        .receivedDate(report.receivedDate())
+                        .content(report.content())
+                        .build())
             .filter(Objects::nonNull)
             .toList();
 
@@ -65,14 +52,14 @@ public class PostgresHandoverReportRepositoryImpl implements HandoverReportRepos
   }
 
   /**
-   * Retrieves all handover reports for a given documentation unit.
+   * Retrieves all handover reports for a given entity (documentation unit or edition).
    *
-   * @param documentUnitUuid the document unit UUID
+   * @param entityId the entity UUID
    * @return the handover reports
    */
   @Override
-  public List<HandoverReport> getAllByDocumentUnitUuid(UUID documentUnitUuid) {
-    return repository.findAllByDocumentUnitId(documentUnitUuid).stream()
+  public List<HandoverReport> getAllByEntityId(UUID entityId) {
+    return repository.findAllByEntityId(entityId).stream()
         .map(
             report ->
                 HandoverReport.builder()

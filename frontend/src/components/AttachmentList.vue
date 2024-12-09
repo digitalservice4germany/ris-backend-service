@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import dayjs from "dayjs"
+import Tooltip from "./Tooltip.vue"
 import CellHeaderItem from "@/components/CellHeaderItem.vue"
 import CellItem from "@/components/CellItem.vue"
 import TableHeader from "@/components/TableHeader.vue"
@@ -62,14 +63,16 @@ const onSelect = (index: number) => {
         }}
       </CellItem>
       <CellItem class="text-end">
-        <button
-          aria-label="Datei löschen"
-          class="cursor-pointer align-middle text-blue-800 focus:outline-none focus-visible:outline-blue-800"
-          @click="onDelete(index)"
-          @keyup.enter="null"
-        >
-          <IconDelete />
-        </button>
+        <Tooltip text="Löschen">
+          <button
+            aria-label="Datei löschen"
+            class="cursor-pointer align-middle text-blue-800 focus:outline-none focus-visible:outline-blue-800"
+            @click="onDelete(index)"
+            @keyup.enter="null"
+          >
+            <IconDelete />
+          </button>
+        </Tooltip>
       </CellItem>
     </TableRow>
   </TableView>

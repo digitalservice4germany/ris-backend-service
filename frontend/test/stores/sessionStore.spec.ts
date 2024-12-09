@@ -62,12 +62,6 @@ describe("Session store", () => {
   it.each(["staging", "uat", "production"] as Env[])(
     "sets and returns the correct env",
     async (environment: Env) => {
-      //
-      const faviconMock = document.createElement("link")
-      faviconMock.href = ""
-      faviconMock.id = "favicon"
-
-      vi.spyOn(document, "getElementById").mockReturnValue(faviconMock)
       vi.mocked(adminService).getEnv.mockResolvedValue({
         status: 200,
         data: environment,

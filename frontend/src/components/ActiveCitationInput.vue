@@ -80,10 +80,24 @@ async function search() {
   if (activeCitationRef.citationType) {
     delete activeCitationRef["citationType"]
   }
+
+  const urlParams = window.location.pathname.split("/")
+  const documentNumberToExclude =
+    urlParams[urlParams.indexOf("documentunit") + 1]
+
   const response = await documentUnitService.searchByRelatedDocumentation(
-    pageNumber.value,
-    itemsPerPage.value,
     activeCitationRef,
+    {
+      ...(pageNumber.value != undefined
+        ? { pg: pageNumber.value.toString() }
+        : {}),
+      ...(itemsPerPage.value != undefined
+        ? { sz: itemsPerPage.value.toString() }
+        : {}),
+      ...(documentNumberToExclude != undefined
+        ? { documentNumber: documentNumberToExclude.toString() }
+        : {}),
+    },
   )
   if (response.data) {
     searchResultsCurrentPage.value = {
@@ -105,10 +119,10 @@ async function search() {
 
 async function updatePage(page: number) {
   pageNumber.value = page
-  search()
+  await search()
 }
 
-async function validateRequiredInput() {
+function validateRequiredInput() {
   validationStore.reset()
 
   activeCitation.value.missingRequiredFields.forEach((missingField) =>
@@ -241,7 +255,8 @@ onMounted(() => {
           label="Entscheidungsdatum *"
           :validation-error="validationStore.getByField('decisionDate')"
           @update:validation-error="
-            (validationError) => updateDateFormatValidation(validationError)
+            (validationError: ValidationError | undefined) =>
+              updateDateFormatValidation(validationError)
           "
         >
           <DateInput
@@ -323,7 +338,7 @@ onMounted(() => {
       />
     </div>
 
-    <div class="bg-blue-200">
+    <div v-if="isLoading || searchResults" class="bg-blue-200">
       <Pagination
         navigation-position="bottom"
         :page="searchResultsCurrentPage"

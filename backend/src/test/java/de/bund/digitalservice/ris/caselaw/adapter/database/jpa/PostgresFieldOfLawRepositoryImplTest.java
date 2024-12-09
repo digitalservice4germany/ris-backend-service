@@ -1,33 +1,29 @@
 package de.bund.digitalservice.ris.caselaw.adapter.database.jpa;
 
-import static de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresFieldOfLawRepositoryImpl.returnTrueIfInTextOrIdentifier;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class PostgresFieldOfLawRepositoryImplTest {
-  private static FieldOfLawDTO generateFieldOfLawDto(String text) {
-    return FieldOfLawDTO.builder().identifier("AB-31-21").text(text).build();
+  private static FieldOfLawDTO generateFieldOfLawDto() {
+    return FieldOfLawDTO.builder().identifier("AB-31-21").text("parent").build();
   }
 
-  static FieldOfLawNormDTO addFieldOfNormDto(FieldOfLawDTO parent) {
+  static void addNormToFieldOfLaw(FieldOfLawDTO parent) {
     var fieldOfLawNorm =
         FieldOfLawNormDTO.builder()
             .id(UUID.randomUUID())
-            .abbreviation("AB" + "-33")
+            .abbreviation("AB-33")
             .singleNormDescription("Example single norm description")
             .fieldOfLaw(parent)
             .build();
 
     parent.getNorms().add(fieldOfLawNorm);
-    return fieldOfLawNorm;
   }
 
-  static void addFieldOfChildDto(FieldOfLawDTO parent) {
+  static void addChildToFieldOfLaw(FieldOfLawDTO parent) {
     var child =
         FieldOfLawDTO.builder()
             .parent(parent)
@@ -41,41 +37,13 @@ class PostgresFieldOfLawRepositoryImplTest {
 
   @Test
   void getWithNorms() {
-    var parent = generateFieldOfLawDto("parent");
-    addFieldOfNormDto(parent);
-    addFieldOfChildDto(parent);
+    var parent = generateFieldOfLawDto();
+    addNormToFieldOfLaw(parent);
+    addChildToFieldOfLaw(parent);
 
     var result = PostgresFieldOfLawRepositoryImpl.getWithNormsWithoutChildren(parent);
 
     assertEquals(Collections.emptyList(), result.children());
     assertEquals(1, result.norms().size());
-  }
-
-  @Test
-  void testReturnTrueIfInTextOrIdentifier() {
-    var fieldOfLaw = generateFieldOfLawDto("find me by text");
-    assertTrue(returnTrueIfInTextOrIdentifier(fieldOfLaw, new String[] {fieldOfLaw.getText()}));
-
-    assertTrue(
-        returnTrueIfInTextOrIdentifier(fieldOfLaw, new String[] {fieldOfLaw.getIdentifier()}));
-    assertTrue(
-        returnTrueIfInTextOrIdentifier(
-            fieldOfLaw, new String[] {fieldOfLaw.getIdentifier(), fieldOfLaw.getText()}));
-    assertTrue(returnTrueIfInTextOrIdentifier(fieldOfLaw, new String[] {"find", "AB"}));
-  }
-
-  @Test
-  void testReturnFalseIfInTextOrIdentifier() {
-    var fieldOfLaw = generateFieldOfLawDto("find me by text");
-    assertFalse(returnTrueIfInTextOrIdentifier(fieldOfLaw, null));
-    assertFalse(returnTrueIfInTextOrIdentifier(fieldOfLaw, new String[] {}));
-    assertFalse(returnTrueIfInTextOrIdentifier(fieldOfLaw, new String[] {"no matches"}));
-    assertFalse(
-        returnTrueIfInTextOrIdentifier(
-            fieldOfLaw, new String[] {fieldOfLaw.getIdentifier(), "no matches"}));
-    assertFalse(
-        returnTrueIfInTextOrIdentifier(
-            fieldOfLaw,
-            new String[] {fieldOfLaw.getIdentifier(), fieldOfLaw.getText(), "no matches"}));
   }
 }

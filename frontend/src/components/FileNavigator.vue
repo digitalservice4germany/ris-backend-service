@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Tooltip from "./Tooltip.vue"
 import FlexContainer from "@/components/FlexContainer.vue"
 import FlexItem from "@/components/FlexItem.vue"
 import TextButton from "@/components/input/TextButton.vue"
@@ -41,22 +42,25 @@ const decreaseFileIndex = () => {
     <FlexItem class="ds-label-01-bold self-center">
       {{ props.attachments[currentIndex]?.name }}
     </FlexItem>
-    <TextButton
-      id="decrease"
-      aria-label="Vorheriges Dokument anzeigen"
-      button-type="ghost"
-      :icon="IcOutlineArrowBack"
-      size="small"
-      @click="decreaseFileIndex"
-    />
-
-    <TextButton
-      id="increase"
-      aria-label="Nächstes Dokument anzeigen"
-      button-type="ghost"
-      :icon="IcOutlineArrowForward"
-      size="small"
-      @click="incrementFileIndex"
-    />
+    <Tooltip text="Zurück">
+      <TextButton
+        id="decrease"
+        aria-label="Vorheriges Dokument anzeigen"
+        button-type="ghost"
+        :icon="IcOutlineArrowBack"
+        size="small"
+        @click="decreaseFileIndex"
+      />
+    </Tooltip>
+    <Tooltip text="Weiter">
+      <TextButton
+        id="increase"
+        aria-label="Nächstes Dokument anzeigen"
+        button-type="ghost"
+        :icon="IcOutlineArrowForward"
+        size="small"
+        @click="incrementFileIndex"
+      />
+    </Tooltip>
   </FlexContainer>
 </template>

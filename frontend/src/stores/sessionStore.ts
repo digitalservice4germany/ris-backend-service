@@ -1,10 +1,11 @@
+import { useFavicon } from "@vueuse/core"
 import { defineStore } from "pinia"
 import { Ref, ref } from "vue"
-import { useFavicon } from "@/composables/useFavicon"
 import { Env } from "@/domain/env"
 import { User } from "@/domain/user"
 import adminService from "@/services/adminService"
 import authService from "@/services/authService"
+import { getFavicon } from "@/utils/getFavicon"
 
 type SessionStore = {
   user: Ref<User | undefined>
@@ -38,8 +39,7 @@ const useSessionStore = defineStore("session", (): SessionStore => {
 
   async function initSession(): Promise<void> {
     env.value = await fetchEnv()
-    const favicon = document.getElementById("favicon") as HTMLAnchorElement
-    favicon.href = useFavicon(env.value).value
+    useFavicon(getFavicon(env.value))
   }
 
   return { user, env, isAuthenticated, initSession }

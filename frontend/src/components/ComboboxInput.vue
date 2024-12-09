@@ -1,13 +1,14 @@
 <script setup lang="ts" generic="T extends InputModelProps">
 import * as Sentry from "@sentry/vue"
 import {
+  computed,
   onBeforeUnmount,
   onMounted,
   ref,
-  watch,
-  computed,
   shallowRef,
+  watch,
 } from "vue"
+import FlexContainer from "@/components/FlexContainer.vue"
 import {
   ComboboxAttributes,
   ComboboxInputModelType,
@@ -321,16 +322,29 @@ export type InputModelProps =
         @keydown.tab="closeDropdownAndRevertToLastSavedValue"
         @keydown.up.prevent="keyArrowUp"
       >
-        <span>
-          <span :class="item.labelCssClasses">{{ item.label }}</span>
-          <div
-            v-if="item.additionalInformation"
-            aria-label="additional-dropdown-info"
+        <FlexContainer
+          align-items="items-end"
+          justify-content="justify-between"
+        >
+          <span>
+            <span :class="item.labelCssClasses">{{ item.label }}</span>
+            <div
+              v-if="item.additionalInformation"
+              aria-label="additional-dropdown-info"
+              class="ds-label-02-reg text-neutral-700"
+            >
+              {{ item.additionalInformation }}
+            </div>
+          </span>
+
+          <span
+            v-if="item.sideInformation"
+            id="dropDownSideInformation"
             class="ds-label-02-reg text-neutral-700"
           >
-            {{ item.additionalInformation }}
-          </div>
-        </span>
+            {{ item.sideInformation }}
+          </span>
+        </FlexContainer>
       </button>
     </div>
   </div>

@@ -163,4 +163,57 @@ test.describe("saving behaviour", () => {
       }),
     ).toBeVisible()
   })
+
+  test(
+    "fields that are filled while a save request is in progress are not overwritten",
+    {
+      annotation: {
+        type: "story",
+        description:
+          "https://digitalservicebund.atlassian.net/browse/RISDEV-4521",
+      },
+    },
+    async ({ page, documentNumber }) => {
+      await navigateToCategories(page, documentNumber)
+
+      const { promise: lock, resolve: releaseLock } =
+        Promise.withResolvers<void>()
+
+      // We want to simulate behavior during an ongoing save request, so we delay the request.
+      await page.route("**/api/v1/caselaw/documentunits/*", async (route) => {
+        // Block all docunit network traffic until lock is released.
+        await lock
+        await route.continue()
+      })
+
+      await page.locator("[aria-label='Spruchkörper']").fill("VG-001")
+      await page.locator("[aria-label='Speichern Button']").click()
+
+      // Fill an input while a save request is in progress
+      await page.getByLabel("ECLI", { exact: true }).fill("ECLI-123")
+
+      // Wait until the save request is finished
+      releaseLock()
+      await expect(page.getByText("speichern...")).toBeHidden()
+
+      // Change a third input and save it
+      await page
+        .getByLabel("Entscheidungsdatum", { exact: true })
+        .fill("01012020")
+      await save(page)
+
+      // After the page reload, the three changed inputs should still be filled.
+      await page.reload()
+
+      await expect(page.locator("[aria-label='Spruchkörper']")).toHaveValue(
+        "VG-001",
+      )
+      await expect(page.getByLabel("ECLI", { exact: true })).toHaveValue(
+        "ECLI-123",
+      )
+      await expect(
+        page.getByLabel("Entscheidungsdatum", { exact: true }),
+      ).toHaveValue("01.01.2020")
+    },
+  )
 })

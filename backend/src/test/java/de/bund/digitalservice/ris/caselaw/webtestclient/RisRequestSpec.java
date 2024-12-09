@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.Cookie;
 import java.net.URI;
+import java.util.Objects;
 import java.util.function.Supplier;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -120,11 +121,7 @@ public class RisRequestSpec {
       request.with(login);
     }
 
-    if (mediaType != null) {
-      request.contentType(mediaType);
-    } else {
-      request.contentType(MediaType.APPLICATION_JSON);
-    }
+    request.contentType(Objects.requireNonNullElse(mediaType, MediaType.APPLICATION_JSON));
 
     if (bodySupplier != null) {
       try {

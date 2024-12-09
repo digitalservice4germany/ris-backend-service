@@ -1,9 +1,9 @@
-FROM node:22.5.1 AS builder
+FROM node:22.11.0 AS builder
 WORKDIR /usr/src/app
 COPY . .
 RUN npm install && npx vite build
 
-FROM cgr.dev/chainguard/nginx@sha256:ebb798372792363d7f21957ca87e5da1bcd5ac9ac1d456bc4c95dcb997feb041
+FROM cgr.dev/chainguard/nginx@sha256:750a50905275dfdd307e73b5de3f70325d232ade7cfdf0a47dfa5b6ee651620d
 EXPOSE 8081
 COPY --from=builder /usr/src/app/dist /var/lib/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/ris.conf

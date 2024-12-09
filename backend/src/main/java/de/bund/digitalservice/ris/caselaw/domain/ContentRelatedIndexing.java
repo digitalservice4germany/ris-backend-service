@@ -7,6 +7,11 @@ import lombok.Builder;
 @Builder(toBuilder = true)
 public record ContentRelatedIndexing(
     List<String> keywords,
+    List<String> jobProfiles,
     List<FieldOfLaw> fieldsOfLaw,
     List<NormReference> norms,
-    List<ActiveCitation> activeCitations) {}
+    List<ActiveCitation> activeCitations,
+    List<String> dismissalGrounds,
+    List<String> dismissalTypes,
+    List<String> collectiveAgreements,
+    boolean hasLegislativeMandate) {}

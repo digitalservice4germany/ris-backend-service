@@ -21,7 +21,7 @@ function toggleContentVisibility(): void {
 </script>
 
 <template>
-  <div class="right-[-9px] top-40 z-10">
+  <div class="right-[-9px] top-36 z-10">
     <button
       :aria-label="`${ariaLabel} ${localIsExpanded ? 'schließen' : 'anzeigen'}`"
       class="w-icon rounded-full bg-blue-800 text-white focus:outline-none focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-blue-800 focus-visible:ring-4 focus-visible:ring-white"

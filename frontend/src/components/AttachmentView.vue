@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { onBeforeMount, ref, watch } from "vue"
 import LoadingSpinner from "./LoadingSpinner.vue"
 import FlexContainer from "@/components/FlexContainer.vue"
 import FlexItem from "@/components/FlexItem.vue"
@@ -27,12 +27,15 @@ const getAttachmentHTML = async () => {
     if (htmlResponse.error === undefined) fileAsHTML.value = htmlResponse.data
   }
 }
-getAttachmentHTML()
+
+onBeforeMount(async () => {
+  await getAttachmentHTML()
+})
 
 watch(
   () => props.s3Path,
-  () => {
-    getAttachmentHTML()
+  async () => {
+    await getAttachmentHTML()
   },
 )
 </script>
@@ -53,9 +56,11 @@ watch(
     </div>
     <FlexItem v-else class="max-h-[70vh] min-h-[63vh] overflow-scroll">
       <TextEditor
+        aria-label="Dokumentenvorschau"
         data-testid="text-editor"
         element-id="text-editor"
         field-size="max"
+        plain-border-numbers
         :value="fileAsHTML?.html"
       />
     </FlexItem>

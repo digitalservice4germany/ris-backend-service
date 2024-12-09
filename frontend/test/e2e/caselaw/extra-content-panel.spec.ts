@@ -38,12 +38,12 @@ test.describe(
           await expect(page.getByLabel("Notiz anzeigen")).toBeVisible()
           await expect(page.getByLabel("Dokumente anzeigen")).toBeVisible()
           await expect(page.getByLabel("Vorschau anzeigen")).toBeVisible()
-          await expect(page.getByText("Notiz")).toBeVisible()
+          await expect(page.getByText("Notiz", { exact: true })).toBeVisible()
           await expect(page.getByLabel("Notiz Eingabefeld")).toHaveValue("")
           await page.getByLabel("Dokumente anzeigen").click()
           await expect(
             page.getByText(
-              "Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.",
+              "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
             ),
           ).toBeVisible()
         })
@@ -118,7 +118,7 @@ test.describe(
         await test.step("open document with note and no attachment, check that note is displayed in open panel", async () => {
           await navigateToCategories(page, documentNumber)
 
-          await expect(page.getByText("Notiz")).toBeVisible()
+          await expect(page.getByText("Notiz", { exact: true })).toBeVisible()
           await expect(page.getByLabel("Notiz Eingabefeld")).toHaveValue(
             "some text",
           )
@@ -126,7 +126,7 @@ test.describe(
           await page.getByLabel("Dokumente anzeigen").click()
           await expect(
             page.getByText(
-              "Wenn Sie eine Datei hochladen, können Sie die Datei hier sehen.",
+              "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
             ),
           ).toBeVisible()
 
@@ -146,7 +146,7 @@ test.describe(
 
           await navigateToCategories(page, documentNumber)
 
-          await expect(page.getByText("Notiz")).toBeVisible()
+          await expect(page.getByText("Notiz", { exact: true })).toBeVisible()
 
           await page.getByLabel("Dokumente anzeigen").click()
           await expect(page.getByText("Die ist ein Test")).toBeVisible()
@@ -304,7 +304,7 @@ es zu unterlassen, den Kläger für das Einstellen des unter Ziffer 1 genannten 
             page.getByRole("button", { name: "Notiz anzeigen" }),
           ).toBeFocused()
           await page.keyboard.press("Enter")
-          await expect(page.getByText("Notiz")).toBeVisible()
+          await expect(page.getByText("Notiz", { exact: true })).toBeVisible()
           await page.keyboard.press("Tab")
           await expect(
             page.getByRole("button", { name: "Dokumente anzeigen" }),

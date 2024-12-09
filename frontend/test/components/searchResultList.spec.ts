@@ -1,9 +1,13 @@
+import { createTestingPinia } from "@pinia/testing"
 import { userEvent } from "@testing-library/user-event"
 import { render, screen } from "@testing-library/vue"
+import { createRouter, createWebHistory } from "vue-router"
 import SearchResultList, {
   SearchResults,
 } from "@/components/SearchResultList.vue"
+import DocumentUnit from "@/domain/documentUnit"
 import RelatedDocumentation from "@/domain/relatedDocumentation"
+import routes from "~/test-helper/routes"
 
 function renderSearchResults(
   searchResults?: SearchResults<RelatedDocumentation>,
@@ -32,13 +36,31 @@ function renderSearchResults(
     isLoading: isLoading ?? false,
   }
 
+  const router = createRouter({
+    history: createWebHistory(),
+    routes: routes,
+  })
+
   const utils = render(SearchResultList, {
     props,
+
     global: {
+      plugins: [
+        createTestingPinia({
+          initialState: {
+            docunitStore: {
+              documentUnit: new DocumentUnit("foo", {
+                documentNumber: "1234567891234",
+              }),
+            },
+          },
+        }),
+        [router],
+      ],
       stubs: { routerLink: { template: "<a><slot/></a>" } },
     },
   })
-  // eslint-disable-next-line testing-library/await-async-events
+
   const user = userEvent.setup()
   return { user, ...utils }
 }

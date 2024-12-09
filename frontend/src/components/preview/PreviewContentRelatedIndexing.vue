@@ -42,6 +42,37 @@ const hasActiveCitations = computed(() => {
     contentRelatedIndexing.value.activeCitations?.length > 0
   )
 })
+
+const hasJobProfiles = computed(() => {
+  return (
+    contentRelatedIndexing.value.jobProfiles &&
+    contentRelatedIndexing.value.jobProfiles?.length > 0
+  )
+})
+
+const hasCollectiveAgreements = computed(() => {
+  return (
+    contentRelatedIndexing.value.collectiveAgreements &&
+    contentRelatedIndexing.value.collectiveAgreements?.length > 0
+  )
+})
+
+const hasDismissalGrounds = computed(() => {
+  return (
+    contentRelatedIndexing.value.dismissalGrounds &&
+    contentRelatedIndexing.value.dismissalGrounds?.length > 0
+  )
+})
+
+const hasDismissalTypes = computed(() => {
+  return (
+    contentRelatedIndexing.value.dismissalTypes &&
+    contentRelatedIndexing.value.dismissalTypes?.length > 0
+  )
+})
+const hasLegislativeMandate = computed(() => {
+  return contentRelatedIndexing.value.hasLegislativeMandate
+})
 </script>
 
 <template>
@@ -109,6 +140,54 @@ const hasActiveCitations = computed(() => {
           {{ activeCitation.renderDecision }}
         </div>
       </PreviewContent>
+    </PreviewRow>
+    <PreviewRow v-if="hasCollectiveAgreements">
+      <PreviewCategory>Tarifvertrag</PreviewCategory>
+      <PreviewContent data-testid="Tarifvertrag">
+        <div
+          v-for="collectiveAgreement in contentRelatedIndexing.collectiveAgreements"
+          :key="collectiveAgreement"
+        >
+          {{ collectiveAgreement }}
+        </div>
+      </PreviewContent>
+    </PreviewRow>
+    <PreviewRow v-if="hasDismissalTypes">
+      <PreviewCategory>Kündigungsarten</PreviewCategory>
+      <PreviewContent data-testid="Kündigungsarten">
+        <div
+          v-for="dismissalType in contentRelatedIndexing.dismissalTypes"
+          :key="dismissalType"
+        >
+          {{ dismissalType }}
+        </div>
+      </PreviewContent>
+    </PreviewRow>
+    <PreviewRow v-if="hasDismissalGrounds">
+      <PreviewCategory>Kündigungsgründe</PreviewCategory>
+      <PreviewContent data-testid="Kündigungsgründe">
+        <div
+          v-for="dismissalGround in contentRelatedIndexing.dismissalGrounds"
+          :key="dismissalGround"
+        >
+          {{ dismissalGround }}
+        </div>
+      </PreviewContent>
+    </PreviewRow>
+    <PreviewRow v-if="hasJobProfiles">
+      <PreviewCategory>Berufsbild</PreviewCategory>
+      <PreviewContent>
+        <div
+          v-for="(jobProfile, index) in contentRelatedIndexing.jobProfiles"
+          :key="index"
+        >
+          {{ jobProfile }}
+        </div>
+      </PreviewContent>
+    </PreviewRow>
+    <PreviewRow v-if="hasLegislativeMandate">
+      <PreviewCategory>Gesetzgebungsauftrag</PreviewCategory>
+      <PreviewContent>Ja</PreviewContent>
     </PreviewRow>
   </FlexContainer>
 </template>

@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -15,14 +14,15 @@ import static org.mockito.Mockito.when;
 
 import ch.qos.logback.classic.Level;
 import de.bund.digitalservice.ris.caselaw.TestMemoryAppender;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitRepository;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitStatusService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitRepository;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitStatusService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverMail;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverReport;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverReportRepository;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverRepository;
 import de.bund.digitalservice.ris.caselaw.domain.HttpMailSender;
+import de.bund.digitalservice.ris.caselaw.domain.LegalPeriodicalEditionRepository;
 import de.bund.digitalservice.ris.caselaw.domain.MailAttachment;
 import de.bund.digitalservice.ris.caselaw.domain.PublicationStatus;
 import de.bund.digitalservice.ris.caselaw.domain.Status;
@@ -66,12 +66,14 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 class JurisXmlExporterResponseProcessorTest {
   private static final String DOCUMENT_NUMBER = "KORE123456789";
   private static final UUID DOCUMENT_UUID = UUID.randomUUID();
-  @MockBean private DocumentUnitStatusService statusService;
+  @MockBean private DocumentationUnitStatusService statusService;
   @MockBean private HttpMailSender mailSender;
   @MockBean private ImapStoreFactory storeFactory;
   @MockBean private HandoverReportRepository reportRepository;
-  @MockBean private DocumentUnitRepository documentUnitRepository;
+  @MockBean private DocumentationUnitRepository documentationUnitRepository;
   @MockBean private HandoverRepository xmlHandoverRepository;
+
+  @MockBean private LegalPeriodicalEditionRepository editionRepository;
   @Mock private Store store;
   @Mock private Folder inbox;
   @Mock private Folder processed;
@@ -85,26 +87,26 @@ class JurisXmlExporterResponseProcessorTest {
   private JurisXmlExporterResponseProcessor responseProcessor;
 
   @BeforeEach
-  void setup() throws MessagingException {
+  void setup() throws MessagingException, DocumentationUnitNotExistsException {
     when(storeFactory.createStore()).thenReturn(store);
     when(store.getFolder("INBOX")).thenReturn(inbox);
     when(store.getFolder("processed")).thenReturn(processed);
     when(store.getFolder("unprocessable")).thenReturn(unprocessable);
 
     when(importMessageWrapper.getMessage()).thenReturn(importMessage);
-    when(importMessageWrapper.getDocumentNumber()).thenReturn(DOCUMENT_NUMBER);
+    when(importMessageWrapper.getIdentifier()).thenReturn(DOCUMENT_NUMBER);
     when(wrapperFactory.getResponsibleWrapper(importMessage))
         .thenReturn(Optional.of(importMessageWrapper));
 
     when(processMessageWrapper.getMessage()).thenReturn(processMessage);
-    when(processMessageWrapper.getDocumentNumber()).thenReturn(DOCUMENT_NUMBER);
+    when(processMessageWrapper.getIdentifier()).thenReturn(DOCUMENT_NUMBER);
     when(wrapperFactory.getResponsibleWrapper(processMessage))
         .thenReturn(Optional.of(processMessageWrapper));
 
     when(reportRepository.saveAll(any())).thenReturn(Collections.emptyList());
 
-    when(documentUnitRepository.findByDocumentNumber(DOCUMENT_NUMBER))
-        .thenReturn(Optional.of(DocumentUnit.builder().uuid(DOCUMENT_UUID).build()));
+    when(documentationUnitRepository.findByDocumentNumber(DOCUMENT_NUMBER))
+        .thenReturn(DocumentationUnit.builder().uuid(DOCUMENT_UUID).build());
 
     when(xmlHandoverRepository.getLastXmlHandoverMail(DOCUMENT_UUID))
         .thenReturn(HandoverMail.builder().issuerAddress("test@digitalservice.bund.de").build());
@@ -118,8 +120,9 @@ class JurisXmlExporterResponseProcessorTest {
             storeFactory,
             reportRepository,
             wrapperFactory,
-            documentUnitRepository,
-            xmlHandoverRepository);
+            documentationUnitRepository,
+            xmlHandoverRepository,
+            editionRepository);
   }
 
   @Test
@@ -146,8 +149,8 @@ class JurisXmlExporterResponseProcessorTest {
     responseProcessor.readEmails();
 
     verifyNoInteractions(mailSender);
-    verify(inbox, never()).copyMessages(any(), any());
-    verify(importMessage, never()).setFlag(Flag.DELETED, true);
+    verify(inbox).copyMessages(new Message[] {importMessage}, unprocessable);
+    verify(importMessage).setFlag(Flag.DELETED, true);
     assertThat(memoryAppender.count(Level.ERROR)).isEqualTo(1L);
     assertThat(memoryAppender.getMessage(Level.ERROR, 0)).isEqualTo("Message has no subject");
 
@@ -164,13 +167,11 @@ class JurisXmlExporterResponseProcessorTest {
     responseProcessor.readEmails();
 
     verifyNoInteractions(mailSender);
-    verify(inbox, never()).copyMessages(new Message[] {importMessage}, processed);
-    verify(importMessage, never()).setFlag(Flag.DELETED, true);
+    verify(inbox).copyMessages(new Message[] {importMessage}, unprocessable);
+    verify(importMessage).setFlag(Flag.DELETED, true);
     assertThat(memoryAppender.count(Level.ERROR)).isEqualTo(1L);
     assertThat(memoryAppender.getMessage(Level.ERROR, 0))
         .isEqualTo("Message null couldn't processed");
-    assertThat(memoryAppender.getCause(Level.ERROR, 0).getCause().getMessage())
-        .isEqualTo("Couldn't find issuer address for document number: KORE123456789");
 
     memoryAppender.detachLoggingTestAppender();
   }
@@ -218,8 +219,8 @@ class JurisXmlExporterResponseProcessorTest {
                 new MessageAttachment(String.format("%s.html", DOCUMENT_NUMBER), "report"),
                 new MessageAttachment(
                     String.format("%s-spellcheck.html", DOCUMENT_NUMBER), "spellcheck")));
-    when(processMessageWrapper.getDocumentNumber()).thenReturn(DOCUMENT_NUMBER);
-    when((processMessageWrapper.getReceivedDate())).thenReturn(now.toInstant());
+    when(processMessageWrapper.getIdentifier()).thenReturn(DOCUMENT_NUMBER);
+    when(processMessageWrapper.getReceivedDate()).thenReturn(now.toInstant());
 
     responseProcessor.readEmails();
 
@@ -229,12 +230,12 @@ class JurisXmlExporterResponseProcessorTest {
             List.of(
                 HandoverReport.builder()
                     .content("report")
-                    .documentNumber(DOCUMENT_NUMBER)
+                    .entityId(DOCUMENT_UUID)
                     .receivedDate(now.toInstant())
                     .build(),
                 HandoverReport.builder()
                     .content("spellcheck")
-                    .documentNumber(DOCUMENT_NUMBER)
+                    .entityId(DOCUMENT_UUID)
                     .receivedDate(now.toInstant())
                     .build()));
   }
@@ -304,7 +305,7 @@ class JurisXmlExporterResponseProcessorTest {
                 new MessageAttachment(
                     String.format("%s-spellcheck.html", DOCUMENT_NUMBER),
                     "<p><script>alert('sanitize me')</script></p>")));
-    when(processMessageWrapper.getDocumentNumber()).thenReturn(DOCUMENT_NUMBER);
+    when(processMessageWrapper.getIdentifier()).thenReturn(DOCUMENT_NUMBER);
     when((processMessageWrapper.getReceivedDate())).thenReturn(now.toInstant());
 
     responseProcessor.readEmails();
@@ -315,12 +316,12 @@ class JurisXmlExporterResponseProcessorTest {
             List.of(
                 HandoverReport.builder()
                     .content(expectedHtml.replaceAll("\\s+", " ").replaceAll(">\\s+<", "><"))
-                    .documentNumber(DOCUMENT_NUMBER)
+                    .entityId(DOCUMENT_UUID)
                     .receivedDate(now.toInstant())
                     .build(),
                 HandoverReport.builder()
                     .content("<p></p>")
-                    .documentNumber(DOCUMENT_NUMBER)
+                    .entityId(DOCUMENT_UUID)
                     .receivedDate(now.toInstant())
                     .build()));
   }

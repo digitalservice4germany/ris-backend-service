@@ -13,6 +13,8 @@ public record DocumentationUnitSearchInput(
     String courtLocation,
     LocalDate decisionDate,
     LocalDate decisionDateEnd,
+    LocalDate publicationDate,
+    boolean scheduledOnly,
     DocumentationOffice documentationOffice,
     Status status,
     boolean myDocOfficeOnly) {}

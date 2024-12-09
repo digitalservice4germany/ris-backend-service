@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -35,6 +36,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Builder(toBuilder = true)
 @Entity
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Table(
     schema = "incremental_migration",
     uniqueConstraints = {@UniqueConstraint(columnNames = {"juris_id", "notation"})},
@@ -42,9 +44,11 @@ import lombok.ToString;
 public class FieldOfLawDTO {
   @Id @GeneratedValue private UUID id;
 
+  @EqualsAndHashCode.Include
   @Column(unique = true, updatable = false, insertable = false)
   private String identifier;
 
+  @EqualsAndHashCode.Include
   @Column(updatable = false, insertable = false)
   private String text;
 
@@ -104,6 +108,7 @@ public class FieldOfLawDTO {
   @ToString.Include
   private Integer jurisId;
 
+  @EqualsAndHashCode.Include
   @Column(updatable = false)
   @Enumerated(EnumType.STRING)
   @ToString.Include

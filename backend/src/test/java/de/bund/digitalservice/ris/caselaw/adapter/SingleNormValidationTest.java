@@ -6,14 +6,15 @@ import de.bund.digitalservice.ris.caselaw.domain.AttachmentService;
 import de.bund.digitalservice.ris.caselaw.domain.DeltaMigrationRepository;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentNumberRecyclingService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentNumberService;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitRepository;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitStatusService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitRepository;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitStatusService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverReportRepository;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
 import de.bund.digitalservice.ris.caselaw.domain.NormElement;
 import de.bund.digitalservice.ris.caselaw.domain.NormElementRepository;
 import de.bund.digitalservice.ris.caselaw.domain.SingleNormValidationInfo;
+import de.bund.digitalservice.ris.caselaw.domain.court.CourtRepository;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.NormCode;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
 import de.bund.digitalservice.ris.caselaw.domain.validator.SingleNormValidator;
@@ -33,21 +34,22 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @ExtendWith(SpringExtension.class)
 @Import({
-  DocumentUnitService.class,
+  DocumentationUnitService.class,
   SingleNormValidator.class,
   LocalValidatorFactoryBean.class,
 })
 class SingleNormValidationTest {
 
-  @Autowired private DocumentUnitService service;
+  @Autowired private DocumentationUnitService service;
   @Autowired private Validator validator;
-  @MockBean private DocumentUnitRepository repository;
+  @MockBean private DocumentationUnitRepository repository;
+  @MockBean private CourtRepository courtRepository;
   @MockBean private NormElementRepository normElementRepository;
   @MockBean private DocumentNumberService numberService;
   @MockBean private DocumentNumberRecyclingService documentNumberRecyclingService;
   @MockBean private S3AsyncClient s3AsyncClient;
   @MockBean private MailService mailService;
-  @MockBean private DocumentUnitStatusService statusService;
+  @MockBean private DocumentationUnitStatusService statusService;
   @MockBean private DeltaMigrationRepository deltaMigrationRepository;
   @MockBean private HandoverReportRepository handoverReportRepository;
   @MockBean AttachmentService attachmentService;

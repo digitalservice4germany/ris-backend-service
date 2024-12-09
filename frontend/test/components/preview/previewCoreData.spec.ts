@@ -37,7 +37,7 @@ describe("preview core data", () => {
       deviatingEclis: ["eclu123"],
       procedure: {
         label: "vorgang-1",
-        documentUnitCount: 1,
+        documentationUnitCount: 1,
         createdAt: "2022-12-12",
       },
       previousProcedures: ["vorgang-0"],
@@ -292,7 +292,7 @@ describe("preview core data", () => {
       {
         procedure: {
           label: "vorgang2",
-          documentUnitCount: 1,
+          documentationUnitCount: 1,
           createdAt: "2023-12-24",
         },
       },

@@ -58,6 +58,11 @@ const service: AttachmentService = {
         title: errorMessages.DOCX_PARSING_ERROR.title,
         description: errorMessages.DOCX_PARSING_ERROR.description,
       }
+    } else if (response.status === 403) {
+      response.error = {
+        title: errorMessages.NOT_ALLOWED.title,
+        description: errorMessages.NOT_ALLOWED.description,
+      }
     } else if (response.status >= 300) {
       response.error = {
         title: errorMessages.SERVER_ERROR.title,

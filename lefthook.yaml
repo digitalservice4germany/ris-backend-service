@@ -12,6 +12,11 @@ pre-commit:
       tags: format backend
       root: backend/
       run: ./gradlew spotlessApply -DspotlessFiles=$(echo {staged_files} | sed 's/ /,/g') && git add {staged_files}
+    frontend-typecheck:
+      tags: format frontend
+      root: frontend/
+      glob: "*.{ts,vue}"
+      run: npm run --silent type:check
     frontend-prettier:
       tags: format frontend
       root: frontend/
@@ -25,7 +30,7 @@ pre-commit:
     frontend-stylelint:
       tags: frontend lint
       root: frontend/
-      run: npm run --silent stylelint:check {staged_files}
+      run: npm run --silent stylelint:fix {staged_files} && git add {staged_files}
 
 post-commit:
   commands:

@@ -19,12 +19,16 @@ public class AdminController {
 
   private final MailTrackingService mailTrackingService;
   private final EnvironmentService environmentService;
+  private final LdmlExporterService ldmlExporterService;
 
   @Autowired
   public AdminController(
-      MailTrackingService mailTrackingService, EnvironmentService environmentService) {
+      MailTrackingService mailTrackingService,
+      EnvironmentService environmentService,
+      LdmlExporterService ldmlExporterService) {
     this.mailTrackingService = mailTrackingService;
     this.environmentService = environmentService;
+    this.ldmlExporterService = ldmlExporterService;
   }
 
   @PostMapping("/webhook")
@@ -40,5 +44,18 @@ public class AdminController {
   @PreAuthorize("isAuthenticated()")
   public ResponseEntity<String> getEnvironment() {
     return ResponseEntity.ok(environmentService.getEnvironment());
+  }
+
+  @GetMapping("/ldml")
+  @PreAuthorize("isAuthenticated()")
+  public ResponseEntity<Void> createLdml() {
+    ldmlExporterService.exportMultipleRandomDocumentationUnits();
+    return ResponseEntity.ok().build();
+  }
+
+  @GetMapping("/accountManagementUrl")
+  @PreAuthorize("isAuthenticated()")
+  public ResponseEntity<String> getAccountManagementUrl() {
+    return ResponseEntity.ok(environmentService.getAccountManagementUrl());
   }
 }

@@ -1,10 +1,12 @@
 import httpClient, {
-  ServiceResponse,
   FailedValidationServerResponse,
+  ServiceResponse,
 } from "./httpClient"
 import { DocumentUnitSearchParameter } from "@/components/DocumentUnitSearchEntryForm.vue"
-import { PageableService, Page } from "@/components/Pagination.vue"
-import DocumentUnit from "@/domain/documentUnit"
+import { Page } from "@/components/Pagination.vue"
+import DocumentUnit, {
+  DocumentationUnitParameters,
+} from "@/domain/documentUnit"
 import DocumentUnitListEntry from "@/domain/documentUnitListEntry"
 import RelatedDocumentation from "@/domain/relatedDocumentation"
 import { RisJsonPatch } from "@/domain/risJsonPatch"
@@ -16,7 +18,9 @@ interface DocumentUnitService {
     documentNumber: string,
   ): Promise<ServiceResponse<DocumentUnit>>
 
-  createNew(): Promise<ServiceResponse<DocumentUnit>>
+  createNew(
+    params?: DocumentationUnitParameters,
+  ): Promise<ServiceResponse<DocumentUnit>>
 
   update(
     documentUnitUuid: string,
@@ -25,10 +29,12 @@ interface DocumentUnitService {
 
   delete(documentUnitUuid: string): Promise<ServiceResponse<unknown>>
 
-  searchByRelatedDocumentation: PageableService<
-    RelatedDocumentation,
-    RelatedDocumentation
-  >
+  takeOver(documentNumber: string): Promise<ServiceResponse<unknown>>
+
+  searchByRelatedDocumentation(
+    query: RelatedDocumentation,
+    requestParams?: { [key: string]: string } | undefined,
+  ): Promise<ServiceResponse<Page<RelatedDocumentation>>>
 
   searchByDocumentUnitSearchInput(
     requestParams?: { [key: string]: string } | undefined,
@@ -58,9 +64,19 @@ const service: DocumentUnitService = {
     return response
   },
 
-  async createNew() {
-    const response = await httpClient.get<DocumentUnit>(
+  async createNew(parameters?: DocumentationUnitParameters) {
+    const response = await httpClient.put<
+      DocumentationUnitParameters,
+      DocumentUnit
+    >(
       "caselaw/documentunits/new",
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      },
+      parameters,
     )
     if (response.status >= 300) {
       response.error = {
@@ -123,21 +139,29 @@ const service: DocumentUnitService = {
     return response
   },
 
-  async searchByRelatedDocumentation(
-    page: number,
-    size: number,
-    query = new RelatedDocumentation(),
-  ) {
-    const urlParams = window.location.pathname.split("/")
-    const documentNumberToExclude =
-      urlParams[urlParams.indexOf("documentunit") + 1]
+  async takeOver(documentNumber: string) {
+    const response = await httpClient.put<string, DocumentUnit>(
+      `caselaw/documentunits/${documentNumber}/takeover`,
+    )
+    if (response.status >= 300) {
+      response.error = {
+        title: errorMessages.DOCUMENT_UNIT_TAKEOVER_FAILED.title,
+      }
+    }
+    return response
+  },
 
+  async searchByRelatedDocumentation(
+    query: RelatedDocumentation = new RelatedDocumentation(),
+    requestParams: { [K in DocumentUnitSearchParameter]?: string } = {},
+  ) {
     const response = await httpClient.put<
       RelatedDocumentation,
       Page<RelatedDocumentation>
     >(
-      `caselaw/documentunits/${documentNumberToExclude}/search-linkable-documentation-units?pg=${page}&sz=${size}`,
+      `caselaw/documentunits/search-linkable-documentation-units`,
       {
+        params: requestParams,
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",

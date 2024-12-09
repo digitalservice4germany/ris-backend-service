@@ -1,8 +1,9 @@
 <script lang="ts" setup>
 import dayjs from "dayjs"
 import customParseFormat from "dayjs/plugin/customParseFormat"
-import { vMaska, MaskaDetail } from "maska"
-import { computed, ref, watch } from "vue"
+import { Mask } from "maska"
+import { vMaska } from "maska/vue"
+import { computed, onMounted, ref, watch } from "vue"
 import { ValidationError } from "@/components/input/types"
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   isFutureDate?: boolean
   hasError?: boolean
   size?: "regular" | "medium" | "small"
+  readOnly?: boolean
+  disabled?: boolean
 }
 
 const props = defineProps<Props>()
@@ -22,7 +25,10 @@ const emit = defineEmits<{
   "update:validationError": [value?: ValidationError]
 }>()
 
-const inputCompleted = ref<boolean>(false)
+const mask = "##.##.####"
+const inputCompleted = computed(
+  () => inputValue.value && new Mask({ mask }).completed(inputValue.value),
+)
 
 const inputValue = ref(
   props.modelValue ? dayjs(props.modelValue).format("DD.MM.YYYY") : undefined,
@@ -38,10 +44,6 @@ const isInPast = computed(() => {
   if (props.isFutureDate) return true
   return dayjs(inputValue.value, "DD.MM.YYYY", true).isBefore(dayjs())
 })
-
-const onMaska = (event: CustomEvent<MaskaDetail>) => {
-  inputCompleted.value = event.detail.completed
-}
 
 const conditionalClasses = computed(() => ({
   "has-error": props.hasError,
@@ -75,6 +77,10 @@ function validateInput() {
   }
 }
 
+onMounted(() => {
+  if (inputValue.value) validateInput()
+})
+
 function backspaceDelete() {
   emit("update:validationError", undefined)
   if (inputValue.value === "") emit("update:modelValue", inputValue.value)
@@ -95,16 +101,16 @@ watch(
 
 watch(inputValue, (is) => {
   if (is === "") emit("update:modelValue", undefined)
-  isValidDate.value &&
-    isInPast.value &&
+  if (isValidDate.value && isInPast.value) {
     emit(
       "update:modelValue",
       dayjs(is, "DD.MM.YYYY", true).format("YYYY-MM-DD"),
     )
-})
+  }
 
-watch(inputCompleted, (is) => {
-  if (is) validateInput()
+  if (inputCompleted.value) {
+    validateInput()
+  }
 })
 </script>
 
@@ -112,15 +118,15 @@ watch(inputCompleted, (is) => {
   <input
     :id="id"
     v-model="inputValue"
-    v-maska
+    v-maska="mask"
     :aria-label="ariaLabel"
     class="ds-input"
     :class="conditionalClasses"
-    data-maska="##.##.####"
+    :disabled="disabled"
     placeholder="TT.MM.JJJJ"
+    :readonly="readOnly"
     @blur="onBlur"
     @focus="emit('update:validationError', undefined)"
     @keydown.delete="backspaceDelete"
-    @maska="onMaska"
   />
 </template>

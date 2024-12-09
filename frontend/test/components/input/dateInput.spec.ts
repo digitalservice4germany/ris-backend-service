@@ -11,6 +11,7 @@ function renderComponent(options?: {
   modelValue?: string
   placeholder?: string
   validationError?: ValidationError
+  disabled?: boolean
 }) {
   const user = userEvent.setup()
   const props = {
@@ -21,6 +22,7 @@ function renderComponent(options?: {
     isFutureDate: options?.isFutureDate ?? false,
     placeholder: options?.placeholder,
     validationError: options?.validationError,
+    disabled: options?.disabled,
   }
   const utils = render(DateInput, { props })
   return { user, props, ...utils }
@@ -176,5 +178,23 @@ describe("DateInput", () => {
         instance: "identifier",
       },
     ])
+  })
+
+  it("renders a disabled input", () => {
+    renderComponent({ disabled: true })
+    const input = screen.queryByLabelText("aria-label") as HTMLInputElement
+    expect(input).toBeDisabled()
+  })
+
+  it("renders an enabled input", () => {
+    renderComponent({ disabled: false })
+    const input = screen.queryByLabelText("aria-label") as HTMLInputElement
+    expect(input).toBeEnabled()
+  })
+
+  it("renders an enabled input by default", () => {
+    renderComponent()
+    const input = screen.queryByLabelText("aria-label") as HTMLInputElement
+    expect(input).toBeEnabled()
   })
 })

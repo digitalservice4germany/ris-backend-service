@@ -12,7 +12,7 @@ We are building an application that consist of a single-page application (SPA) a
 
 ## Decision
 
-We are starting with keeping all of the sources in a single repository, i.e. monorepo. The frontend/SPA sources reside in a `web` directory. This is so that we avoid the additional complexity that would come with an approach where sources are kept in separate repositories:
+We are starting with keeping all of the sources in a single repository, i.e. monorepo. The frontend/SPA sources reside in a `frontend` directory. This is so that we avoid the additional complexity that would come with an approach where sources are kept in separate repositories:
 
 - An SPA in a separate repository will need its own deployment (Nginx, S3 bucket etc.) and pipeline.
 - The SPA is no longer secured out-of-the-box by Spring's security config; we'd need to recreate it or already deploy a shared auth implementation from the very beginning.

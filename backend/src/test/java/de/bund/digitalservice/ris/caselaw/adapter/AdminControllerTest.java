@@ -30,6 +30,7 @@ class AdminControllerTest {
   @Autowired private RisWebTestClient risWebTestClient;
   @MockBean private MailTrackingService mailTrackingService;
   @MockBean private EnvironmentService environmentService;
+  @MockBean LdmlExporterService ldmlExporterService;
   @MockBean private ClientRegistrationRepository clientRegistrationRepository;
 
   private static final UUID TEST_UUID = UUID.fromString("88888888-4444-4444-4444-121212121212");
@@ -148,5 +149,23 @@ class AdminControllerTest {
             .returnResult();
 
     assertThat(result.getResponseBody()).isEqualTo("staging");
+  }
+
+  @Test
+  void testGetAccountManagementUrl() {
+    when(environmentService.getAccountManagementUrl()).thenReturn("some-url");
+
+    var result =
+        risWebTestClient
+            .withDefaultLogin()
+            .get()
+            .uri("/api/v1/admin/accountManagementUrl")
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(String.class)
+            .returnResult();
+
+    assertThat(result.getResponseBody()).isEqualTo("some-url");
   }
 }

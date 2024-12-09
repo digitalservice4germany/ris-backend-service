@@ -6,11 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import java.io.Serializable;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -30,11 +28,4 @@ public class DeviatingEcliDTO {
   private String value;
 
   private Long rank;
-}
-
-@AllArgsConstructor
-@EqualsAndHashCode
-class DeviatingEcliId implements Serializable {
-  private String value;
-  private UUID documentationUnitId;
 }

@@ -69,7 +69,6 @@ class DatabaseDocumentNumberGeneratorServiceTest {
           DocumentNumberFormatterException,
           DocumentationUnitExistsException {
     var nextDocumentNumber = generateDefaultDocumentNumber();
-    when(service.recycle(nextDocumentNumber)).thenReturn(Optional.of(nextDocumentNumber));
 
     Assertions.assertEquals(
         service.generateDocumentNumber(DEFAULT_ABBREVIATION), nextDocumentNumber);

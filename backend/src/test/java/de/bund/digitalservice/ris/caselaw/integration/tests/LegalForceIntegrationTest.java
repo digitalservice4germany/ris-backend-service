@@ -1,22 +1,22 @@
 package de.bund.digitalservice.ris.caselaw.integration.tests;
 
-import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDefaultDocOffice;
+import static de.bund.digitalservice.ris.caselaw.AuthUtils.buildDSDocOffice;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.springframework.test.context.jdbc.Sql.ExecutionPhase.AFTER_TEST_METHOD;
 
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.AuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberGeneratorService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberRecyclingService;
-import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentUnitStatusService;
+import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentationUnitStatusService;
 import de.bund.digitalservice.ris.caselaw.adapter.DocumentNumberPatternConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.DocumentUnitController;
+import de.bund.digitalservice.ris.caselaw.adapter.DocumentationUnitController;
 import de.bund.digitalservice.ris.caselaw.adapter.DocxConverterService;
+import de.bund.digitalservice.ris.caselaw.adapter.LdmlExporterService;
+import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationOfficeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitRepository;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseDocumentationUnitSearchRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseLegalForceTypeRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseNormAbbreviationRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseNormReferenceRepository;
@@ -34,13 +34,15 @@ import de.bund.digitalservice.ris.caselaw.config.SecurityConfig;
 import de.bund.digitalservice.ris.caselaw.domain.AttachmentService;
 import de.bund.digitalservice.ris.caselaw.domain.ContentRelatedIndexing;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataInitializationService;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
 import de.bund.digitalservice.ris.caselaw.domain.LegalForce;
 import de.bund.digitalservice.ris.caselaw.domain.MailService;
 import de.bund.digitalservice.ris.caselaw.domain.NormReference;
+import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.SingleNorm;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.LegalForceType;
@@ -66,21 +68,21 @@ import software.amazon.awssdk.services.s3.S3AsyncClient;
 
 @RISIntegrationTest(
     imports = {
-      DocumentUnitService.class,
+      DocumentationUnitService.class,
       PostgresDeltaMigrationRepositoryImpl.class,
       DatabaseDocumentNumberGeneratorService.class,
       DatabaseDocumentNumberRecyclingService.class,
-      DatabaseDocumentUnitStatusService.class,
+      DatabaseDocumentationUnitStatusService.class,
       PostgresDocumentationUnitRepositoryImpl.class,
       PostgresHandoverReportRepositoryImpl.class,
       FlywayConfig.class,
       PostgresJPAConfig.class,
       SecurityConfig.class,
-      AuthService.class,
+      OAuthService.class,
       TestConfig.class,
       DocumentNumberPatternConfig.class
     },
-    controllers = {DocumentUnitController.class},
+    controllers = {DocumentationUnitController.class},
     timeout = "PT2M")
 @Sql(scripts = {"classpath:doc_office_init.sql", "classpath:legal_force_init.sql"})
 @Sql(
@@ -115,12 +117,16 @@ class LegalForceIntegrationTest {
   @MockBean private ClientRegistrationRepository clientRegistrationRepository;
   @MockBean private AttachmentService attachmentService;
   @MockBean private HandoverService handoverService;
+  @MockBean private ProcedureService procedureService;
+  @MockBean private LdmlExporterService ldmlExporterService;
+
+  @MockBean
+  private DocumentationUnitDocxMetadataInitializationService
+      documentationUnitDocxMetadataInitializationService;
+
   @MockBean private PatchMapperService patchMapperService;
 
-  private final DocumentationOffice docOffice = buildDefaultDocOffice();
-
-  @Autowired
-  private DatabaseDocumentationUnitSearchRepository databaseDocumentationUnitSearchRepository;
+  private final DocumentationOffice docOffice = buildDSDocOffice();
 
   @BeforeEach
   void setUp() {
@@ -137,7 +143,7 @@ class LegalForceIntegrationTest {
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
               assertThat(response.getResponseBody().contentRelatedIndexing().norms()).hasSize(1);
@@ -164,7 +170,7 @@ class LegalForceIntegrationTest {
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
               assertThat(response.getResponseBody().contentRelatedIndexing().norms()).hasSize(1);
@@ -202,8 +208,8 @@ class LegalForceIntegrationTest {
                 .findById(UUID.fromString("55555555-2222-3333-4444-555555555555"))
                 .get());
 
-    DocumentUnit documentUnitFromFrontend =
-        DocumentUnit.builder()
+    DocumentationUnit documentationUnitFromFrontend =
+        DocumentationUnit.builder()
             .uuid(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3"))
             .documentNumber("documentnr001")
             .coreData(CoreData.builder().build())
@@ -231,24 +237,23 @@ class LegalForceIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri("/api/v1/caselaw/documentunits/46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")
-        .bodyValue(documentUnitFromFrontend)
+        .bodyValue(documentationUnitFromFrontend)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
-            response -> {
-              assertThat(
-                      response
-                          .getResponseBody()
-                          .contentRelatedIndexing()
-                          .norms()
-                          .get(0)
-                          .singleNorms()
-                          .get(0)
-                          .legalForce())
-                  .isNotNull();
-            });
+            response ->
+                assertThat(
+                        response
+                            .getResponseBody()
+                            .contentRelatedIndexing()
+                            .norms()
+                            .get(0)
+                            .singleNorms()
+                            .get(0)
+                            .legalForce())
+                    .isNotNull());
   }
 
   @Transactional
@@ -266,8 +271,8 @@ class LegalForceIntegrationTest {
                 .findById(UUID.fromString("55555555-2222-3333-4444-555555555555"))
                 .get());
 
-    DocumentUnit documentUnitFromFrontend =
-        DocumentUnit.builder()
+    DocumentationUnit documentationUnitFromFrontend =
+        DocumentationUnit.builder()
             .uuid(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3"))
             .documentNumber("documentnr001")
             .coreData(CoreData.builder().build())
@@ -294,7 +299,7 @@ class LegalForceIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri("/api/v1/caselaw/documentunits/46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")
-        .bodyValue(documentUnitFromFrontend)
+        .bodyValue(documentationUnitFromFrontend)
         .exchange()
         .expectStatus()
         .is5xxServerError();
@@ -323,8 +328,8 @@ class LegalForceIntegrationTest {
 
     LegalForce legalForce = LegalForce.builder().region(region).type(legalForceType).build();
 
-    DocumentUnit documentUnitFromFrontend =
-        DocumentUnit.builder()
+    DocumentationUnit documentationUnitFromFrontend =
+        DocumentationUnit.builder()
             .uuid(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3"))
             .documentNumber("documentnr001")
             .coreData(CoreData.builder().build())
@@ -348,24 +353,23 @@ class LegalForceIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri("/api/v1/caselaw/documentunits/46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")
-        .bodyValue(documentUnitFromFrontend)
+        .bodyValue(documentationUnitFromFrontend)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
-            response -> {
-              assertThat(
-                      response
-                          .getResponseBody()
-                          .contentRelatedIndexing()
-                          .norms()
-                          .get(0)
-                          .singleNorms()
-                          .get(0)
-                          .legalForce())
-                  .isNotNull();
-            });
+            response ->
+                assertThat(
+                        response
+                            .getResponseBody()
+                            .contentRelatedIndexing()
+                            .norms()
+                            .get(0)
+                            .singleNorms()
+                            .get(0)
+                            .legalForce())
+                    .isNotNull());
 
     DocumentationUnitDTO result =
         repository.findById(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")).get();
@@ -384,8 +388,8 @@ class LegalForceIntegrationTest {
                 .findById(UUID.fromString("33333333-2222-3333-4444-555555555555"))
                 .get());
 
-    DocumentUnit documentUnitFromFrontend =
-        DocumentUnit.builder()
+    DocumentationUnit documentationUnitFromFrontend =
+        DocumentationUnit.builder()
             .uuid(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3"))
             .documentNumber("documentnr001")
             .coreData(CoreData.builder().build())
@@ -405,24 +409,23 @@ class LegalForceIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri("/api/v1/caselaw/documentunits/46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")
-        .bodyValue(documentUnitFromFrontend)
+        .bodyValue(documentationUnitFromFrontend)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
-            response -> {
-              assertThat(
-                      response
-                          .getResponseBody()
-                          .contentRelatedIndexing()
-                          .norms()
-                          .get(0)
-                          .singleNorms()
-                          .get(0)
-                          .legalForce())
-                  .isNull();
-            });
+            response ->
+                assertThat(
+                        response
+                            .getResponseBody()
+                            .contentRelatedIndexing()
+                            .norms()
+                            .get(0)
+                            .singleNorms()
+                            .get(0)
+                            .legalForce())
+                    .isNull());
 
     DocumentationUnitDTO result =
         repository.findById(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")).get();
@@ -450,8 +453,8 @@ class LegalForceIntegrationTest {
 
     LegalForce legalForce = LegalForce.builder().type(legalForceType).build();
 
-    DocumentUnit documentUnitFromFrontend =
-        DocumentUnit.builder()
+    DocumentationUnit documentationUnitFromFrontend =
+        DocumentationUnit.builder()
             .uuid(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3"))
             .documentNumber("documentnr001")
             .coreData(CoreData.builder().build())
@@ -475,11 +478,11 @@ class LegalForceIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri("/api/v1/caselaw/documentunits/46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")
-        .bodyValue(documentUnitFromFrontend)
+        .bodyValue(documentationUnitFromFrontend)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
               assertThat(
@@ -524,8 +527,8 @@ class LegalForceIntegrationTest {
 
     LegalForce legalForce = LegalForce.builder().region(region).build();
 
-    DocumentUnit documentUnitFromFrontend =
-        DocumentUnit.builder()
+    DocumentationUnit documentationUnitFromFrontend =
+        DocumentationUnit.builder()
             .uuid(UUID.fromString("46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3"))
             .documentNumber("documentnr001")
             .coreData(CoreData.builder().build())
@@ -549,11 +552,11 @@ class LegalForceIntegrationTest {
         .withDefaultLogin()
         .put()
         .uri("/api/v1/caselaw/documentunits/46f9ae5c-ea72-46d8-864c-ce9dd7cee4a3")
-        .bodyValue(documentUnitFromFrontend)
+        .bodyValue(documentationUnitFromFrontend)
         .exchange()
         .expectStatus()
         .isOk()
-        .expectBody(DocumentUnit.class)
+        .expectBody(DocumentationUnit.class)
         .consumeWith(
             response -> {
               assertThat(

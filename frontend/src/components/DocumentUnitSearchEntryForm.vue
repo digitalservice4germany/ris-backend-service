@@ -7,6 +7,7 @@ import InputField, { LabelPosition } from "@/components/input/InputField.vue"
 import TextButton from "@/components/input/TextButton.vue"
 import TextInput from "@/components/input/TextInput.vue"
 import { DropdownItem, ValidationError } from "@/components/input/types"
+import { useFeatureToggle } from "@/composables/useFeatureToggle"
 import useQuery, { Query } from "@/composables/useQueryFromRoute"
 import { useValidationStore } from "@/composables/useValidationStore"
 import { PublicationState } from "@/domain/publicationStatus"
@@ -39,6 +40,7 @@ const dropdownItems: DropdownItem[] = [
   { label: "Dublette", value: PublicationState.DUPLICATED },
   { label: "Gesperrt", value: PublicationState.LOCKED },
   { label: "Löschen", value: PublicationState.DELETING },
+  { label: "Fremdanlage", value: PublicationState.EXTERNAL_HANDOVER_PENDING },
 ]
 
 const myDocOfficeOnly = computed({
@@ -50,8 +52,23 @@ const myDocOfficeOnly = computed({
     if (!data) {
       delete query.value.withError
       delete query.value.myDocOfficeOnly
+      delete query.value.scheduledOnly
+      delete query.value.publicationDate
+      resetErrors("publicationDate")
     } else {
       query.value.myDocOfficeOnly = "true"
+    }
+  },
+})
+
+const scheduledOnly = computed({
+  get: () =>
+    query.value?.scheduledOnly ? JSON.parse(query.value.scheduledOnly) : false,
+  set: (data) => {
+    if (!data) {
+      delete query.value.scheduledOnly
+    } else {
+      query.value.scheduledOnly = "true"
     }
   },
 })
@@ -99,7 +116,7 @@ function hasValidationErrors() {
   return validationStore.getAll().length > 0
 }
 
-async function validateSearchInput() {
+function validateSearchInput() {
   //Startdatum fehlt
   if (
     query.value?.decisionDateEnd &&
@@ -120,13 +137,14 @@ async function validateSearchInput() {
     query.value?.decisionDate &&
     new Date(query.value.decisionDate) > new Date(query.value.decisionDateEnd)
   ) {
-    !validationStore.getByField("decisionDateEnd") &&
+    if (!validationStore.getByField("decisionDateEnd")) {
       validationStore.add(
-        "Enddatum darf nich vor Startdatum liegen",
+        "Enddatum darf nicht vor Startdatum liegen",
         "decisionDateEnd",
       )
+    }
   } else if (
-    validationStore.getByMessage("Enddatum darf nich vor Startdatum liegen")
+    validationStore.getByMessage("Enddatum darf nicht vor Startdatum liegen")
       .length === 1
   ) {
     validationStore.remove("decisionDateEnd")
@@ -179,6 +197,8 @@ function handleSearch() {
   }
 }
 
+const schedulingFeatureToggle = useFeatureToggle("neuris.scheduledPublishing")
+
 watch(
   route,
   () => {
@@ -202,6 +222,8 @@ export type DocumentUnitSearchParameter =
   | "documentNumber"
   | "fileNumber"
   | "publicationStatus"
+  | "publicationDate"
+  | "scheduledOnly"
   | "courtType"
   | "courtLocation"
   | "decisionDate"
@@ -213,12 +235,21 @@ export type DocumentUnitSearchParameter =
 <template>
   <div class="pyb-24 mb-32 flex flex-col bg-blue-200">
     <div
-      class="m-40 grid grid-flow-col grid-cols-[auto_1fr_auto_1fr] grid-rows-[auto_auto_auto_auto] gap-x-12 gap-y-20 lg:gap-x-32"
+      class="m-40 grid grid-flow-col grid-cols-[auto_1fr_auto_1fr] grid-rows-[auto_auto_auto_auto_auto] gap-x-12 gap-y-20 lg:gap-x-32"
     >
       <!-- Column 1 -->
-      <div class="ds-body-01-reg flex flex-row items-center">Aktenzeichen</div>
+      <div class="ds-body-01-reg ml-3 flex flex-row items-center">
+        Aktenzeichen
+      </div>
       <div class="ds-body-01-reg flex flex-row items-center">Gericht</div>
       <div class="ds-body-01-reg flex flex-row items-center">Datum</div>
+      <div
+        v-if="myDocOfficeOnly && schedulingFeatureToggle"
+        class="ds-body-01-reg flex flex-row items-center"
+      >
+        jDV Übergabe
+      </div>
+      <div v-if="!myDocOfficeOnly || !schedulingFeatureToggle" />
       <div></div>
       <!-- Column 2 -->
       <div>
@@ -273,7 +304,8 @@ export type DocumentUnitSearchParameter =
             @blur="validateSearchInput"
             @focus="resetErrors(id as DocumentUnitSearchParameter)"
             @update:validation-error="
-              (validationError) => handleLocalInputError(validationError, id)
+              (validationError: ValidationError | undefined) =>
+                handleLocalInputError(validationError, id)
             "
           ></DateInput>
         </InputField>
@@ -296,11 +328,56 @@ export type DocumentUnitSearchParameter =
             @blur="validateSearchInput"
             @focus="resetErrors(id as DocumentUnitSearchParameter)"
             @update:validation-error="
-              (validationError) => handleLocalInputError(validationError, id)
+              (validationError: ValidationError | undefined) =>
+                handleLocalInputError(validationError, id)
             "
           ></DateInput>
         </InputField>
       </div>
+      <div
+        v-if="myDocOfficeOnly && schedulingFeatureToggle"
+        class="flex flex-row gap-20"
+      >
+        <InputField
+          id="publicationDate"
+          v-slot="{ id, hasError }"
+          data-testid="publication-date-input"
+          label="jDV Übergabedatum"
+          :validation-error="validationStore.getByField('publicationDate')"
+          visually-hide-label
+        >
+          <DateInput
+            :id="id"
+            v-model="query.publicationDate"
+            aria-label="jDV Übergabedatum Suche"
+            class="ds-input-small"
+            :has-error="hasError"
+            is-future-date
+            @blur="validateSearchInput"
+            @focus="resetErrors(id as DocumentUnitSearchParameter)"
+            @update:validation-error="
+              (validationError: ValidationError | undefined) =>
+                handleLocalInputError(validationError, id)
+            "
+          ></DateInput>
+        </InputField>
+        <InputField
+          id="scheduled"
+          v-slot="{ id }"
+          label="Nur terminiert"
+          label-class="ds-label-01-reg"
+          :label-position="LabelPosition.RIGHT"
+        >
+          <Checkbox
+            :id="id"
+            v-model="scheduledOnly"
+            aria-label="Terminiert Filter"
+            class="ds-checkbox-mini bg-white"
+            @focus="resetErrors"
+          />
+        </InputField>
+      </div>
+      <div v-if="!myDocOfficeOnly || !schedulingFeatureToggle" />
       <div class="pl-32"></div>
       <!-- Column 3 -->
       <div class="ds-body-01-reg flex flex-row items-center pl-24 lg:pl-48">
@@ -309,6 +386,7 @@ export type DocumentUnitSearchParameter =
       <div class="ds-body-01-reg flex flex-row items-center pl-24 lg:pl-48">
         Status
       </div>
+      <div></div>
       <div></div>
       <div></div>
       <!-- Column 4 -->
@@ -360,6 +438,7 @@ export type DocumentUnitSearchParameter =
           id="withErrorsOnly"
           v-slot="{ id }"
           label="Nur Fehler"
+          label-class="ds-label-01-reg"
           :label-position="LabelPosition.RIGHT"
         >
           <Checkbox

@@ -41,7 +41,7 @@ fi
 # Check if you can access the right bucket with
 aws s3 ls --profile otc --endpoint-url https://obs.eu-de.otc.t-systems.com s3://neuris-migration-juris-data
 # Download the lookup tables
-aws s3 cp --profile otc --endpoint-url https://obs.eu-de.otc.t-systems.com --recursive s3://neuris-migration-juris-data/monthly/2024/05/Tabellen ./juris-xml-data/Tabellen
+aws s3 cp --profile otc --endpoint-url https://obs.eu-de.otc.t-systems.com --recursive s3://neuris-migration-juris-data/monthly/2024/10/Tabellen ./juris-xml-data/Tabellen
 # Download BGH DocumentationUnits
 aws s3 cp --profile otc --endpoint-url https://obs.eu-de.otc.t-systems.com --recursive s3://neuris-migration-juris-data/monthly/2024/05/BGH-juris/RSP/2022/ ./juris-xml-data/BGH-juris/RSP/2022/
 

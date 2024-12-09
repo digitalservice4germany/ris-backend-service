@@ -28,4 +28,11 @@ public class DocumentTypeController {
       @RequestParam(value = "q") Optional<String> searchStr) {
     return service.getDocumentTypes(searchStr);
   }
+
+  @GetMapping(value = "/dependent-literature", produces = MediaType.APPLICATION_JSON_VALUE)
+  @PreAuthorize("isAuthenticated()")
+  public List<DocumentType> getDependentLiteratureDocumentTypes(
+      @RequestParam(value = "q") Optional<String> searchStr) {
+    return service.getDependentLiteratureDocumentTypes(searchStr);
+  }
 }

@@ -22,4 +22,12 @@ public class DocumentTypeService {
 
     return documentTypeRepository.findAllByDocumentTypeOrderByAbbreviationAscLabelAsc('R');
   }
+
+  public List<DocumentType> getDependentLiteratureDocumentTypes(Optional<String> searchStr) {
+    if (searchStr.isPresent() && !searchStr.get().isBlank()) {
+      return documentTypeRepository.findDependentLiteratureBySearchStr(searchStr.get().trim());
+    }
+
+    return documentTypeRepository.findAllDependentLiteratureOrderByAbbreviationAscLabelAsc();
+  }
 }

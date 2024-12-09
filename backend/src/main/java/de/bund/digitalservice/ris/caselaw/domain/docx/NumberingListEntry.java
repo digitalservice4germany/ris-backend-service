@@ -1,8 +1,8 @@
 package de.bund.digitalservice.ris.caselaw.domain.docx;
 
 public record NumberingListEntry(
-    DocumentUnitDocx paragraphElement, NumberingListEntryIndex numberingListEntryIndex)
-    implements DocumentUnitDocx {
+    DocumentationUnitDocx paragraphElement, NumberingListEntryIndex numberingListEntryIndex)
+    implements DocumentationUnitDocx {
   @Override
   public String toHtmlString() {
     return paragraphElement.toHtmlString();

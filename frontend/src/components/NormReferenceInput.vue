@@ -113,8 +113,9 @@ async function addNormReference() {
  * Emits to the editable list to removes the current norm reference and empties the local single norm list. The truthy
  * boolean value indicates, that the edit index should be resetted to undefined, ergo show all list items in summary mode.
  */
-async function removeNormReference() {
+function removeNormReference() {
   singleNorms.value = []
+  norm.value.normAbbreviation = undefined
   emit("removeEntry")
 }
 
@@ -135,8 +136,8 @@ function removeSingleNormEntry(index: number) {
 
 function cancelEdit() {
   if (new NormReference({ ...props.modelValue }).isEmpty) {
-    emit("removeEntry")
-    singleNorms.value = []
+    removeNormReference()
+    addSingleNormEntry()
   }
   emit("cancelEdit")
 }
@@ -149,7 +150,7 @@ function cancelEdit() {
  */
 function updateFormatValidation(
   validationError: ValidationError | undefined,
-  field: string,
+  field?: string,
 ) {
   if (validationError) {
     validationStore.add(
@@ -186,7 +187,7 @@ watch(
     if (singleNorms.value?.length == 0 || !singleNorms.value)
       addSingleNormEntry()
   },
-  { immediate: true },
+  { immediate: true, deep: true },
 )
 </script>
 
@@ -219,7 +220,7 @@ watch(
         norm-abbreviation="normAbbreviation.abbreviation"
         @remove-entry="removeSingleNormEntry(index)"
         @update:validation-error="
-          (validationError: ValidationError | undefined, field: string) =>
+          (validationError: ValidationError | undefined, field?: string) =>
             updateFormatValidation(validationError, field)
         "
       />

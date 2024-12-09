@@ -17,14 +17,21 @@ import IconClear from "~icons/ic/baseline-clear"
             rel="noopener"
             target="_blank"
             >Google Material</a
-          >
-          and
+          >,
           <a
             class="ds-link-01-bold"
             href="https://icon-sets.iconify.design/material-symbols"
             rel="noopener"
             target="_blank"
             >Material Symbols</a
+          >
+          and
+          <a
+            class="ds-link-01-bold"
+            href="https://icon-sets.iconify.design/mdi/"
+            rel="noopener"
+            target="_blank"
+            >Material Design Icons</a
           >
           sets can be used
         </p>

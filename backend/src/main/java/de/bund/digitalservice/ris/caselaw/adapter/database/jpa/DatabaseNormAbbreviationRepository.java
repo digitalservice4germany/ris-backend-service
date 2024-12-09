@@ -23,6 +23,9 @@ public interface DatabaseNormAbbreviationRepository
   List<NormAbbreviationDTO> findByAbbreviationStartsWithIgnoreCase(
       String abbreviation, PageRequest of);
 
+  List<NormAbbreviationDTO> findByOfficialLongTitleContainsIgnoreCase(
+      String officialLongTitle, PageRequest of);
+
   List<NormAbbreviationDTO> findByOfficialLetterAbbreviationStartsWithIgnoreCase(
       String officialLetterAbbreviation, PageRequest size);
 

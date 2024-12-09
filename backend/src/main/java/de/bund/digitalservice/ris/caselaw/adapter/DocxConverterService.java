@@ -1,16 +1,19 @@
 package de.bund.digitalservice.ris.caselaw.adapter;
 
-import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocumentUnitDocxListUtils;
+import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocumentationUnitDocxListUtils;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverter;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.DocxConverterException;
 import de.bund.digitalservice.ris.caselaw.adapter.converter.docx.FooterConverter;
 import de.bund.digitalservice.ris.caselaw.domain.ConverterService;
-import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentUnitDocx;
+import de.bund.digitalservice.ris.caselaw.domain.docx.DocumentationUnitDocx;
 import de.bund.digitalservice.ris.caselaw.domain.docx.Docx2Html;
 import de.bund.digitalservice.ris.caselaw.domain.docx.DocxImagePart;
+import de.bund.digitalservice.ris.caselaw.domain.docx.DocxMetadataProperty;
 import de.bund.digitalservice.ris.caselaw.domain.docx.ECLIElement;
 import de.bund.digitalservice.ris.caselaw.domain.docx.FooterElement;
+import de.bund.digitalservice.ris.caselaw.domain.docx.MetadataProperty;
 import de.bund.digitalservice.ris.caselaw.domain.docx.ParagraphElement;
+import de.bund.digitalservice.ris.caselaw.domain.docx.UnhandledElement;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -22,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -38,11 +42,13 @@ import org.docx4j.model.listnumbering.ListNumberingDefinition;
 import org.docx4j.model.structure.HeaderFooterPolicy;
 import org.docx4j.openpackaging.exceptions.Docx4JException;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
+import org.docx4j.openpackaging.parts.DocPropsCustomPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPartAbstractImage;
 import org.docx4j.openpackaging.parts.WordprocessingML.ImageJpegPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.ImagePngPart;
 import org.docx4j.openpackaging.parts.WordprocessingML.MetafileEmfPart;
 import org.docx4j.wml.Style;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
@@ -66,7 +72,9 @@ public class DocxConverterService implements ConverterService {
   private String bucketName;
 
   public DocxConverterService(
-      S3Client client, DocumentBuilderFactory documentBuilderFactory, DocxConverter converter) {
+      @Qualifier("docxS3Client") S3Client client,
+      DocumentBuilderFactory documentBuilderFactory,
+      DocxConverter converter) {
     this.client = client;
     this.documentBuilderFactory = documentBuilderFactory;
     this.converter = converter;
@@ -121,9 +129,10 @@ public class DocxConverterService implements ConverterService {
     ResponseBytes<GetObjectResponse> response =
         client.getObject(request, ResponseTransformer.toBytes());
 
-    List<DocumentUnitDocx> documentUnitDocxList;
-    documentUnitDocxList = parseAsDocumentUnitDocxList(response.asInputStream());
-    List<DocumentUnitDocx> packedList = DocumentUnitDocxListUtils.packList(documentUnitDocxList);
+    List<DocumentationUnitDocx> documentationUnitDocxList;
+    documentationUnitDocxList = parseAsDocumentationUnitDocxList(response.asInputStream());
+    List<DocumentationUnitDocx> packedList =
+        DocumentationUnitDocxListUtils.packList(documentationUnitDocxList);
     List<String> ecliList =
         packedList.stream()
             .filter(ECLIElement.class::isInstance)
@@ -134,20 +143,28 @@ public class DocxConverterService implements ConverterService {
     String content = null;
     if (!packedList.isEmpty()) {
       content =
-          packedList.stream().map(DocumentUnitDocx::toHtmlString).collect(Collectors.joining());
+          packedList.stream()
+              .map(DocumentationUnitDocx::toHtmlString)
+              .collect(Collectors.joining());
     }
 
-    return new Docx2Html(content, ecliList);
+    Map<DocxMetadataProperty, String> properties =
+        packedList.stream()
+            .filter(MetadataProperty.class::isInstance)
+            .map(MetadataProperty.class::cast)
+            .collect(Collectors.toMap(MetadataProperty::getKey, MetadataProperty::getValue));
+
+    return new Docx2Html(content, ecliList, properties);
   }
 
   /**
-   * Convert the content file (docx) into a list of DocumentUnitDocx elements. Read the styles,
+   * Convert the content file (docx) into a list of DocumentationUnitDocx elements. Read the styles,
    * images, footers and numbering definitions from the docx file.
    *
    * @param inputStream input stream of the content file
-   * @return list of DocumentUnitDocx elements
+   * @return list of DocumentationUnitDocx elements
    */
-  public List<DocumentUnitDocx> parseAsDocumentUnitDocxList(InputStream inputStream) {
+  public List<DocumentationUnitDocx> parseAsDocumentationUnitDocxList(InputStream inputStream) {
     if (inputStream == null) {
       return Collections.emptyList();
     }
@@ -159,28 +176,72 @@ public class DocxConverterService implements ConverterService {
       throw new DocxConverterException("Couldn't load docx file!", e);
     }
 
+    List<UnhandledElement> unhandledElements = new ArrayList<>();
+
     converter.setStyles(readStyles(mlPackage));
     converter.setImages(readImages(mlPackage));
-    converter.setFooters(readFooters(mlPackage, converter));
+    converter.setFooters(readFooters(mlPackage, converter, unhandledElements));
     converter.setListNumberingDefinitions(readListNumberingDefinitions(mlPackage));
 
-    List<DocumentUnitDocx> documentUnitDocxList =
+    List<DocumentationUnitDocx> documentationUnitDocxList =
         mlPackage.getMainDocumentPart().getContent().stream()
-            .map(converter::convert)
+            .map(element -> converter.convert(element, unhandledElements))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     Set<FooterElement> footerElements = parseFooterAndIdentifyECLI();
-    documentUnitDocxList.addAll(
+    documentationUnitDocxList.addAll(
         0, footerElements.stream().filter(ECLIElement.class::isInstance).toList());
-    documentUnitDocxList.addAll(
+    documentationUnitDocxList.addAll(
         footerElements.stream()
             .filter(footerElement -> !(footerElement instanceof ECLIElement))
             .toList());
 
-    DocumentUnitDocxListUtils.postProcessBorderNumbers(documentUnitDocxList);
+    documentationUnitDocxList.addAll(readDocumentProperties(mlPackage));
 
-    return documentUnitDocxList;
+    DocumentationUnitDocxListUtils.postProcessBorderNumbers(documentationUnitDocxList);
+
+    logUnhandledElements(unhandledElements);
+
+    return documentationUnitDocxList;
+  }
+
+  private void logUnhandledElements(List<UnhandledElement> unhandledElements) {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(unhandledElements.size());
+    stringBuilder.append(" unhandled elements found: ");
+
+    Map<UnhandledElement, Long> unhandledElementMap =
+        unhandledElements.stream()
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+    AtomicInteger i = new AtomicInteger();
+    unhandledElementMap.forEach(
+        (key, value) -> {
+          if (i.getAndIncrement() > 0) {
+            stringBuilder.append(", ");
+          }
+          stringBuilder.append(key.toString());
+          stringBuilder.append("(").append(value).append(")");
+        });
+
+    log.warn(stringBuilder.toString());
+  }
+
+  private List<MetadataProperty> readDocumentProperties(WordprocessingMLPackage mlPackage) {
+    DocPropsCustomPart customProps = mlPackage.getDocPropsCustomPart();
+    List<MetadataProperty> props = new ArrayList<>();
+
+    if (customProps == null || customProps.getJaxbElement() == null) {
+      return props;
+    }
+    for (var prop : customProps.getJaxbElement().getProperty()) {
+      DocxMetadataProperty field = DocxMetadataProperty.fromKey(prop.getName());
+      if (prop.getLpwstr() != null && field != null) {
+        props.add(new MetadataProperty(field, prop.getLpwstr()));
+      }
+    }
+
+    return props;
   }
 
   private Set<FooterElement> parseFooterAndIdentifyECLI() {
@@ -253,7 +314,9 @@ public class DocxConverterService implements ConverterService {
   }
 
   private List<ParagraphElement> readFooters(
-      WordprocessingMLPackage mlPackage, DocxConverter converter) {
+      WordprocessingMLPackage mlPackage,
+      DocxConverter converter,
+      List<UnhandledElement> unhandledElements) {
     if (mlPackage == null
         || mlPackage.getDocumentModel() == null
         || mlPackage.getDocumentModel().getSections() == null) {
@@ -272,19 +335,25 @@ public class DocxConverterService implements ConverterService {
               if (headerFooterPolicy.getDefaultFooter() != null) {
                 footers.add(
                     FooterConverter.convert(
-                        headerFooterPolicy.getDefaultFooter().getContent(), converter));
+                        headerFooterPolicy.getDefaultFooter().getContent(),
+                        converter,
+                        unhandledElements));
               }
 
               if (headerFooterPolicy.getFirstFooter() != null) {
                 footers.add(
                     FooterConverter.convert(
-                        headerFooterPolicy.getFirstFooter().getContent(), converter));
+                        headerFooterPolicy.getFirstFooter().getContent(),
+                        converter,
+                        unhandledElements));
               }
 
               if (headerFooterPolicy.getEvenFooter() != null) {
                 footers.add(
                     FooterConverter.convert(
-                        headerFooterPolicy.getEvenFooter().getContent(), converter));
+                        headerFooterPolicy.getEvenFooter().getContent(),
+                        converter,
+                        unhandledElements));
               }
             });
 
@@ -358,8 +427,13 @@ public class DocxConverterService implements ConverterService {
                                 relationship.getId(),
                                 new DocxImagePart(pngPart.getContentType(), pngPart.getBytes())));
               } else if (part instanceof BinaryPartAbstractImage imagePart) {
-                throw new DocxConverterException(
-                    "unknown image file format: " + imagePart.getClass().getName());
+                part.getSourceRelationships()
+                    .forEach(
+                        relationship ->
+                            images.put(
+                                relationship.getId(),
+                                new DocxImagePart("image/unknown", new byte[] {})));
+                log.warn("unknown image file format: " + imagePart.getClass().getName());
               }
             });
 

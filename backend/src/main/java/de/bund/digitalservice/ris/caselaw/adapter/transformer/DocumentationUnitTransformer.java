@@ -1,41 +1,43 @@
 package de.bund.digitalservice.ris.caselaw.adapter.transformer;
 
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.CollectiveAgreementDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DecisionNameDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DeviatingCourtDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DeviatingDateDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DeviatingEcliDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DeviatingFileNumberDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DismissalGroundsDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DismissalTypesDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentTypeDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO.DocumentationUnitDTOBuilder;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.EnsuingDecisionDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.FileNumberDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.InputTypeDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.JobProfileDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LeadingDecisionNormReferenceDTO;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LegalEffectDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.NormReferenceDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PendingDecisionDTO;
-import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.StatusDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.YearOfDisputeDTO;
 import de.bund.digitalservice.ris.caselaw.domain.ContentRelatedIndexing;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData;
 import de.bund.digitalservice.ris.caselaw.domain.CoreData.CoreDataBuilder;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentUnit.DocumentUnitBuilder;
-import de.bund.digitalservice.ris.caselaw.domain.DocumentationOffice;
+import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnit;
 import de.bund.digitalservice.ris.caselaw.domain.EnsuingDecision;
 import de.bund.digitalservice.ris.caselaw.domain.LegalEffect;
+import de.bund.digitalservice.ris.caselaw.domain.LongTexts;
+import de.bund.digitalservice.ris.caselaw.domain.ManagementData;
 import de.bund.digitalservice.ris.caselaw.domain.NormReference;
 import de.bund.digitalservice.ris.caselaw.domain.PreviousDecision;
+import de.bund.digitalservice.ris.caselaw.domain.ReferenceType;
+import de.bund.digitalservice.ris.caselaw.domain.ShortTexts;
 import de.bund.digitalservice.ris.caselaw.domain.SingleNorm;
 import de.bund.digitalservice.ris.caselaw.domain.StringUtils;
-import de.bund.digitalservice.ris.caselaw.domain.Texts;
 import de.bund.digitalservice.ris.caselaw.domain.lookuptable.fieldoflaw.FieldOfLaw;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -62,7 +64,7 @@ public class DocumentationUnitTransformer {
    *     updatedDomainObject
    */
   public static DocumentationUnitDTO transformToDTO(
-      DocumentationUnitDTO currentDto, DocumentUnit updatedDomainObject) {
+      DocumentationUnitDTO currentDto, DocumentationUnit updatedDomainObject) {
 
     log.debug("transform database documentation unit '{}'", currentDto.getId());
 
@@ -70,7 +72,10 @@ public class DocumentationUnitTransformer {
         currentDto.toBuilder()
             .id(updatedDomainObject.uuid())
             .documentNumber(updatedDomainObject.documentNumber())
-            .note(updatedDomainObject.note())
+            .note(
+                StringUtils.returnTrueIfNullOrBlank(updatedDomainObject.note())
+                    ? null
+                    : updatedDomainObject.note())
             .version(updatedDomainObject.version());
 
     if (updatedDomainObject.coreData() != null) {
@@ -87,10 +92,10 @@ public class DocumentationUnitTransformer {
           .court(CourtTransformer.transformToDTO(coreData.court()));
 
       addInputTypes(builder, coreData);
-      addFileNumbers(currentDto, builder, coreData);
+      addFileNumbers(builder, coreData);
       addDeviationCourts(builder, coreData);
       addDeviatingDecisionDates(builder, coreData);
-      addDeviatingFileNumbers(currentDto, builder, coreData);
+      addDeviatingFileNumbers(builder, coreData);
       addDeviatingEclis(builder, coreData);
       addLegalEffect(currentDto, updatedDomainObject, builder);
       addLeadingDecisionNormReferences(updatedDomainObject, builder);
@@ -116,9 +121,14 @@ public class DocumentationUnitTransformer {
 
       addActiveCitations(builder, contentRelatedIndexing);
       addNormReferences(builder, contentRelatedIndexing);
+      addJobProfiles(builder, contentRelatedIndexing);
+      addDismissalGrounds(builder, contentRelatedIndexing);
+      addDismissalTypes(builder, contentRelatedIndexing);
+      addCollectiveAgreements(builder, contentRelatedIndexing);
+      builder.hasLegislativeMandate(contentRelatedIndexing.hasLegislativeMandate());
     }
 
-    if (updatedDomainObject.texts() != null) {
+    if (updatedDomainObject.longTexts() != null) {
       addTexts(updatedDomainObject, builder);
     } else {
       builder
@@ -126,24 +136,38 @@ public class DocumentationUnitTransformer {
           .headline(null)
           .guidingPrinciple(null)
           .headnote(null)
+          .otherHeadnote(null)
           .tenor(null)
           .grounds(null)
           .caseFacts(null)
-          .decisionGrounds(null);
+          .decisionGrounds(null)
+          .dissentingOpinion(null)
+          .otherLongText(null)
+          .outline(null);
+    }
+
+    if (updatedDomainObject.managementData() != null) {
+      var managementData = updatedDomainObject.managementData();
+
+      builder.scheduledPublicationDateTime(managementData.scheduledPublicationDateTime());
+      builder.lastPublicationDateTime(managementData.lastPublicationDateTime());
+      builder.scheduledByEmail(managementData.scheduledByEmail());
     }
 
     addReferences(updatedDomainObject, builder);
+    addDependentLiteratureCitations(updatedDomainObject, builder);
 
     return builder.build();
   }
 
   private static void addReferences(
-      DocumentUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
+      DocumentationUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
     AtomicInteger i = new AtomicInteger(1);
     builder.references(
         updatedDomainObject.references() == null
             ? Collections.emptyList()
             : updatedDomainObject.references().stream()
+                .filter(reference -> reference.referenceType() == ReferenceType.CASELAW)
                 .map(ReferenceTransformer::transformToDTO)
                 .map(
                     referenceDTO -> {
@@ -155,22 +179,48 @@ public class DocumentationUnitTransformer {
                 .toList());
   }
 
+  private static void addDependentLiteratureCitations(
+      DocumentationUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
+    AtomicInteger i = new AtomicInteger(1);
+    builder.dependentLiteratureCitations(
+        updatedDomainObject.references() == null
+            ? Collections.emptyList()
+            : updatedDomainObject.references().stream()
+                .filter(reference -> reference.referenceType() == ReferenceType.LITERATURE)
+                .map(DependentLiteratureTransformer::transformToDTO)
+                .map(
+                    referenceDTO -> {
+                      referenceDTO.setDocumentationUnit(builder.build());
+                      referenceDTO.setRank(i.getAndIncrement());
+                      return referenceDTO;
+                    })
+                .toList());
+  }
+
   private static void addTexts(
-      DocumentUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
-    Texts texts = updatedDomainObject.texts();
+      DocumentationUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
+    ShortTexts shortTexts = updatedDomainObject.shortTexts();
+    LongTexts longTexts = updatedDomainObject.longTexts();
 
     builder
-        .headline(texts.headline())
-        .guidingPrinciple(texts.guidingPrinciple())
-        .headnote(texts.headnote())
-        .tenor(texts.tenor())
-        .grounds(texts.reasons())
-        .caseFacts(texts.caseFacts())
-        .decisionGrounds(texts.decisionReasons());
+        .headline(shortTexts.headline())
+        .guidingPrinciple(shortTexts.guidingPrinciple())
+        .headnote(shortTexts.headnote())
+        .otherHeadnote(shortTexts.otherHeadnote())
+        .tenor(longTexts.tenor())
+        .grounds(longTexts.reasons())
+        .caseFacts(longTexts.caseFacts())
+        .decisionGrounds(longTexts.decisionReasons())
+        .dissentingOpinion(longTexts.dissentingOpinion())
+        .participatingJudges(
+            ParticipatingJudgeTransformer.transformToDTO(longTexts.participatingJudges()))
+        .otherLongText(longTexts.otherLongText())
+        .outline(longTexts.outline());
 
-    if (texts.decisionName() != null) {
+    if (shortTexts.decisionName() != null) {
       // Todo multiple decision names?
-      builder.decisionNames(List.of(DecisionNameDTO.builder().value(texts.decisionName()).build()));
+      builder.decisionNames(
+          List.of(DecisionNameDTO.builder().value(shortTexts.decisionName()).build()));
     } else {
       builder.decisionNames(Collections.emptyList());
     }
@@ -236,8 +286,78 @@ public class DocumentationUnitTransformer {
             .toList());
   }
 
+  private static void addJobProfiles(
+      DocumentationUnitDTOBuilder builder, ContentRelatedIndexing contentRelatedIndexing) {
+    if (contentRelatedIndexing.jobProfiles() == null) {
+      return;
+    }
+
+    List<JobProfileDTO> jobProfileDTOs = new ArrayList<>();
+    List<String> jobProfiles = contentRelatedIndexing.jobProfiles().stream().distinct().toList();
+
+    for (int i = 0; i < jobProfiles.size(); i++) {
+      jobProfileDTOs.add(JobProfileDTO.builder().value(jobProfiles.get(i)).rank(i + 1L).build());
+    }
+
+    builder.jobProfiles(jobProfileDTOs);
+  }
+
+  private static void addDismissalGrounds(
+      DocumentationUnitDTOBuilder builder, ContentRelatedIndexing contentRelatedIndexing) {
+    if (contentRelatedIndexing.dismissalGrounds() == null) {
+      return;
+    }
+
+    List<DismissalGroundsDTO> dismissalGroundsDTOS = new ArrayList<>();
+    List<String> dismissalGrounds =
+        contentRelatedIndexing.dismissalGrounds().stream().distinct().toList();
+
+    for (int i = 0; i < dismissalGrounds.size(); i++) {
+      dismissalGroundsDTOS.add(
+          DismissalGroundsDTO.builder().value(dismissalGrounds.get(i)).rank(i + 1L).build());
+    }
+
+    builder.dismissalGrounds(dismissalGroundsDTOS);
+  }
+
+  private static void addDismissalTypes(
+      DocumentationUnitDTOBuilder builder, ContentRelatedIndexing contentRelatedIndexing) {
+    if (contentRelatedIndexing.dismissalTypes() == null) {
+      return;
+    }
+
+    List<DismissalTypesDTO> dismissalTypesDTOS = new ArrayList<>();
+    List<String> dismissalTypes =
+        contentRelatedIndexing.dismissalTypes().stream().distinct().toList();
+
+    for (int i = 0; i < dismissalTypes.size(); i++) {
+      dismissalTypesDTOS.add(
+          DismissalTypesDTO.builder().value(dismissalTypes.get(i)).rank(i + 1L).build());
+    }
+
+    builder.dismissalTypes(dismissalTypesDTOS);
+  }
+
+  private static void addCollectiveAgreements(
+      DocumentationUnitDTOBuilder builder, ContentRelatedIndexing contentRelatedIndexing) {
+    if (contentRelatedIndexing.collectiveAgreements() == null) {
+      return;
+    }
+
+    List<CollectiveAgreementDTO> collectiveAgreementDTOS = new ArrayList<>();
+    List<String> collectiveAgreements =
+        contentRelatedIndexing.collectiveAgreements().stream().distinct().toList();
+
+    for (int i = 0; i < collectiveAgreements.size(); i++) {
+      collectiveAgreementDTOS.add(
+          CollectiveAgreementDTO.builder().value(collectiveAgreements.get(i)).rank(i + 1L).build());
+    }
+
+    builder.collectiveAgreements(collectiveAgreementDTOS);
+  }
+
   private static void addEnsuingAndPendingDecisions(
-      DocumentUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
+      DocumentationUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
     List<EnsuingDecision> ensuingDecisions = updatedDomainObject.ensuingDecisions();
     if (ensuingDecisions != null) {
 
@@ -269,7 +389,7 @@ public class DocumentationUnitTransformer {
   }
 
   private static void addPreviousDecisions(
-      DocumentUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
+      DocumentationUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
     List<PreviousDecision> previousDecisions = updatedDomainObject.previousDecisions();
     if (previousDecisions != null) {
       AtomicInteger i = new AtomicInteger(1);
@@ -288,7 +408,7 @@ public class DocumentationUnitTransformer {
 
   private static void addLegalEffect(
       DocumentationUnitDTO currentDto,
-      DocumentUnit updatedDomainObject,
+      DocumentationUnit updatedDomainObject,
       DocumentationUnitDTOBuilder builder) {
 
     boolean courtWasAdded =
@@ -309,20 +429,11 @@ public class DocumentationUnitTransformer {
         LegalEffect.deriveFrom(
             updatedDomainObject, courtWasAdded || courtWasDeleted || courtHasChanged);
 
-    LegalEffectDTO legalEffectDTO = LegalEffectDTO.FALSCHE_ANGABE;
-    if (legalEffect != null) {
-      switch (legalEffect) {
-        case NO -> legalEffectDTO = LegalEffectDTO.NEIN;
-        case YES -> legalEffectDTO = LegalEffectDTO.JA;
-        case NOT_SPECIFIED -> legalEffectDTO = LegalEffectDTO.KEINE_ANGABE;
-      }
-    }
-
-    builder.legalEffect(legalEffectDTO);
+    builder.legalEffect(LegalEffectTransformer.transformToDTO(legalEffect));
   }
 
   private static void addLeadingDecisionNormReferences(
-      DocumentUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
+      DocumentationUnit updatedDomainObject, DocumentationUnitDTOBuilder builder) {
 
     List<String> leadingDecisionNormReferences =
         updatedDomainObject.coreData().leadingDecisionNormReferences();
@@ -362,7 +473,7 @@ public class DocumentationUnitTransformer {
   }
 
   private static void addDeviatingFileNumbers(
-      DocumentationUnitDTO currentDto, DocumentationUnitDTOBuilder builder, CoreData coreData) {
+      DocumentationUnitDTOBuilder builder, CoreData coreData) {
     if (coreData.deviatingFileNumbers() == null) {
       return;
     }
@@ -375,7 +486,6 @@ public class DocumentationUnitTransformer {
           DeviatingFileNumberDTO.builder()
               .value(StringUtils.normalizeSpace(deviatingFileNumbers.get(i)))
               .rank(i + 1L)
-              .documentationUnit(currentDto)
               .build());
     }
 
@@ -437,8 +547,7 @@ public class DocumentationUnitTransformer {
     builder.inputTypes(inputTypeDTOs);
   }
 
-  private static void addFileNumbers(
-      DocumentationUnitDTO currentDto, DocumentationUnitDTOBuilder builder, CoreData coreData) {
+  private static void addFileNumbers(DocumentationUnitDTOBuilder builder, CoreData coreData) {
     if (coreData.fileNumbers() == null) {
       return;
     }
@@ -451,7 +560,6 @@ public class DocumentationUnitTransformer {
           FileNumberDTO.builder()
               .value(StringUtils.normalizeSpace(fileNumbers.get(i)))
               .rank(i + 1L)
-              .documentationUnit(currentDto)
               .build());
     }
 
@@ -465,32 +573,35 @@ public class DocumentationUnitTransformer {
    * @param documentationUnitDTO the database documentation unit
    * @return a transformed domain object, or an empty domain object if the input is null
    */
-  public static DocumentUnit transformToDomain(DocumentationUnitDTO documentationUnitDTO) {
+  public static DocumentationUnit transformToDomain(DocumentationUnitDTO documentationUnitDTO) {
     if (documentationUnitDTO == null) {
-      throw new DocumentUnitTransformerException("Document unit is null and won't transform");
+      throw new DocumentationUnitTransformerException("Document unit is null and won't transform");
     }
 
     log.debug(
         "transfer database documentation unit '{}' to domain object", documentationUnitDTO.getId());
 
-    LegalEffect legalEffect = getLegalEffectForDomain(documentationUnitDTO);
+    LegalEffect legalEffect =
+        LegalEffectTransformer.transformToDomain(documentationUnitDTO.getLegalEffect());
 
-    DocumentUnit.DocumentUnitBuilder builder =
-        DocumentUnit.builder()
+    DocumentationUnit.DocumentationUnitBuilder builder =
+        DocumentationUnit.builder()
             .note(documentationUnitDTO.getNote())
             .version(documentationUnitDTO.getVersion());
     CoreDataBuilder coreDataBuilder =
         CoreData.builder()
-            .court(CourtTransformer.transformToDomain((documentationUnitDTO.getCourt())))
+            .court(CourtTransformer.transformToDomain(documentationUnitDTO.getCourt()))
             .procedure(
                 ProcedureTransformer.transformFirstToDomain(documentationUnitDTO.getProcedures()))
             .previousProcedures(
                 ProcedureTransformer.transformPreviousProceduresToLabel(
                     documentationUnitDTO.getProcedures()))
             .documentationOffice(
-                DocumentationOffice.builder()
-                    .abbreviation(documentationUnitDTO.getDocumentationOffice().getAbbreviation())
-                    .build())
+                DocumentationOfficeTransformer.transformToDomain(
+                    documentationUnitDTO.getDocumentationOffice()))
+            .creatingDocOffice(
+                DocumentationOfficeTransformer.transformToDomain(
+                    documentationUnitDTO.getCreatingDocumentationOffice()))
             // TODO multiple regions
             .region(
                 documentationUnitDTO.getRegions() == null
@@ -555,10 +666,43 @@ public class DocumentationUnitTransformer {
       contentRelatedIndexingBuilder.fieldsOfLaw(fieldOfLaws);
     }
 
+    if (documentationUnitDTO.getJobProfiles() != null) {
+      List<String> jobProfiles =
+          documentationUnitDTO.getJobProfiles().stream().map(JobProfileDTO::getValue).toList();
+      contentRelatedIndexingBuilder.jobProfiles(jobProfiles);
+    }
+
+    if (documentationUnitDTO.getDismissalGrounds() != null) {
+      List<String> dismissalGrounds =
+          documentationUnitDTO.getDismissalGrounds().stream()
+              .map(DismissalGroundsDTO::getValue)
+              .toList();
+      contentRelatedIndexingBuilder.dismissalGrounds(dismissalGrounds);
+    }
+
+    if (documentationUnitDTO.getDismissalTypes() != null) {
+      List<String> dismissalTypes =
+          documentationUnitDTO.getDismissalTypes().stream()
+              .map(DismissalTypesDTO::getValue)
+              .toList();
+      contentRelatedIndexingBuilder.dismissalTypes(dismissalTypes);
+    }
+
+    if (documentationUnitDTO.getCollectiveAgreements() != null) {
+      List<String> collectiveAgreements =
+          documentationUnitDTO.getCollectiveAgreements().stream()
+              .map(CollectiveAgreementDTO::getValue)
+              .toList();
+      contentRelatedIndexingBuilder.collectiveAgreements(collectiveAgreements);
+    }
+
+    contentRelatedIndexingBuilder.hasLegislativeMandate(
+        documentationUnitDTO.isHasLegislativeMandate());
+
     ContentRelatedIndexing contentRelatedIndexing = contentRelatedIndexingBuilder.build();
 
-    Texts texts =
-        Texts.builder()
+    ShortTexts shortTexts =
+        ShortTexts.builder()
             // TODO multiple decisionNames
             .decisionName(
                 (documentationUnitDTO.getDecisionNames() == null
@@ -568,10 +712,21 @@ public class DocumentationUnitTransformer {
             .headline(documentationUnitDTO.getHeadline())
             .guidingPrinciple(documentationUnitDTO.getGuidingPrinciple())
             .headnote(documentationUnitDTO.getHeadnote())
+            .otherHeadnote(documentationUnitDTO.getOtherHeadnote())
+            .build();
+
+    LongTexts longTexts =
+        LongTexts.builder()
             .tenor(documentationUnitDTO.getTenor())
             .reasons(documentationUnitDTO.getGrounds())
             .caseFacts(documentationUnitDTO.getCaseFacts())
             .decisionReasons(documentationUnitDTO.getDecisionGrounds())
+            .dissentingOpinion(documentationUnitDTO.getDissentingOpinion())
+            .participatingJudges(
+                ParticipatingJudgeTransformer.transformToDomain(
+                    documentationUnitDTO.getParticipatingJudges()))
+            .otherLongText(documentationUnitDTO.getOtherLongText())
+            .outline(documentationUnitDTO.getOutline())
             .build();
 
     List<String> borderNumbers =
@@ -579,7 +734,17 @@ public class DocumentationUnitTransformer {
             documentationUnitDTO.getTenor(),
             documentationUnitDTO.getGrounds(),
             documentationUnitDTO.getCaseFacts(),
-            documentationUnitDTO.getDecisionGrounds());
+            documentationUnitDTO.getDecisionGrounds(),
+            documentationUnitDTO.getOtherLongText(),
+            documentationUnitDTO.getDissentingOpinion());
+
+    ManagementData managementData =
+        ManagementData.builder()
+            .lastPublicationDateTime(documentationUnitDTO.getLastPublicationDateTime())
+            .scheduledPublicationDateTime(documentationUnitDTO.getScheduledPublicationDateTime())
+            .scheduledByEmail(documentationUnitDTO.getScheduledByEmail())
+            .borderNumbers(borderNumbers)
+            .build();
 
     addOriginalFileDocuments(documentationUnitDTO, builder);
     addPreviousDecisionsToDomain(documentationUnitDTO, builder);
@@ -589,9 +754,10 @@ public class DocumentationUnitTransformer {
         .uuid(documentationUnitDTO.getId())
         .documentNumber(documentationUnitDTO.getDocumentNumber())
         .coreData(coreData)
-        .texts(texts)
-        .borderNumbers(borderNumbers)
-        .contentRelatedIndexing(contentRelatedIndexing);
+        .shortTexts(shortTexts)
+        .longTexts(longTexts)
+        .contentRelatedIndexing(contentRelatedIndexing)
+        .managementData(managementData);
 
     addStatusToDomain(documentationUnitDTO, builder);
     addReferencesToDomain(documentationUnitDTO, builder);
@@ -600,13 +766,29 @@ public class DocumentationUnitTransformer {
   }
 
   private static void addReferencesToDomain(
-      DocumentationUnitDTO documentationUnitDTO, DocumentUnitBuilder builder) {
-    builder.references(
-        documentationUnitDTO.getReferences() == null
-            ? Collections.emptyList()
-            : documentationUnitDTO.getReferences().stream()
-                .map(ReferenceTransformer::transformToDomain)
-                .toList());
+      DocumentationUnitDTO documentationUnitDTO,
+      DocumentationUnit.DocumentationUnitBuilder builder) {
+
+    builder.references(new ArrayList<>());
+
+    if (documentationUnitDTO.getReferences() != null) {
+      builder
+          .build()
+          .references()
+          .addAll(
+              documentationUnitDTO.getReferences().stream()
+                  .map(ReferenceTransformer::transformToDomain)
+                  .toList());
+    }
+    if (documentationUnitDTO.getDependentLiteratureCitations() != null) {
+      builder
+          .build()
+          .references()
+          .addAll(
+              documentationUnitDTO.getDependentLiteratureCitations().stream()
+                  .map(DependentLiteratureTransformer::transformToDomain)
+                  .toList());
+    }
   }
 
   /**
@@ -641,7 +823,7 @@ public class DocumentationUnitTransformer {
                     "More than one norm references for norm abbreviation ({}, {})",
                     normReferenceDTO.getNormAbbreviation().getId(),
                     normReferenceDTO.getNormAbbreviation().getAbbreviation());
-                throw new DocumentUnitTransformerException(
+                throw new DocumentationUnitTransformerException(
                     "More than one norm references with the same norm abbreviation.");
               } else if (existingNormReferences.isEmpty()) {
                 normReferences.add(normReference);
@@ -662,24 +844,9 @@ public class DocumentationUnitTransformer {
     return normReferences;
   }
 
-  private static LegalEffect getLegalEffectForDomain(DocumentationUnitDTO documentationUnitDTO) {
-    LegalEffect legalEffect = null;
-
-    if (documentationUnitDTO.getLegalEffect() != null) {
-      if (documentationUnitDTO.getLegalEffect() == LegalEffectDTO.NEIN) {
-        legalEffect = LegalEffect.NO;
-      } else if (documentationUnitDTO.getLegalEffect() == LegalEffectDTO.JA) {
-        legalEffect = LegalEffect.YES;
-      } else if (documentationUnitDTO.getLegalEffect() == LegalEffectDTO.KEINE_ANGABE) {
-        legalEffect = LegalEffect.NOT_SPECIFIED;
-      }
-    }
-
-    return legalEffect;
-  }
-
   private static void addOriginalFileDocuments(
-      DocumentationUnitDTO documentationUnitDTO, DocumentUnitBuilder builder) {
+      DocumentationUnitDTO documentationUnitDTO,
+      DocumentationUnit.DocumentationUnitBuilder builder) {
     builder.attachments(
         documentationUnitDTO.getAttachments().stream()
             .map(AttachmentTransformer::transformToDomain)
@@ -687,19 +854,14 @@ public class DocumentationUnitTransformer {
   }
 
   private static void addStatusToDomain(
-      DocumentationUnitDTO documentationUnitDTO, DocumentUnitBuilder builder) {
-    if (documentationUnitDTO.getStatus() == null || documentationUnitDTO.getStatus().isEmpty()) {
-      return;
-    }
-    builder.status(
-        StatusTransformer.transformToDomain(
-            documentationUnitDTO.getStatus().stream()
-                .max(Comparator.comparing(StatusDTO::getCreatedAt))
-                .orElse(null)));
+      DocumentationUnitDTO documentationUnitDTO,
+      DocumentationUnit.DocumentationUnitBuilder builder) {
+    builder.status(StatusTransformer.transformToDomain(documentationUnitDTO.getStatus()));
   }
 
   private static void addPreviousDecisionsToDomain(
-      DocumentationUnitDTO documentationUnitDTO, DocumentUnitBuilder builder) {
+      DocumentationUnitDTO documentationUnitDTO,
+      DocumentationUnit.DocumentationUnitBuilder builder) {
     if (documentationUnitDTO.getPreviousDecisions() == null) {
       return;
     }
@@ -792,7 +954,8 @@ public class DocumentationUnitTransformer {
   }
 
   private static void addEnsuingDecisionsToDomain(
-      DocumentationUnitDTO documentationUnitDTO, DocumentUnitBuilder builder) {
+      DocumentationUnitDTO documentationUnitDTO,
+      DocumentationUnit.DocumentationUnitBuilder builder) {
 
     List<EnsuingDecisionDTO> ensuingDecisionDTOs = documentationUnitDTO.getEnsuingDecisions();
     List<PendingDecisionDTO> pendingDecisionDTOs = documentationUnitDTO.getPendingDecisions();

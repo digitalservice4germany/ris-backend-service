@@ -27,6 +27,7 @@ test.describe("upload an original document to a doc unit", () => {
     // delete file
     await page.getByLabel("Datei löschen").click()
     await page.getByLabel("Löschen", { exact: true }).click() // confirm
+    await expect(page.getByText("Anhang löschen")).toBeHidden()
     await expect(page.getByText("sample.docx")).toBeHidden()
 
     await page.reload()

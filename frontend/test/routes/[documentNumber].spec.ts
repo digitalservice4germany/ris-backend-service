@@ -40,6 +40,14 @@ function renderComponent() {
         },
       },
       {
+        path: "/caselaw/documentUnit/:documentNumber/references",
+        name: "caselaw-documentUnit-documentNumber-references",
+        component: {
+          template:
+            "<div data-testid='references'>References<input aria-label=\"Periodikum\"/></div>",
+        },
+      },
+      {
         path: "/caselaw/documentUnit/:documentNumber/handover",
         name: "caselaw-documentUnit-documentNumber-handover",
         component: {
@@ -69,6 +77,7 @@ function renderComponent() {
           [
             createTestingPinia({
               initialState: {
+                session: { user: { roles: ["Internal"] } },
                 docunitStore: {
                   documentUnit: new DocumentUnit("foo", {
                     documentNumber: "1234567891234",
@@ -248,6 +257,83 @@ describe("Document Number Route", () => {
 
       // Error page is rendered
       expect(screen.getByText("Backend_Error_Title")).toBeInTheDocument()
+    })
+  })
+
+  describe("Shortcuts", () => {
+    it('detects "n" keypress and opens notes', async () => {
+      const { user, router } = renderComponent()
+      await router.push({
+        path: "/caselaw/documentUnit/1234567891234/references?showAttachmentPanel=false",
+      })
+
+      expect(screen.getByLabelText("Notiz Eingabefeld")).not.toBeVisible()
+      await user.keyboard("n")
+      expect(screen.getByLabelText("Notiz Eingabefeld")).toBeVisible()
+    })
+
+    it('detects "v" keypress and opens preview', async () => {
+      const { user, router } = renderComponent()
+      await router.push({
+        path: "/caselaw/documentUnit/1234567891234/references?showAttachmentPanel=false",
+      })
+
+      expect(screen.queryByTestId("preview")).not.toBeInTheDocument()
+      await user.keyboard("v")
+      expect(screen.getByTestId("preview")).toBeInTheDocument()
+    })
+
+    it('detects "d" keypress and opens documents', async () => {
+      const { user, router } = renderComponent()
+      await router.push({
+        path: "/caselaw/documentUnit/1234567891234/references?showAttachmentPanel=false",
+      })
+
+      expect(
+        screen.queryByTestId(
+          "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
+        ),
+      ).not.toBeInTheDocument()
+      await user.keyboard("d")
+      expect(
+        screen.getByText(
+          "Wenn eine Datei hochgeladen ist, können Sie die Datei hier sehen.",
+        ),
+      ).toBeVisible()
+    })
+
+    it('detects ">" keypress and opens both panels', async () => {
+      const { user, router } = renderComponent()
+      await router.push({
+        path: "/caselaw/documentUnit/1234567891234/references?showAttachmentPanel=false",
+      })
+
+      expect(
+        screen.queryByLabelText("Seitenpanel schließen"),
+      ).not.toBeInTheDocument()
+      await user.keyboard("<")
+      expect(screen.getByLabelText("Seitenpanel schließen")).toBeVisible()
+      await user.keyboard("<")
+      expect(
+        screen.queryByLabelText("Seitenpanel schließen"),
+      ).not.toBeInTheDocument()
+    })
+
+    it('does not detect ">" when input is focused', async () => {
+      const { user, router } = renderComponent()
+      await router.push({
+        path: "/caselaw/documentUnit/1234567891234/references?showAttachmentPanel=false",
+      })
+
+      expect(
+        screen.queryByLabelText("Seitenpanel schließen"),
+      ).not.toBeInTheDocument()
+      screen.getByLabelText("Periodikum").focus()
+      expect(screen.getByLabelText("Periodikum")).toHaveFocus()
+      await user.keyboard("<")
+      expect(
+        screen.queryByLabelText("Seitenpanel schließen"),
+      ).not.toBeInTheDocument()
     })
   })
 })

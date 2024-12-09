@@ -8,7 +8,7 @@ function authenticateUser(user: {
   setup(`authenticate ${user.name}`, async ({ page }) => {
     await page.goto("/")
     await page.getByLabel("E-Mailadresse").fill(user.email)
-    await page.getByLabel("Passwort").fill(user.password)
+    await page.getByLabel("Passwort", { exact: true }).fill(user.password)
     await page.locator("input#kc-login").click()
 
     await page.goto(process.env.E2E_BASE_URL ?? "http://127.0.0.1")
@@ -30,5 +30,10 @@ function authenticateUser(user: {
     name: "user_bgh",
     email: process.env.E2E_TEST_USER_BGH as string,
     password: process.env.E2E_TEST_PASSWORD_BGH as string,
+  },
+  {
+    name: "user_external",
+    email: process.env.E2E_TEST_USER_EXTERNAL as string,
+    password: process.env.E2E_TEST_PASSWORD_EXTERNAL as string,
   },
 ].forEach(authenticateUser)

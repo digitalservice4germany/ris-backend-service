@@ -10,8 +10,8 @@ public interface DeltaMigrationRepository {
   /**
    * Get the latest migration for a given document unit
    *
-   * @param documentUnitUuid the document unit UUID
+   * @param documentationUnitUuid the document unit UUID
    * @return the latest migration
    */
-  DeltaMigration getLatestMigration(UUID documentUnitUuid);
+  DeltaMigration getLatestMigration(UUID documentationUnitUuid);
 }

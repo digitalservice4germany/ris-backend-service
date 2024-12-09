@@ -6,7 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class NumberingList implements DocumentUnitDocx {
+public class NumberingList implements DocumentationUnitDocx {
 
   // this should be a list containing either NumberingListEntry's or NumberingList's
   // so that a tree structure that can recursively be traversed
@@ -14,7 +14,7 @@ public class NumberingList implements DocumentUnitDocx {
   private static final Logger LOGGER = LoggerFactory.getLogger(NumberingList.class);
 
   public NumberingList() {
-    /*Create new instance of documentUnitNumberList*/
+    /*Create new instance of DocumentationUnitNumberList*/
   }
 
   public void addNumberingListEntry(NumberingListEntry entry) {
@@ -30,7 +30,7 @@ public class NumberingList implements DocumentUnitDocx {
     StringBuilder sb = new StringBuilder();
     LinkedList<String> closeTags = new LinkedList<>();
     int[] cLvl = {-1};
-    List<DocumentUnitNumberingListNumberFormat> currentNumberFormat = new ArrayList<>();
+    List<DocumentationUnitNumberingListNumberFormat> currentNumberFormat = new ArrayList<>();
 
     entries.forEach(
         entry -> {
@@ -83,7 +83,7 @@ public class NumberingList implements DocumentUnitDocx {
     return sb.toString();
   }
 
-  public enum DocumentUnitNumberingListNumberFormat {
+  public enum DocumentationUnitNumberingListNumberFormat {
     DECIMAL,
     BULLET,
     UPPER_ROMAN,
@@ -93,32 +93,35 @@ public class NumberingList implements DocumentUnitDocx {
   }
 
   private String getOpenListTag(NumberingListEntryIndex numberingListEntryIndex) {
-    DocumentUnitNumberingListNumberFormat listNumberFormat = numberingListEntryIndex.numberFormat();
+    DocumentationUnitNumberingListNumberFormat listNumberFormat =
+        numberingListEntryIndex.numberFormat();
     String listStyle = getListType(listNumberFormat, numberingListEntryIndex);
-    if (listNumberFormat == DocumentUnitNumberingListNumberFormat.BULLET) {
+    if (listNumberFormat == DocumentationUnitNumberingListNumberFormat.BULLET) {
       return String.format("<ul style=\"%s\">", listStyle);
     } else {
       return String.format("<ol style=\"%s\">", listStyle);
     }
   }
 
-  private String getCloseListTag(DocumentUnitNumberingListNumberFormat listNumberFormat) {
-    return listNumberFormat == DocumentUnitNumberingListNumberFormat.BULLET ? "</ul>" : "</ol>";
+  private String getCloseListTag(DocumentationUnitNumberingListNumberFormat listNumberFormat) {
+    return listNumberFormat == DocumentationUnitNumberingListNumberFormat.BULLET
+        ? "</ul>"
+        : "</ol>";
   }
 
   private boolean shouldCreateNewList(
       int cLvl,
       int nLvl,
-      List<DocumentUnitNumberingListNumberFormat> cNumberFormat,
-      DocumentUnitNumberingListNumberFormat nNumberFormat) {
+      List<DocumentationUnitNumberingListNumberFormat> cNumberFormat,
+      DocumentationUnitNumberingListNumberFormat nNumberFormat) {
     if (cNumberFormat.isEmpty() || nNumberFormat.equals(cNumberFormat.get(0))) return false;
     if (nLvl != 0) return false;
     if (cLvl == 0) return true;
-    return nNumberFormat.equals(DocumentUnitNumberingListNumberFormat.BULLET);
+    return nNumberFormat.equals(DocumentationUnitNumberingListNumberFormat.BULLET);
   }
 
   private String getListType(
-      DocumentUnitNumberingListNumberFormat numberFormat,
+      DocumentationUnitNumberingListNumberFormat numberFormat,
       NumberingListEntryIndex numberingListEntryIndex) {
     if (numberingListEntryIndex.lvlPicBullet()) {
       LOGGER.error("Unsupported picture bullet, use default bullet for list");

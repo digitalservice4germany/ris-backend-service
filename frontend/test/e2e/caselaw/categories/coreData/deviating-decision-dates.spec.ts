@@ -40,7 +40,7 @@ test.describe("deviating decision dates", () => {
 
     await test.step("Check if deviating decision dates are persisted in reload", async () => {
       await page.reload()
-      await page.getByLabel("Abweichendes Entscheidungsdatum anzeigen").click()
+      // If deviating data is available, it is automatically expanded
       await expect(page.getByText("01.02.2020")).toBeVisible()
     })
   })
@@ -176,7 +176,7 @@ test.describe("deviating decision dates", () => {
 
     await test.step("On reload, check if no invalid dates were saved", async () => {
       await page.reload()
-      await page.getByLabel("Abweichendes Entscheidungsdatum anzeigen").click()
+      // If deviating data is available, it is automatically expanded
       await expect(page.getByText("01.02.2020")).toBeVisible()
     })
   })

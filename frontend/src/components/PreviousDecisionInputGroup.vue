@@ -65,10 +65,23 @@ async function search() {
     pageNumber.value = 0
   }
 
+  const urlParams = window.location.pathname.split("/")
+  const documentNumberToExclude =
+    urlParams[urlParams.indexOf("documentunit") + 1]
+
   const response = await documentUnitService.searchByRelatedDocumentation(
-    pageNumber.value,
-    itemsPerPage.value,
     previousDecisionRef,
+    {
+      ...(pageNumber.value != undefined
+        ? { pg: pageNumber.value.toString() }
+        : {}),
+      ...(itemsPerPage.value != undefined
+        ? { sz: itemsPerPage.value.toString() }
+        : {}),
+      ...(documentNumberToExclude != undefined
+        ? { documentNumber: documentNumberToExclude.toString() }
+        : {}),
+    },
   )
   if (response.data) {
     searchResultsCurrentPage.value = {
@@ -90,7 +103,7 @@ async function search() {
 
 async function updatePage(page: number) {
   pageNumber.value = page
-  search()
+  await search()
 }
 
 async function validateRequiredInput() {
@@ -157,9 +170,9 @@ watch(
   },
 )
 
-onMounted(() => {
+onMounted(async () => {
   if (props.modelValue?.isEmpty !== undefined) {
-    validateRequiredInput()
+    await validateRequiredInput()
   }
   previousDecision.value = new PreviousDecision({ ...props.modelValue })
 })
@@ -230,7 +243,10 @@ onMounted(() => {
         <NestedComponent
           aria-label="Abweichendes Aktenzeichen Vorgehende Entscheidung"
           class="w-full"
-          :is-open="previousDecision.hasForeignSource"
+          :is-open="
+            previousDecision.hasForeignSource ||
+            !!previousDecision.deviatingFileNumber
+          "
         >
           <InputField
             id="fileNumber"
@@ -321,11 +337,11 @@ onMounted(() => {
         button-type="destructive"
         label="Eintrag löschen"
         size="small"
-        @click.stop="emit('removeEntry', modelValue)"
+        @click.stop="modelValue && emit('removeEntry', modelValue)"
       />
     </div>
 
-    <div class="bg-blue-200">
+    <div v-if="isLoading || searchResults" class="bg-blue-200">
       <Pagination
         navigation-position="bottom"
         :page="searchResultsCurrentPage"

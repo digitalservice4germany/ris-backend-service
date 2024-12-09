@@ -1,9 +1,8 @@
 package de.bund.digitalservice.ris.caselaw.domain.exception;
 
-import java.io.IOException;
 import java.util.UUID;
 
-public class DocumentationUnitNotExistsException extends IOException {
+public class DocumentationUnitNotExistsException extends Exception {
 
   private static final String DEFAULT_MESSAGE = "Documentation unit does not exist";
 

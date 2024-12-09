@@ -5,6 +5,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.ProcedureDTO;
 import de.bund.digitalservice.ris.caselaw.domain.Procedure;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
@@ -55,7 +56,15 @@ public class ProcedureTransformer {
         .id(procedureDTO.getId())
         .label(procedureDTO.getLabel())
         .createdAt(procedureDTO.getCreatedAt())
-        .documentUnitCount(getDocumentationUnitCount(procedureDTO))
+        .documentationUnitCount(getDocumentationUnitCount(procedureDTO))
+        .userGroupId(extractUserGroupId(procedureDTO))
         .build();
+  }
+
+  private static UUID extractUserGroupId(ProcedureDTO procedureDTO) {
+    if (procedureDTO.getUserGroupDTO() != null) {
+      return procedureDTO.getUserGroupDTO().getId();
+    }
+    return null;
   }
 }

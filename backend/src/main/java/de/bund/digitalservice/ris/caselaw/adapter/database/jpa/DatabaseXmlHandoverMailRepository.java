@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 /** Repository for performed jDV handover operations. */
 public interface DatabaseXmlHandoverMailRepository extends JpaRepository<HandoverMailDTO, Long> {
 
-  HandoverMailDTO findTopByDocumentUnitIdOrderBySentDateDesc(UUID documentUnitId);
+  HandoverMailDTO findTopByEntityIdOrderBySentDateDesc(UUID entityId);
 
-  List<HandoverMailDTO> findAllByDocumentUnitIdOrderBySentDateDesc(UUID documentUnitId);
+  List<HandoverMailDTO> findAllByEntityIdOrderBySentDateDesc(UUID entityId);
 }

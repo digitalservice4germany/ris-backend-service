@@ -9,6 +9,7 @@ spring:
       username: redis
 
 sentry:
+  dsn: ${SENTRY_DSN}
   environment: uat
   traces-sample-rate: 0.01
 
@@ -16,3 +17,4 @@ neuris:
   environment: uat
   document-number-patterns:
     BGH: KORE7****1YYY
+    BAG: KARE7****1YYY

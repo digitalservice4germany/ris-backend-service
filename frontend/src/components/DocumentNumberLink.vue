@@ -1,40 +1,58 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router"
+import { DisplayMode } from "@/components/enumDisplayMode"
 import FlexContainer from "@/components/FlexContainer.vue"
+import LinkElement from "@/components/LinkElement.vue"
 import RelatedDocumentation from "@/domain/relatedDocumentation"
-import BaselineArrowOutward from "~icons/ic/baseline-arrow-outward"
+import { useDocumentUnitStore } from "@/stores/documentUnitStore"
+import { useExtraContentSidePanelStore } from "@/stores/extraContentSidePanelStore"
 
 interface Props {
   decision: RelatedDocumentation
+  displayMode?: DisplayMode
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  displayMode: DisplayMode.TAB,
+})
+
+const documentUnitStore = useDocumentUnitStore()
+const extraContentSidePanelStore = useExtraContentSidePanelStore()
+
+async function openSidePanel(documentUnitNumber?: string) {
+  if (documentUnitNumber) {
+    await documentUnitStore.loadDocumentUnit(documentUnitNumber)
+    extraContentSidePanelStore.togglePanel(true)
+    extraContentSidePanelStore.setSidePanelMode("preview")
+  }
+}
 </script>
 
 <template>
   <FlexContainer
-    :data-testid="'document-number-link-' + props.decision.documentNumber"
+    align-items="items-center"
+    :data-testid="'document-number-link-' + props.decision.fileNumber"
   >
     <span class="ds-label-01-reg ml-8 mr-8">|</span>
     <div v-if="decision.hasForeignSource" class="pt-3">
-      <RouterLink
-        v-if="props.decision.documentNumber"
-        tabindex="-1"
-        target="_blank"
-        :to="{
-          name: 'caselaw-documentUnit-documentNumber-preview',
-          params: { documentNumber: props.decision.documentNumber },
-        }"
-      >
-        <button
-          class="ds-link-03-bold flex flex-row border-b-2 border-blue-800 leading-24 focus:outline-none focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-blue-800"
+      <div v-if="props.displayMode === DisplayMode.TAB">
+        <RouterLink
+          v-if="props.decision.documentNumber"
+          tabindex="-1"
+          target="_blank"
+          :to="{
+            name: 'caselaw-documentUnit-documentNumber-preview',
+            params: { documentNumber: props.decision.documentNumber },
+          }"
         >
-          <FlexContainer flex-direction="flex-row">
-            <p>{{ props.decision.documentNumber }}</p>
-            <BaselineArrowOutward />
-          </FlexContainer>
+          <LinkElement :title="props.decision.documentNumber" />
+        </RouterLink>
+      </div>
+      <div v-else-if="props.displayMode === DisplayMode.SIDEPANEL">
+        <button @click="openSidePanel(props.decision.documentNumber)">
+          <LinkElement :title="props.decision.documentNumber" />
         </button>
-      </RouterLink>
+      </div>
     </div>
 
     <div v-else>

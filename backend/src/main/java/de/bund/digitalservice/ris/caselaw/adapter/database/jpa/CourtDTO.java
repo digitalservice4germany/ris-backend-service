@@ -57,4 +57,8 @@ public class CourtDTO {
       joinColumns = @JoinColumn(name = "court_id"),
       inverseJoinColumns = @JoinColumn(name = "region_id"))
   private RegionDTO region;
+
+  @ManyToOne
+  @JoinColumn(name = "jurisdiction_type_id")
+  private JurisdictionTypeDTO jurisdictionType;
 }

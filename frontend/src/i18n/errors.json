@@ -59,6 +59,10 @@
     "title": "Dokumentationseinheit konnte nicht aktualisiert werden.",
     "description": ""
   },
+  "DOCUMENT_UNIT_TAKEOVER_FAILED": {
+    "title": "Dokumentationseinheit konnte nicht übernommen werden.",
+    "description": ""
+  },
   "DOCUMENT_UNIT_DELETE_FAILED": {
     "title": "Dokumentationseinheit konnte nicht gelöscht werden.",
     "description": ""
@@ -189,5 +193,35 @@
   },
   "SEARCH_RESULTS_NOT_FOUND": {
     "title": "Keine Suchergebnisse gefunden"
+  },
+  "LEGAL_PERIODICAL_EDITION_COULD_NOT_BE_SAVED": {
+    "title": "Ausgabe konnte nicht gespeichert werden. Bitte laden Sie die Seite neu."
+  },
+  "LEGAL_PERIODICAL_EDITION_COULD_NOT_BE_LOADED": {
+    "title": "Ausgabe konnte nicht geladen werden. Bitte laden Sie die Seite neu."
+  },
+  "LEGAL_PERIODICAL_EDITIONS_COULD_NOT_BE_LOADED": {
+    "title": "Ausgaben konnten nicht geladen werden. Bitte laden Sie die Seite neu."
+  },
+  "LEGAL_PERIODICAL_EDITION_COULD_NOT_BE_DELETED": {
+    "title": "Ausgabe konnte nicht gelöscht werden. Bitte laden Sie die Seite neu."
+  },
+  "PROCEDURE_COULD_NOT_BE_ASSIGNED": {
+    "title": "Vorgang konnte nicht zugewiesen werden. Bitte laden Sie die Seite neu."
+  },
+  "PROCEDURE_COULD_NOT_BE_UNASSIGNED": {
+    "title": "Zuweisung des Vorgangs konnte nicht entfernt werden. Bitte laden Sie die Seite neu."
+  },
+  "EDITION_HANDOVER_FAILED": {
+    "title": "Leider ist ein Fehler aufgetreten.",
+    "description": "Die Ausgabe kann nicht übergeben werden."
+  },
+  "EDITION_LOADING_EVENT_LOG_FAILED": {
+    "title": "Fehler beim Laden der Ereignisse",
+    "description": "Bitte laden Sie die Seite neu."
+  },
+  "EDITION_LOADING_XML_PREVIEW": {
+    "title": "Fehler beim Laden der XML-Vorschau",
+    "description": "Bitte laden Sie die Seite neu."
   }
 }

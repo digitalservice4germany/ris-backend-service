@@ -9,6 +9,7 @@ spring:
       username: redis
 
 sentry:
+  dsn: ${SENTRY_DSN}
   environment: production
   traces-sample-rate: 0.01
 
