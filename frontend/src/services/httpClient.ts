@@ -1,3 +1,5 @@
+import http from "http"
+import https from "https"
 import axios, { AxiosError } from "axios"
 import { ValidationError } from "@/components/input/types"
 import errorMessages from "@/i18n/errors.json"
@@ -124,6 +126,9 @@ export type ServiceResponse<T> = {
     }
 )
 
-export const axiosInstance = axios.create()
+export const axiosInstance = axios.create({
+  httpAgent: new http.Agent({ keepAlive: true }),
+  httpsAgent: new https.Agent({ keepAlive: true }),
+})
 export default httpClient
 export const API_PREFIX = `/api/v1/`
