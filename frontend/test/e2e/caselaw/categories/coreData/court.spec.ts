@@ -99,7 +99,7 @@ test.describe("court", () => {
       .filter({ hasText: "Gericht * Fehlerhaftes" })
       .getByLabel("Dropdown öffnen")
       .click()
-    await expect(page.getByLabel("dropdown-option")).toHaveCount(10)
+    await expect(page.getByLabel("dropdown-option")).toHaveCount(200)
     await expect(page.getByText("AG Aachen")).toBeVisible()
     await expect(page.getByText("AG Aalen")).toBeVisible()
 
@@ -113,7 +113,7 @@ test.describe("court", () => {
     // use the clear icon
     await page.getByLabel("Auswahl zurücksetzen", { exact: true }).click()
     await expect(page.getByLabel("Gericht", { exact: true })).toHaveValue("")
-    await expect(page.getByLabel("dropdown-option")).toHaveCount(10)
+    await expect(page.getByLabel("dropdown-option")).toHaveCount(200)
 
     // close dropdown
     await page.getByLabel("Dropdown schließen").click()
@@ -122,7 +122,7 @@ test.describe("court", () => {
 
     // open dropdown again by focussing
     await page.getByLabel("Gericht", { exact: true }).focus()
-    await expect(page.getByLabel("dropdown-option")).toHaveCount(10)
+    await expect(page.getByLabel("dropdown-option")).toHaveCount(200)
 
     // close dropdown using the esc key, user input text gets removed and last saved value restored
     await page.keyboard.down("Escape")
