@@ -4,7 +4,6 @@ import {
   clearInput,
   fillNormInputs,
   navigateToCategories,
-  save,
 } from "~/e2e/caselaw/e2e-utils"
 import { caselawTest as test } from "~/e2e/caselaw/fixtures"
 
@@ -40,6 +39,9 @@ test.describe("norm", () => {
 
     // edit entry
     await container.getByTestId("list-entry-0").click()
+    await expect(
+      container.getByLabel("Einzelnorm", { exact: true }),
+    ).toBeVisible()
     await fillNormInputs(page, {
       normAbbreviation: "PBefGZustV HE",
     })
@@ -50,13 +52,15 @@ test.describe("norm", () => {
     // the second list item is a default list entry
     await expect(container.getByLabel("Listen Eintrag")).toHaveCount(2)
 
-    // add second entry
+    await expect(
+      container.getByLabel("Einzelnorm", { exact: true }),
+    ).not.toBeVisible()
 
+    // add second entry
     await fillNormInputs(page, {
       normAbbreviation: "PBefG",
     })
     await container.getByLabel("Norm speichern").click()
-    await save(page)
 
     // the third list item is a default list entry
     await expect(container.getByLabel("Listen Eintrag")).toHaveCount(3)
@@ -178,6 +182,10 @@ test.describe("norm", () => {
     await expect(container.getByText("PBefG", { exact: true })).toBeHidden()
     await expect(container.getByText("PBefG, § 123")).toBeVisible()
     await expect(container.getByText("§ 456, 2022")).toBeHidden()
+
+    // cleanup
+    await container.getByTestId("list-entry-0").click()
+    await container.getByLabel("Eintrag löschen").click()
   })
 
   test("cancel editing does not save anything", async ({
@@ -199,6 +207,9 @@ test.describe("norm", () => {
 
     const listEntries = container.getByLabel("Listen Eintrag")
     await container.getByTestId("list-entry-0").click()
+    await expect(
+      container.getByLabel("Einzelnorm", { exact: true }),
+    ).toBeVisible()
 
     //cancel editing existing input falls back to last saved value
     await fillNormInputs(page, {
@@ -252,6 +263,7 @@ test.describe("norm", () => {
 
     await container.getByLabel("Norm speichern").click()
     await container.getByTestId("list-entry-1").click()
+    await expect(container.getByLabel("Norm speichern")).toBeVisible()
     await page.getByLabel("RIS-Abkürzung").fill("PBefG")
     await page.getByText("PBefG", { exact: true }).click()
 
@@ -364,7 +376,6 @@ test.describe("norm", () => {
       const saveNormButton = normContainer.getByLabel("Norm speichern")
       await saveNormButton.click()
 
-      await save(page)
       await expect(page.getByText("Nichtig (Brandenburg)")).toBeVisible()
 
       // edit legal force
@@ -380,7 +391,6 @@ test.describe("norm", () => {
 
       await saveNormButton.click()
 
-      await save(page)
       await expect(page.getByText("Vereinbar (Berlin (Ost))")).toBeVisible()
 
       // remove legal force
@@ -390,7 +400,7 @@ test.describe("norm", () => {
       await clearInput(page, "Gesetzeskraft Geltungsbereich")
 
       await saveNormButton.click()
-      await save(page)
+
       await expect(page.getByText("Vereinbar (Berlin (Ost))")).toBeHidden()
     })
 
@@ -425,7 +435,6 @@ test.describe("norm", () => {
       const saveNormButton = normContainer.getByLabel("Norm speichern")
       await saveNormButton.click()
 
-      await save(page)
       await expect(page.getByText("Fehlende Daten")).toBeVisible()
 
       // enter edit mode
@@ -449,7 +458,6 @@ test.describe("norm", () => {
 
       await saveNormButton.click()
 
-      await save(page)
       await expect(page.getByText("Vereinbar (Berlin (Ost))")).toBeVisible()
     })
   })
@@ -480,8 +488,6 @@ test.describe("norm", () => {
     saveNormButton = normContainer.getByLabel("Norm speichern")
     await saveNormButton.click()
 
-    await save(page)
-
     await fillNormInputs(page, {
       normAbbreviation: "KBErrG",
       singleNorms: [{ singleNorm: "§ 8" } as SingleNorm],
@@ -503,8 +509,6 @@ test.describe("norm", () => {
     await expect(page.locator("text=PBefG, § 123")).toBeHidden()
     await expect(page.locator("text=BGB, § 1")).toBeVisible()
     await expect(page.locator("text=KBErrG, § 8")).toBeVisible()
-
-    await save(page)
 
     await normContainer.getByTestId("list-entry-0").click()
 

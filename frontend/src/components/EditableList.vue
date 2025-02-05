@@ -1,6 +1,6 @@
 <script lang="ts" setup generic="T extends ListItem">
 import type { Component, ComponentPublicInstance, Ref } from "vue"
-import { ref, watch, computed, nextTick } from "vue"
+import { computed, nextTick, ref, watch } from "vue"
 import Tooltip from "./Tooltip.vue"
 import DefaultSummary from "@/components/DefaultSummary.vue"
 import TextButton from "@/components/input/TextButton.vue"
@@ -170,7 +170,7 @@ function isSaved(entries: T[], entry?: T): boolean {
  */
 async function updateModel(index: number) {
   emit("update:modelValue", modelValueList.value)
-  await toggleDisplayDefaultValue(true, index)
+  // await toggleDisplayDefaultValue(true, index)
 }
 
 /**

@@ -512,9 +512,7 @@ export async function fillNormInputs(
   if (values?.normAbbreviation) {
     await fillInput(page, "RIS-Abkürzung", values.normAbbreviation)
     await page.getByText(values.normAbbreviation, { exact: true }).click()
-    await waitForInputValue(
-      page,
-      "[aria-label='RIS-Abkürzung']",
+    await expect(page.getByLabel("RIS-Abkürzung", { exact: true })).toHaveValue(
       values.normAbbreviation,
     )
   }

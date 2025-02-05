@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import * as Sentry from "@sentry/vue"
 import dayjs from "dayjs"
-import { computed } from "vue"
+import { computed, ref } from "vue"
 import EditableList from "@/components/EditableList.vue"
 import { DocumentUnitCategoriesEnum } from "@/components/enumDocumentUnitCategories"
 import NormReferenceInput from "@/components/NormReferenceInput.vue"
@@ -12,10 +12,14 @@ import SingleNorm from "@/domain/singleNorm"
 import { useDocumentUnitStore } from "@/stores/documentUnitStore"
 
 const store = useDocumentUnitStore()
+const editableListRef = ref()
 
 const norms = computed({
   get: () => store.documentUnit!.contentRelatedIndexing.norms,
   set: async (newValues) => {
+    const addedOrChanged =
+      Object.keys(newValues).length >=
+      store.documentUnit!.contentRelatedIndexing.norms.length
     store.documentUnit!.contentRelatedIndexing.norms = newValues?.filter(
       (value) => {
         if (Object.keys(value).length === 0) {
@@ -29,7 +33,7 @@ const norms = computed({
         return true // Keep the value in the norms array
       },
     )
-    await store.updateDocumentUnit()
+    await editableListRef.value.toggleDisplayDefaultValue(addedOrChanged)
   },
 })
 
@@ -72,6 +76,7 @@ const defaultValue = new NormReference() as NormReference
     <div class="flex flex-row">
       <div class="flex-1">
         <EditableList
+          ref="editableListRef"
           v-model="norms"
           :default-value="defaultValue"
           :edit-component="NormReferenceInput"
