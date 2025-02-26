@@ -30,6 +30,12 @@ public class OtcObsConfig {
   @Value("${s3.file-storage.case-law.secret-access-key:test}")
   private String ldmlSecretAccessKey;
 
+  @Value("${s3.file-storage.case-law-prototype.access-key-id:test}")
+  private String portalPrototypeAccessKeyId;
+
+  @Value("${s3.file-storage.case-law-prototype.access-key:test}")
+  private String portalPrototypeAccessKey;
+
   @Bean(name = "docxS3Client")
   @Profile({"staging", "production", "uat"})
   public S3Client docxS3Client() throws URISyntaxException {
@@ -60,6 +66,24 @@ public class OtcObsConfig {
     return new S3NoOpClient();
   }
 
+  @Bean(name = "portalPrototypeS3Client")
+  @Profile({"staging", "production"})
+  public S3Client portalPrototypeS3Client() throws URISyntaxException {
+    return S3Client.builder()
+        .credentialsProvider(
+            StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(portalPrototypeAccessKeyId, portalPrototypeAccessKey)))
+        .endpointOverride(new URI(endpoint))
+        .region(Region.of("eu-de"))
+        .build();
+  }
+
+  @Bean(name = "portalPrototypeS3Client")
+  @Profile({"uat"})
+  public S3Client portalPrototypeS3NoopClient() {
+    return new S3NoOpClient();
+  }
+
   @Bean(name = "docxS3Client")
   @Profile({"!production & !staging & !uat"})
   public S3Client docxS3MockClient() {
@@ -69,6 +93,12 @@ public class OtcObsConfig {
   @Bean(name = "ldmlS3Client")
   @Profile({"!production & !staging & !uat"})
   public S3Client ldmlS3MockClient() {
+    return new S3MockClient();
+  }
+
+  @Bean(name = "portalPrototypeS3Client")
+  @Profile({"!production & !staging & !uat"})
+  public S3Client portalPrototypeS3MockClient() {
     return new S3MockClient();
   }
 }

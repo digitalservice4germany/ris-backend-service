@@ -5,13 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import de.bund.digitalservice.ris.caselaw.EntityBuilderTestUtil;
 import de.bund.digitalservice.ris.caselaw.TestConfig;
-import de.bund.digitalservice.ris.caselaw.adapter.CaselawExceptionHandler;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberGeneratorService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentNumberRecyclingService;
 import de.bund.digitalservice.ris.caselaw.adapter.DatabaseDocumentationUnitStatusService;
@@ -22,6 +22,7 @@ import de.bund.digitalservice.ris.caselaw.adapter.LdmlBucket;
 import de.bund.digitalservice.ris.caselaw.adapter.LdmlExporterService;
 import de.bund.digitalservice.ris.caselaw.adapter.OAuthService;
 import de.bund.digitalservice.ris.caselaw.adapter.PortalPrototypeBucket;
+import de.bund.digitalservice.ris.caselaw.adapter.PortalPublicationJobService;
 import de.bund.digitalservice.ris.caselaw.adapter.XmlUtilService;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.CourtDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DatabaseCourtRepository;
@@ -34,6 +35,8 @@ import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationOffi
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.DocumentationUnitDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.FileNumberDTO;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.LegalEffectDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PortalPublicationJobDTO;
+import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PortalPublicationJobRepository;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresCourtRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentTypeRepositoryImpl;
 import de.bund.digitalservice.ris.caselaw.adapter.database.jpa.PostgresDocumentationUnitRepositoryImpl;
@@ -47,18 +50,25 @@ import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitDocxMetadataIn
 import de.bund.digitalservice.ris.caselaw.domain.DocumentationUnitService;
 import de.bund.digitalservice.ris.caselaw.domain.DuplicateCheckService;
 import de.bund.digitalservice.ris.caselaw.domain.HandoverService;
+import de.bund.digitalservice.ris.caselaw.domain.PortalPublicationTaskStatus;
+import de.bund.digitalservice.ris.caselaw.domain.PortalPublicationTaskType;
 import de.bund.digitalservice.ris.caselaw.domain.ProcedureService;
 import de.bund.digitalservice.ris.caselaw.domain.UserService;
 import de.bund.digitalservice.ris.caselaw.domain.mapper.PatchMapperService;
 import de.bund.digitalservice.ris.caselaw.webtestclient.RisWebTestClient;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
@@ -69,8 +79,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 
 @RISIntegrationTest(
     imports = {
@@ -91,13 +101,16 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
       SecurityConfig.class,
       OAuthService.class,
       TestConfig.class,
+      PortalPublicationJobService.class,
       DocumentNumberPatternConfig.class
     },
     controllers = {DocumentationUnitController.class})
-class PublishIntegrationTest {
+class PortalPublicationJobIntegrationTest {
   @Container
   static PostgreSQLContainer<?> postgreSQLContainer =
       new PostgreSQLContainer<>("postgres:14").withInitScript("init_db.sql");
+
+  @Autowired private PortalPublicationJobRepository portalPublicationJobRepository;
 
   @DynamicPropertySource
   static void registerDynamicProperties(DynamicPropertyRegistry registry) {
@@ -113,12 +126,14 @@ class PublishIntegrationTest {
   @Autowired private DatabaseDocumentationOfficeRepository documentationOfficeRepository;
   @Autowired private DatabaseCourtRepository databaseCourtRepository;
   @Autowired private DatabaseDocumentTypeRepository databaseDocumentTypeRepository;
-
-  @MockitoBean(name = "ldmlS3Client")
-  private S3Client s3Client;
+  @Autowired private PortalPublicationJobRepository publicationJobRepository;
+  @Autowired private PortalPublicationJobService portalPublicationJobService;
 
   @MockitoBean(name = "portalPrototypeS3Client")
-  private S3Client portalPrototypeS3Client;
+  private S3Client s3Client;
+
+  @MockitoBean(name = "ldmlS3Client")
+  private S3Client ldmlS3Client;
 
   @MockitoBean private UserService userService;
   @MockitoBean private DocxConverterService docxConverterService;
@@ -135,7 +150,6 @@ class PublishIntegrationTest {
 
   private final DocumentationOffice docOffice = buildDSDocOffice();
   private DocumentationOfficeDTO documentationOffice;
-  private static final String DEFAULT_DOCUMENT_NUMBER = "1234567890123";
 
   @BeforeEach
   void setUp() {
@@ -150,6 +164,8 @@ class PublishIntegrationTest {
                   List<String> groups = user.getAttribute("groups");
                   return Objects.requireNonNull(groups).get(0).equals("/DS");
                 }));
+
+    portalPublicationJobRepository.deleteAll();
   }
 
   @AfterEach
@@ -158,92 +174,98 @@ class PublishIntegrationTest {
   }
 
   @Test
-  void testPublishSuccessfully() {
-    DocumentationUnitDTO dto =
+  void shouldPublishAndDeleteInOrder() throws IOException {
+    DocumentationUnitDTO dto1 =
         EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
-            repository, buildValidDocumentationUnit());
+            repository, buildValidDocumentationUnit("1"));
+    DocumentationUnitDTO dto2 =
+        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
+            repository, buildValidDocumentationUnit("2"));
 
-    risWebTestClient
-        .withDefaultLogin()
-        .put()
-        .uri("/api/v1/caselaw/documentunits/" + dto.getId() + "/publish")
-        .exchange()
-        .expectStatus()
-        .isOk();
+    portalPublicationJobRepository.saveAll(
+        List.of(
+            createPublicationJob(dto1, PortalPublicationTaskType.PUBLISH),
+            createPublicationJob(dto1, PortalPublicationTaskType.DELETE),
+            createPublicationJob(dto2, PortalPublicationTaskType.PUBLISH)));
 
-    ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+    portalPublicationJobService.executePendingJobs();
 
-    verify(s3Client, times(2)).putObject(captor.capture(), any(RequestBody.class));
+    ArgumentCaptor<PutObjectRequest> putCaptor = ArgumentCaptor.forClass(PutObjectRequest.class);
+    ArgumentCaptor<RequestBody> bodyCaptor = ArgumentCaptor.forClass(RequestBody.class);
+    ArgumentCaptor<Consumer<DeleteObjectRequest.Builder>> deleteCaptor =
+        ArgumentCaptor.forClass(Consumer.class);
 
-    var capturedRequests = captor.getAllValues();
-    assertThat(capturedRequests.get(0).key()).contains("changelogs/");
-    assertThat(capturedRequests.get(1).key()).isEqualTo("1234567890123.xml");
+    InOrder inOrder = inOrder(s3Client);
+
+    // PUT 1.xml
+    inOrder.verify(s3Client, times(1)).putObject(putCaptor.capture(), bodyCaptor.capture());
+    // DELETE 1.xml
+    inOrder.verify(s3Client, times(1)).deleteObject(deleteCaptor.capture());
+    // PUT 2.xml + PUT changelog
+    inOrder.verify(s3Client, times(2)).putObject(putCaptor.capture(), bodyCaptor.capture());
+
+    var capturedPutRequests = putCaptor.getAllValues();
+    var changelogContent =
+        new String(
+            bodyCaptor.getAllValues().get(2).contentStreamProvider().newStream().readAllBytes(),
+            StandardCharsets.UTF_8);
+    assertThat(capturedPutRequests.get(0).key()).isEqualTo("1.xml");
+    assertThat(capturedPutRequests.get(1).key()).isEqualTo("2.xml");
+    assertThat(capturedPutRequests.get(2).key()).contains("changelogs/");
+    assertThat(changelogContent)
+        .isEqualTo(
+            """
+                {"changed":["1","2"],"deleted":["1"]}""");
+
+    var deleteRequestBuilder = DeleteObjectRequest.builder();
+    deleteCaptor.getValue().accept(deleteRequestBuilder);
+    var deleteRequest = deleteRequestBuilder.build();
+    assertThat(deleteRequest.key()).isEqualTo("1.xml");
+
+    assertThat(portalPublicationJobRepository.findAll())
+        .allMatch(job -> job.getPublicationStatus() == PortalPublicationTaskStatus.SUCCESS);
   }
 
   @Test
-  void testPublishFailsWithMissingMandatoryFields() {
+  void shouldContinueExecutionOnError() {
     DocumentationUnitDTO dto =
         EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
-            repository, documentationOffice);
+            repository, buildValidDocumentationUnit("1"));
 
-    risWebTestClient
-        .withDefaultLogin()
-        .put()
-        .uri("/api/v1/caselaw/documentunits/" + dto.getId() + "/publish")
-        .exchange()
-        .expectStatus()
-        .isBadRequest()
-        .expectBody(CaselawExceptionHandler.ApiError.class)
-        .consumeWith(
-            response ->
-                assertThat(response.getResponseBody().message())
-                    .contains("Could not transform documentation unit to LDML."));
-  }
-
-  @Test
-  void testPublishFailsWhenLDMLValidationFails() {
-    DocumentationUnitDTO dto =
-        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
-            repository, buildValidDocumentationUnit().grounds(null));
-
-    risWebTestClient
-        .withDefaultLogin()
-        .put()
-        .uri("/api/v1/caselaw/documentunits/" + dto.getId() + "/publish")
-        .exchange()
-        .expectStatus()
-        .isBadRequest()
-        .expectBody(CaselawExceptionHandler.ApiError.class)
-        .consumeWith(
-            response ->
-                assertThat(response.getResponseBody().message())
-                    .contains("Could not transform documentation unit to valid LDML."));
-  }
-
-  @Test
-  void testPublishFailsWhenS3ClientThrowsException() {
-    DocumentationUnitDTO dto =
-        EntityBuilderTestUtil.createAndSavePublishedDocumentationUnit(
-            repository, buildValidDocumentationUnit());
-
+    // PUBLISH job and upload changelog will fail
     when(s3Client.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
-        .thenThrow(S3Exception.class);
+        .thenThrow(new RuntimeException("error"));
 
-    risWebTestClient
-        .withDefaultLogin()
-        .put()
-        .uri("/api/v1/caselaw/documentunits/" + dto.getId() + "/publish")
-        .exchange()
-        .expectStatus()
-        .is5xxServerError()
-        .expectBody(CaselawExceptionHandler.ApiError.class)
-        .consumeWith(
-            response ->
-                assertThat(response.getResponseBody().message())
-                    .contains("Could not save changelog to bucket."));
+    portalPublicationJobRepository.saveAll(
+        List.of(
+            createPublicationJob(dto, PortalPublicationTaskType.PUBLISH),
+            createPublicationJob(dto, PortalPublicationTaskType.DELETE)));
+
+    portalPublicationJobService.executePendingJobs();
+
+    // DELETE is called even after fail
+    verify(s3Client, times(1)).deleteObject(any(Consumer.class));
+    // PUT 1.xml (fails) + PUT changelog
+    verify(s3Client, times(2)).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+
+    assertThat(
+            portalPublicationJobRepository.findAll().stream()
+                .map(PortalPublicationJobDTO::getPublicationStatus)
+                .toList())
+        .isEqualTo(List.of(PortalPublicationTaskStatus.ERROR, PortalPublicationTaskStatus.SUCCESS));
   }
 
-  private DecisionDTO.DecisionDTOBuilder<?, ?> buildValidDocumentationUnit() {
+  private PortalPublicationJobDTO createPublicationJob(
+      DocumentationUnitDTO dto, PortalPublicationTaskType publicationType) {
+    return PortalPublicationJobDTO.builder()
+        .documentNumber(dto.getDocumentNumber())
+        .createdAt(Instant.now())
+        .publicationStatus(PortalPublicationTaskStatus.PENDING)
+        .publicationType(publicationType)
+        .build();
+  }
+
+  private DecisionDTO.DecisionDTOBuilder<?, ?> buildValidDocumentationUnit(String docNumber) {
     CourtDTO court =
         databaseCourtRepository.saveAndFlush(
             CourtDTO.builder()
@@ -259,7 +281,7 @@ class PublishIntegrationTest {
             DocumentTypeDTO.builder().abbreviation("test").multiple(true).build());
 
     return DecisionDTO.builder()
-        .documentNumber(DEFAULT_DOCUMENT_NUMBER)
+        .documentNumber(docNumber)
         .documentType(docType)
         .documentationOffice(documentationOffice)
         .court(court)

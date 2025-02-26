@@ -204,7 +204,7 @@ dependencies {
     // or with local gradle project (look also into settings.gradle.kts)
     // implementation(project(":exporter"))
 
-    implementation("de.bund.digitalservice:neuris-caselaw-migration-schema:0.0.48")
+    implementation("de.bund.digitalservice:neuris-caselaw-migration-schema:0.0.49")
     // for local development:
     // implementation(files("../../ris-data-migration/schema/build/libs/schema-0.0.45.jar"))
 

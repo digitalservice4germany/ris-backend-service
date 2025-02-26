@@ -48,6 +48,7 @@ class CaseLawLdmlExportTest {
 
   static DocumentationUnitRepository documentationUnitRepository;
   static LdmlBucket caseLawBucket;
+  static PortalPrototypeBucket externalBucket;
   static DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
   static XmlUtilService xmlUtilService = new XmlUtilService(new TransformerFactoryImpl());
   static LdmlExporterService exporter;
@@ -59,6 +60,7 @@ class CaseLawLdmlExportTest {
   static void setUpBeforeClass() {
     documentationUnitRepository = mock(DocumentationUnitRepository.class);
     caseLawBucket = mock(LdmlBucket.class);
+    externalBucket = mock(PortalPrototypeBucket.class);
     objectMapper = mock(ObjectMapper.class);
     exporter =
         new LdmlExporterService(
@@ -66,6 +68,7 @@ class CaseLawLdmlExportTest {
             xmlUtilService,
             documentBuilderFactory,
             caseLawBucket,
+            externalBucket,
             objectMapper);
 
     PreviousDecision related1 =

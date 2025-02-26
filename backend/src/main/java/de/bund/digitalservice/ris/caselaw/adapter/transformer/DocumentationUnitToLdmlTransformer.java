@@ -212,6 +212,7 @@ public class DocumentationUnitToLdmlTransformer {
 
     Meta.MetaBuilder builder = Meta.builder();
 
+    // FIXME: Not in prototype
     List<AknKeyword> keywords =
         documentationUnit.contentRelatedIndexing() == null
             ? Collections.emptyList()
@@ -254,6 +255,7 @@ public class DocumentationUnitToLdmlTransformer {
               .filter(Objects::nonNull)
               .toList(),
           builder::legalForce);
+      // FIXME: field of law not in prototype
       applyIfNotEmpty(
           contentRelatedIndexing.fieldsOfLaw().stream().map(FieldOfLaw::text).toList(),
           builder::fieldOfLaw);
@@ -262,20 +264,25 @@ public class DocumentationUnitToLdmlTransformer {
     var coreData = documentationUnit.coreData();
     if (coreData != null) {
       if (coreData.deviatingDecisionDates() != null) {
+        // FIXME: No deviating decision dates in prototype
         applyIfNotEmpty(
             coreData.deviatingDecisionDates().stream().map(DateUtils::toDateString).toList(),
             builder::deviatingDate);
       }
+      // FIXME: No deviating decision courts in prototype
       applyIfNotEmpty(coreData.deviatingCourts(), builder::deviatingCourt);
       //    applyIfNotEmpty(
       //        caseLaw.getDeviatingDocumentNumbers().stream()
       //            .map(DeviatingDocumentNumber::getValue)
       //            .toList(),
       //        builder::deviatingDocumentNumber);
+      // FIXME: No deviating decision eclis in prototype
       applyIfNotEmpty(coreData.deviatingEclis(), builder::deviatingEcli);
+      // FIXME: No deviating decision file numbers in prototype
       applyIfNotEmpty(coreData.deviatingFileNumbers(), builder::deviatingFileNumber);
       applyIfNotEmpty(coreData.fileNumbers(), builder::fileNumbers);
       if (coreData.procedure() != null) {
+        // FIXME: No procedures in prototype
         applyIfNotEmpty(
             Stream.of(coreData.procedure())
                 .map(Procedure::label)
@@ -288,19 +295,23 @@ public class DocumentationUnitToLdmlTransformer {
           .documentType(coreData.documentType().label())
           .courtLocation(nullSafeGet(coreData.court(), Court::location))
           .courtType(nullSafeGet(coreData.court(), Court::type))
+          // FIXME: legalEffect Not in prototype
           .legalEffect(coreData.legalEffect())
           .judicialBody(nullIfEmpty(coreData.appraisalBody()))
+          // FIXME: Not in prototype
           .documentationOffice(
               nullSafeGet(coreData.documentationOffice(), DocumentationOffice::abbreviation));
     }
 
     var decisionName = nullSafeGet(documentationUnit.shortTexts(), ShortTexts::decisionName);
     if (StringUtils.isNotEmpty(decisionName)) {
+      // FIXME Not in prototype
       builder.decisionName(List.of(decisionName));
     }
 
     Status lastStatus = documentationUnit.status();
 
+    // FIXME Not in prototype
     return builder
         .publicationStatus(
             nullSafeGet(

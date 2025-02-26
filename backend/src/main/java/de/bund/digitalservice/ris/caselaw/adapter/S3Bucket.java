@@ -69,8 +69,16 @@ public class S3Bucket {
     return Optional.empty();
   }
 
-  public void delete(String fileName) {
-    s3Client.deleteObject(builder -> builder.bucket(bucketName).key(fileName));
+  /**
+   * @return true if the file was deleted, false if the file did not exist
+   */
+  public boolean delete(String fileName) {
+    try {
+      s3Client.deleteObject(builder -> builder.bucket(bucketName).key(fileName));
+      return true;
+    } catch (NoSuchKeyException e) {
+      return false;
+    }
   }
 
   public void save(String fileName, String fileContent) {
