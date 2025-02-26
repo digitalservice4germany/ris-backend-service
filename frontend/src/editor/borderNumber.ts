@@ -2,6 +2,7 @@ import "../styles/border-numbers.css"
 import { commands } from "@guardian/prosemirror-invisibles"
 import { CommandProps } from "@tiptap/core"
 import { Node } from "@tiptap/vue-3"
+import { longTextLabels } from "@/domain/documentUnit"
 import addBorderNumbers from "@/editor/commands/addBorderNumbers"
 import { handleSelection } from "@/editor/commands/handleSelection"
 import removeBorderNumbers from "@/editor/commands/removeBorderNumbers"
@@ -94,3 +95,11 @@ export const BorderNumberContent = Node.create({
     return ["content", 0]
   },
 })
+
+export const borderNumberCategories = [
+  longTextLabels.reasons,
+  longTextLabels.caseFacts,
+  longTextLabels.decisionReasons,
+  longTextLabels.otherLongText,
+  longTextLabels.dissentingOpinion,
+]

@@ -6,7 +6,7 @@ import TextEditorButton, {
   EditorButton,
 } from "@/components/input/TextEditorButton.vue"
 import { useCollapsingMenuBar } from "@/composables/useCollapsingMenuBar"
-import { longTextLabels } from "@/domain/documentUnit"
+import { borderNumberCategories } from "@/editor/borderNumber"
 import IcSharpAddBox from "~icons/ic/sharp-add-box"
 import MaterialSymbolsDeleteSweepOutline from "~icons/ic/sharp-delete-sweep"
 import IconExpand from "~icons/ic/sharp-expand"
@@ -45,13 +45,6 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{ onEditorExpandedChanged: [boolean] }>()
-const borderNumberCategories = [
-  longTextLabels.reasons,
-  longTextLabels.caseFacts,
-  longTextLabels.decisionReasons,
-  longTextLabels.otherLongText,
-  longTextLabels.dissentingOpinion,
-]
 
 const shouldShowAddBorderNumbersButton = computed(() =>
   borderNumberCategories.includes(props.ariaLabel),

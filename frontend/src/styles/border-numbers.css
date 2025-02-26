@@ -36,12 +36,26 @@ border-number content {
   width: 100%; /* For centered border number content, e.g., centered headlines like "I." */
 }
 
+div.with-border-numbers > div.tiptap > div,
+div.with-border-numbers > div.tiptap > p,
+div.with-border-numbers > div.tiptap > blockquote,
+div.with-border-numbers > div.tiptap > span,
+div.with-border-numbers > div.tiptap > span.invisible::before,
+div.with-border-numbers > div.tiptap > img {
+  padding-left: 52px;
+}
+
+div.with-border-numbers > div.tiptap > ul,
+div.with-border-numbers > div.tiptap > ol {
+  margin-left: 52px;
+}
+
 /* stylelint-disable-next-line selector-type-no-unknown */
 border-number content::before {
   content: "";
   position: absolute;
   top: 12px; /* Start of the line, leaving space at the top */
-  bottom: 12px; /* End of the line, leaving space at the bottom */
+  bottom: 4px; /* End of the line, leaving space at the bottom */
   left: -4px; /* Line should overlap with border-number */
   width: 4px;
   background-color: #dce8ef;
