@@ -172,7 +172,7 @@ dependencies {
     implementation("net.minidev:json-smart:2.5.2")
 
     // CVE-2025-24970
-    implementation("io.netty:netty-handler:4.1.118.Final")
+    implementation("io.netty:netty-handler:4.1.119.Final")
 
     implementation("org.postgresql:postgresql:42.7.5")
 
